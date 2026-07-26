@@ -1,0 +1,19 @@
+# Python / Byte-code / Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Environment variables & secrets
+.env
+*.env
+
+# Flutter / Dart
+.dart_tool/
+.vscode/
+build/
+
+# System files
+.DS_Store
+Thumbs.db

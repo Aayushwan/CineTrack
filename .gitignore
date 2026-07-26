@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 .venv/
 venv/
+ENV/
 
 # Environment variables & secrets
 .env
@@ -17,3 +18,9 @@ build/
 # System files
 .DS_Store
 Thumbs.db
+
+# Database / IDE
+*.db
+*.sqlite3
+.vscode/
+.idea/

@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     PROJECT_NAME: str = "CineTrack API"
     ENVIRONMENT: str = "local"
+    TMDB_API_KEY: str = ""
     
     # Database connection URL
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/cinetrack"

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/review.dart';
 
 class ApiService {
   // Base URL pointing to your FastAPI backend
@@ -189,5 +190,46 @@ class ApiService {
     if (response.statusCode != 204 && response.statusCode != 200) {
       throw Exception('Failed to remove item from watchlist');
     }
+  }
+
+  // --- Reviews Endpoints ---
+
+  /// Fetch all user reviews for a specific movie
+  static Future<List<Review>> getMovieReviews(int movieId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/reviews/movie/$movieId'),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      return body.map((item) => Review.fromJson(item)).toList();
+    } else {
+      throw Exception('Failed to load movie reviews');
+    }
+  }
+
+  /// Submit a review for a movie (JWT protected)
+  static Future<bool> postReview({
+    required int movieId,
+    required double rating,
+    String? comment,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/reviews/'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'movie_id': movieId,
+        'rating': rating,
+        'comment': comment,
+      }),
+    );
+
+    return response.statusCode == 201;
   }
 }

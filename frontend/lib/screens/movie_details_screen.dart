@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../providers/watchlist_provider.dart';
 import '../services/api_service.dart';
 import '../widgets/navbar.dart';
+import '../widgets/movie_reviews_widget.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
   final int movieId;
@@ -265,6 +266,12 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                                 height: 1.5,
                               ),
                             ),
+
+                            // --- Added Reviews Section ---
+                            const SizedBox(height: 32),
+                            const Divider(color: Colors.white24),
+                            const SizedBox(height: 24),
+                            MovieReviewsWidget(movieId: widget.movieId),
                           ],
                         ),
                       ),

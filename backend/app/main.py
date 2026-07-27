@@ -7,6 +7,8 @@ from app.db.session import engine, Base
 from app.routers.auth import router as auth_router
 from app.routers.movies import router as movies_router
 from app.routers.watchlist import router as watchlist_router
+import app.models.review
+from app.routers.reviews import router as reviews_router
 
 
 @asynccontextmanager
@@ -39,6 +41,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(movies_router)
 app.include_router(watchlist_router)
+app.include_router(reviews_router)
 
 
 @app.get("/", tags=["Health Check"])

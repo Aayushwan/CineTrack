@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     # Database connection URL
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/cinetrack"
     
+    # Redis configuration
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+
     # CORS Origins allowed to make requests to this FastAPI backend
     CORS_ORIGINS: List[str] = [
         "http://localhost:8000",

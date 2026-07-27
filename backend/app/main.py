@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.db.session import engine, Base
+from app.core.redis import init_redis, close_redis  # 👈 1. Import Redis helpers
 from app.routers.auth import router as auth_router
 from app.routers.movies import router as movies_router
 from app.routers.watchlist import router as watchlist_router
@@ -13,10 +14,17 @@ from app.routers.reviews import router as reviews_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all database tables on startup if they don't exist
+    # Initialize DB tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # 👈 2. Connect to Redis on startup
+    await init_redis()
+    
     yield
+    
+    # 👈 3. Disconnect Redis on shutdown
+    await close_redis()
 
 
 app = FastAPI(
@@ -28,7 +36,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Allow all origins for local development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,7 +44,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routers
 app.include_router(auth_router)
 app.include_router(movies_router)
 app.include_router(watchlist_router)

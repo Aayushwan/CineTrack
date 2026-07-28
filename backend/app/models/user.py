@@ -1,7 +1,14 @@
+from __future__ import annotations
 from datetime import datetime
+from typing import List, TYPE_CHECKING
 from sqlalchemy import String, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
+
+# Imported strictly for Pylance/type-checking to avoid runtime circular imports
+if TYPE_CHECKING:
+    from app.models.history import WatchHistory, ShowProgress
+
 
 class User(Base):
     __tablename__ = "users"
@@ -11,3 +18,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    history: Mapped[List[WatchHistory]] = relationship("WatchHistory", back_populates="user")
+    show_progress: Mapped[List[ShowProgress]] = relationship("ShowProgress", back_populates="user")

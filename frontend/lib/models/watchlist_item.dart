@@ -4,7 +4,7 @@ class WatchlistItem {
   final int movieId;
   final String movieTitle;
   final String? posterPath;
-  final String status; // "watchlist", "favorite", or "watched"
+  final String status;
   final DateTime createdAt;
 
   WatchlistItem({

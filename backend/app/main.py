@@ -4,12 +4,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.db.session import engine, Base
-from app.core.redis import init_redis, close_redis  # 👈 1. Import Redis helpers
+from app.core.redis import init_redis, close_redis
+
+# Router Imports
 from app.routers.auth import router as auth_router
-from app.routers.movies import router as movies_router
+from app.routers.media import router as media_router
 from app.routers.watchlist import router as watchlist_router
-import app.models.review
 from app.routers.reviews import router as reviews_router
+from app.routers.history import router as history_router  # 👈 1. Import history router
+
+# Model Imports (Ensures metadata is registered before create_all runs)
+import app.models.review
+import app.models.history  # 👈 2. Import history models
 
 
 @asynccontextmanager
@@ -18,12 +24,12 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    # 👈 2. Connect to Redis on startup
+    # Connect to Redis on startup
     await init_redis()
     
     yield
     
-    # 👈 3. Disconnect Redis on shutdown
+    # Disconnect Redis on shutdown
     await close_redis()
 
 
@@ -44,10 +50,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register API Routers
 app.include_router(auth_router)
-app.include_router(movies_router)
+app.include_router(media_router)
 app.include_router(watchlist_router)
 app.include_router(reviews_router)
+app.include_router(history_router)  # 👈 3. Include history router
 
 
 @app.get("/", tags=["Health Check"])

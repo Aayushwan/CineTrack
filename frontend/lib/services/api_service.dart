@@ -1,3 +1,4 @@
+// frontend/lib/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,7 +6,7 @@ import '../models/review.dart';
 
 class ApiService {
   // Base URL pointing to your FastAPI backend
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'http://127.0.0.1:8000';
 
   // --- Token Management Helpers ---
 
@@ -74,7 +75,7 @@ class ApiService {
     }
   }
 
-  // --- Movies Endpoints (TMDB) ---
+  // --- Movies & Media Endpoints (TMDB via FastAPI) ---
 
   /// Fetch daily trending movies
   static Future<Map<String, dynamic>> getTrendingMovies({int page = 1}) async {
@@ -89,7 +90,7 @@ class ApiService {
     }
   }
 
-  /// Search movies by title/keyword
+  /// Search movies, TV shows, and persons across TMDB multi-search
   static Future<Map<String, dynamic>> searchMovies(String query,
       {int page = 1}) async {
     final response = await http.get(
@@ -100,7 +101,12 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Failed to search movies');
+      try {
+        final error = jsonDecode(response.body);
+        throw Exception(error['detail'] ?? 'Failed to perform search');
+      } catch (_) {
+        throw Exception('Failed to perform search');
+      }
     }
   }
 
@@ -116,6 +122,65 @@ class ApiService {
       throw Exception('Failed to load movie details');
     }
   }
+
+  // Fetch TV Show Details
+static Future<Map<String, dynamic>> getTvDetails(int tvId) async {
+  final response = await http.get(
+    Uri.parse('$baseUrl/movies/tv/$tvId'),
+    headers: {'Content-Type': 'application/json'},
+  );
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to load TV show details');
+  }
+}
+
+// Fetch Person Details
+static Future<Map<String, dynamic>> getPersonDetails(int personId) async {
+  final response = await http.get(
+    Uri.parse('$baseUrl/movies/person/$personId'),
+    headers: {'Content-Type': 'application/json'},
+  );
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to load person details');
+  }
+}
+
+// Fetch Upcoming Movies/Shows from FastAPI
+static Future<Map<String, dynamic>> getUpcomingMedia({int page = 1}) async {
+  final response = await http.get(
+    Uri.parse('$baseUrl/movies/upcoming?page=$page'),
+    headers: {'Content-Type': 'application/json'},
+  );
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to load upcoming releases');
+  }
+}
+
+// Fetch Discover Media by Category (Trending, Releases, Anticipated, Popular)
+static Future<Map<String, dynamic>> getDiscoverMedia({
+  String category = 'trending',
+  int page = 1,
+}) async {
+  final response = await http.get(
+    Uri.parse('$baseUrl/movies/discover?category=$category&page=$page'),
+    headers: {'Content-Type': 'application/json'},
+  );
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to load discover content');
+  }
+}
 
   // --- Watchlist Endpoints (JWT Protected) ---
 
@@ -144,34 +209,27 @@ class ApiService {
   }
 
   /// Add a movie to watchlist or update its status
-  static Future<Map<String, dynamic>> addToWatchlist({
+  static Future<void> addToWatchlist({
     required int movieId,
     required String movieTitle,
     String? posterPath,
     String status = 'watchlist',
+    String mediaType = 'movie', // 👈 Add this named parameter
   }) async {
-    final token = await getToken();
-    if (token == null) throw Exception('Not authenticated');
-
     final response = await http.post(
       Uri.parse('$baseUrl/watchlist/'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'movie_id': movieId,
         'movie_title': movieTitle,
         'poster_path': posterPath,
         'status': status,
+        'media_type': mediaType, // 👈 Send media_type to backend
       }),
     );
 
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? 'Failed to update watchlist');
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to update watchlist');
     }
   }
 
@@ -203,6 +261,8 @@ class ApiService {
     if (response.statusCode == 200) {
       List<dynamic> body = jsonDecode(response.body);
       return body.map((item) => Review.fromJson(item)).toList();
+    } else if (response.statusCode == 404) {
+      return [];
     } else {
       throw Exception('Failed to load movie reviews');
     }
@@ -231,5 +291,122 @@ class ApiService {
     );
 
     return response.statusCode == 201;
+  }
+
+  // --- User Activity & Watch History Endpoints (JWT Protected) ---
+
+  /// Retrieve full watch history log with optional filter (e.g., 'movie' or 'tv')
+  static Future<List<dynamic>> getWatchHistory([String? mediaType]) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final uri = Uri.parse('$baseUrl/user/history').replace(
+      queryParameters: mediaType != null && mediaType.isNotEmpty
+          ? {'media_type': mediaType.toLowerCase()}
+          : null,
+    );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch watch history');
+    }
+  }
+
+  /// Log a newly watched movie or show episode
+  static Future<void> logWatchHistory({
+    required int movieId,
+    required String mediaType,
+    required String title,
+    String? subtitle,
+    String? posterPath,
+    double? userRating,
+    int runtimeMinutes = 120,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/user/history'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'movie_id': movieId,
+        'media_type': mediaType,
+        'title': title,
+        'subtitle': subtitle,
+        'poster_path': posterPath,
+        'user_rating': userRating,
+        'runtime_minutes': runtimeMinutes,
+      }),
+    );
+
+    if (response.statusCode != 201) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['detail'] ?? 'Failed to log watch history');
+    }
+  }
+
+  /// Update show episode progress
+  static Future<Map<String, dynamic>> updateShowProgress({
+    required int showId,
+    required String title,
+    required String season,
+    required int totalEpisodes,
+    int increment = 1,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/user/progress/episode'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'show_id': showId,
+        'title': title,
+        'season': season,
+        'total_episodes': totalEpisodes,
+        'increment': increment,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update show progress');
+    }
+  }
+
+  /// Retrieve profile screen time and analytics
+  static Future<Map<String, dynamic>> getProfileStats() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/user/profile/stats'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch profile stats');
+    }
   }
 }

@@ -28,28 +28,30 @@ class WatchlistProvider extends ChangeNotifier {
     }
   }
 
-  /// Add or update a movie in the watchlist
-  Future<bool> addToWatchlist({
-    required int movieId,
-    required String movieTitle,
-    String? posterPath,
-    String status = 'watchlist',
-  }) async {
-    try {
-      await ApiService.addToWatchlist(
-        movieId: movieId,
-        movieTitle: movieTitle,
-        posterPath: posterPath,
-        status: status,
-      );
-      await fetchWatchlist();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
-      notifyListeners();
-      return false;
-    }
+/// Add or update a movie/show in the watchlist
+Future<bool> addToWatchlist({
+  required int movieId,
+  required String movieTitle,
+  String? posterPath,
+  String status = 'watchlist',
+  String mediaType = 'movie', // 👈 Added mediaType support
+}) async {
+  try {
+    await ApiService.addToWatchlist(
+      movieId: movieId,
+      movieTitle: movieTitle,
+      posterPath: posterPath,
+      status: status,
+      mediaType: mediaType, // 👈 Pass to ApiService
+    );
+    await fetchWatchlist();
+    return true;
+  } catch (e) {
+    _errorMessage = e.toString().replaceAll('Exception: ', '');
+    notifyListeners();
+    return false;
   }
+}
 
   /// Remove a movie from the watchlist
   Future<bool> removeFromWatchlist(int movieId) async {

@@ -1,12 +1,6 @@
+// frontend/lib/screens/movie_details_screen.dart
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-
-import '../providers/auth_provider.dart';
-import '../providers/watchlist_provider.dart';
 import '../services/api_service.dart';
-import '../widgets/navbar.dart';
-import '../widgets/movie_reviews_widget.dart';
 
 class MovieDetailsScreen extends StatefulWidget {
   final int movieId;
@@ -18,8 +12,10 @@ class MovieDetailsScreen extends StatefulWidget {
 }
 
 class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
-  Map<String, dynamic>? _movieData;
   bool _isLoading = true;
+  bool _isInWatchlist = false;
+  bool _isLogging = false;
+  Map<String, dynamic>? _movieData;
   String _errorMessage = '';
 
   @override
@@ -30,10 +26,19 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
   Future<void> _fetchDetails() async {
     try {
-      final data = await ApiService.getMovieDetails(widget.movieId);
+      final details = await ApiService.getMovieDetails(widget.movieId);
+      
+      // Check if item is already in watchlist
+      bool inWatchlist = false;
+      try {
+        final watchlist = await ApiService.getWatchlist();
+        inWatchlist = watchlist.any((item) => item['movie_id'] == widget.movieId);
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
-          _movieData = data;
+          _movieData = details;
+          _isInWatchlist = inWatchlist;
           _isLoading = false;
         });
       }
@@ -47,237 +52,201 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     }
   }
 
+  // Toggle Watchlist
+  Future<void> _toggleWatchlist() async {
+    if (_movieData == null) return;
+    final title = _movieData!['title'] ?? _movieData!['name'] ?? 'Untitled';
+    final poster = _movieData!['poster_path'];
+
+    try {
+      if (_isInWatchlist) {
+        await ApiService.removeFromWatchlist(widget.movieId);
+        setState(() => _isInWatchlist = false);
+        _showSnackBar('Removed from Watchlist');
+      } else {
+        await ApiService.addToWatchlist(
+          movieId: widget.movieId,
+          movieTitle: title,
+          posterPath: poster,
+        );
+        setState(() => _isInWatchlist = true);
+        _showSnackBar('Added to Watchlist');
+      }
+    } catch (e) {
+      _showSnackBar('Action failed: ${e.toString().replaceAll('Exception: ', '')}');
+    }
+  }
+
+  // Log as Watched
+  Future<void> _markAsWatched() async {
+    if (_movieData == null || _isLogging) return;
+    setState(() => _isLogging = true);
+
+    final title = _movieData!['title'] ?? _movieData!['name'] ?? 'Untitled';
+    final poster = _movieData!['poster_path'];
+    final runtime = _movieData!['runtime'] ?? 120;
+
+    try {
+      await ApiService.logWatchHistory(
+        movieId: widget.movieId,
+        mediaType: 'movie',
+        title: title,
+        posterPath: poster,
+        runtimeMinutes: runtime,
+        userRating: 4.5, // Default or prompt rating dialog
+      );
+      _showSnackBar('Marked "$title" as Watched!');
+    } catch (e) {
+      _showSnackBar('Failed to log watch history: $e');
+    } finally {
+      if (mounted) setState(() => _isLogging = false);
+    }
+  }
+
+  void _showSnackBar(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        backgroundColor: const Color(0xFF1E293B),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final watchlistProvider = Provider.of<WatchlistProvider>(context);
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF09090B),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFFE11D48))),
+      );
+    }
 
-    final isInWatchlist = watchlistProvider.isMovieInWatchlist(widget.movieId);
+    if (_errorMessage.isNotEmpty || _movieData == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF09090B),
+        body: Center(
+          child: Text(_errorMessage.isNotEmpty ? _errorMessage : 'Movie not found',
+              style: const TextStyle(color: Colors.redAccent)),
+        ),
+      );
+    }
+
+    final title = _movieData!['title'] ?? _movieData!['name'] ?? 'Untitled';
+    final overview = _movieData!['overview'] ?? 'No overview available.';
+    final posterPath = _movieData!['poster_path'];
+    final posterUrl = posterPath != null
+        ? 'https://image.tmdb.org/t/p/w500$posterPath'
+        : 'https://via.placeholder.com/500x750';
 
     return Scaffold(
-      appBar: const CustomNavbar(),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFE11D48)),
-            )
-          : _errorMessage.isNotEmpty
-              ? Center(
-                  child: Text(
-                    _errorMessage,
-                    style: const TextStyle(color: Colors.redAccent),
-                  ),
-                )
-              : SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Backdrop & Hero Header
-                      Stack(
-                        children: [
-                          Container(
-                            height: 380,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              image: DecorationImage(
-                                image: NetworkImage(
-                                  _movieData?['backdrop_path'] != null
-                                      ? 'https://image.tmdb.org/t/p/w1280${_movieData!['backdrop_path']}'
-                                      : 'https://via.placeholder.com/1280x720?text=No+Backdrop',
-                                ),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            height: 380,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.transparent,
-                                  const Color(0xFF0F172A).withValues(alpha: 0.9),
-                                  const Color(0xFF0F172A),
-                                ],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 24,
-                            left: 24,
-                            right: 24,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                // Poster Thumbnail
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    _movieData?['poster_path'] != null
-                                        ? 'https://image.tmdb.org/t/p/w500${_movieData!['poster_path']}'
-                                        : 'https://via.placeholder.com/500x750?text=No+Poster',
-                                    height: 180,
-                                    width: 120,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _movieData?['title'] ?? 'Untitled',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.star_rounded,
-                                              color: Colors.amber, size: 20),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            (_movieData?['vote_average'] as num?)
-                                                    ?.toStringAsFixed(1) ??
-                                                '0.0',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          const Icon(Icons.calendar_today_rounded,
-                                              color: Colors.white54, size: 16),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            _movieData?['release_date'] ?? 'N/A',
-                                            style: const TextStyle(color: Colors.white70),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Actions and Details Body
-                      Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Watchlist Buttons
-                            Row(
-                              children: [
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isInWatchlist
-                                        ? Colors.grey.shade800
-                                        : const Color(0xFFE11D48),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 20, vertical: 14),
-                                  ),
-                                  onPressed: () async {
-                                    if (!authProvider.isAuthenticated) {
-                                      context.go('/login');
-                                      return;
-                                    }
-
-                                    if (isInWatchlist) {
-                                      await watchlistProvider
-                                          .removeFromWatchlist(widget.movieId);
-                                    } else {
-                                      await watchlistProvider.addToWatchlist(
-                                        movieId: widget.movieId,
-                                        movieTitle: _movieData?['title'] ?? '',
-                                        posterPath: _movieData?['poster_path'],
-                                        status: 'watchlist',
-                                      );
-                                    }
-                                  },
-                                  icon: Icon(
-                                    isInWatchlist
-                                        ? Icons.check_circle_rounded
-                                        : Icons.bookmark_add_rounded,
-                                    color: Colors.white,
-                                  ),
-                                  label: Text(
-                                    isInWatchlist
-                                        ? 'In Watchlist'
-                                        : 'Add to Watchlist',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: Colors.amber),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 14),
-                                  ),
-                                  onPressed: () async {
-                                    if (!authProvider.isAuthenticated) {
-                                      context.go('/login');
-                                      return;
-                                    }
-                                    await watchlistProvider.addToWatchlist(
-                                      movieId: widget.movieId,
-                                      movieTitle: _movieData?['title'] ?? '',
-                                      posterPath: _movieData?['poster_path'],
-                                      status: 'favorite',
-                                    );
-                                  },
-                                  icon: const Icon(Icons.favorite_rounded,
-                                      color: Colors.amber),
-                                  label: const Text('Favorite',
-                                      style: TextStyle(color: Colors.amber)),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Overview Section
-                            Text(
-                              'Overview',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _movieData?['overview'] ?? 'No overview available.',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                                height: 1.5,
-                              ),
-                            ),
-
-                            // --- Added Reviews Section ---
-                            const SizedBox(height: 32),
-                            const Divider(color: Colors.white24),
-                            const SizedBox(height: 24),
-                            MovieReviewsWidget(movieId: widget.movieId),
-                          ],
-                        ),
-                      ),
-                    ],
+      backgroundColor: const Color(0xFF09090B),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Banner Poster
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  posterUrl,
+                  height: 320,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 320,
+                    width: 200,
+                    color: const Color(0xFF1E293B),
+                    child: const Icon(Icons.movie_rounded, color: Colors.white24, size: 50),
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Title
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _markAsWatched,
+                    icon: _isLogging
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.check_circle_outline_rounded, size: 18),
+                    label: const Text('Watched'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE11D48),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  onPressed: _toggleWatchlist,
+                  icon: Icon(
+                    _isInWatchlist ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
+                    color: _isInWatchlist ? const Color(0xFFE11D48) : Colors.white,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFF131316),
+                    padding: const EdgeInsets.all(14),
+                    side: const BorderSide(color: Colors.white10),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Overview Section
+            const Text(
+              'Overview',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              overview,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                height: 1.6,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

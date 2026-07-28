@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/navbar.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -45,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      appBar: const CustomNavbar(),
+      backgroundColor: const Color(0xFF09090B),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),

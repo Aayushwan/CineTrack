@@ -1,37 +1,49 @@
+// frontend/lib/routes.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
-import 'providers/auth_provider.dart';
+import 'services/api_service.dart';
 import 'screens/home_screen.dart';
+import 'screens/search_screen.dart';
+import 'screens/discover_screen.dart';
+import '../screens/releases_screen.dart';
+import 'screens/discover_category_screen.dart';
+import 'screens/lists_screen.dart';
+import 'screens/history_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'widgets/main_layout.dart';
 import 'screens/movie_details_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/progress_screen.dart';
 import 'screens/watchlist_screen.dart';
+import 'screens/recommended_screen.dart';
+import 'screens/calendar_screen.dart';
+import '../screens/show_details_screen.dart';
+import '../screens/person_details_screen.dart';
 
-final GoRouter router = GoRouter(
+
+final GoRouter appRouter = GoRouter(
   initialLocation: '/',
-  redirect: (BuildContext context, GoRouterState state) {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+  
+  // 🔐 Auth Guard / Redirection Logic
+  redirect: (context, state) async {
+    final token = await ApiService.getToken();
+    final isAuthRoute = state.uri.path == '/login' || state.uri.path == '/register';
 
-    // Protect watchlist route if user is not logged in
-    if (!authProvider.isAuthenticated && state.matchedLocation == '/watchlist') {
-      return '/login';
+    if (token == null || token.isEmpty) {
+      return isAuthRoute ? null : '/login';
     }
 
-    // Redirect away from login/register if already logged in
-    if (authProvider.isAuthenticated && isLoggingIn) {
+    if (token.isNotEmpty && isAuthRoute) {
       return '/';
     }
 
     return null;
   },
-  routes: <RouteBase>[
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const HomeScreen(),
-    ),
+
+  routes: [
+    // --- Auth Routes ---
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
@@ -40,16 +52,110 @@ final GoRouter router = GoRouter(
       path: '/register',
       builder: (context, state) => const RegisterScreen(),
     ),
-    GoRoute(
-      path: '/movie/:id',
-      builder: (context, state) {
-        final movieId = int.parse(state.pathParameters['id']!);
-        return MovieDetailsScreen(movieId: movieId);
+
+    // --- Main App Shell Routes ---
+    ShellRoute(
+      builder: (context, state, child) {
+        return MainLayout(child: child);
       },
-    ),
-    GoRoute(
-      path: '/watchlist',
-      builder: (context, state) => const WatchlistScreen(),
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const HomeScreen(),
+        ),
+        GoRoute(
+          path: '/search',
+          builder: (context, state) => const SearchScreen(), 
+        ),
+        GoRoute(
+          path: '/discover',
+          builder: (context, state) => const DiscoverScreen(),
+        ),
+        GoRoute(
+          path: '/discover/:category',
+          builder: (context, state) {
+            final category = state.pathParameters['category'] ?? 'trending';
+            return DiscoverCategoryScreen(category: category);
+          },
+        ),
+        GoRoute(
+          path: '/releases',
+          builder: (context, state) => const ReleasesScreen(),
+        ),
+        GoRoute(
+          path: '/lists',
+          builder: (context, state) => const ListsScreen(),
+        ),
+        GoRoute(
+          path: '/history',
+          builder: (context, state) => const HistoryScreen(),
+        ),
+        GoRoute(
+          path: '/movie/:id',
+          builder: (context, state) {
+            final movieIdStr = state.pathParameters['id']!;
+            final movieId = int.parse(movieIdStr);
+            return MovieDetailsScreen(movieId: movieId);
+          },
+        ),
+        GoRoute(
+          path: '/tv/:id',
+          builder: (context, state) {
+            final id = int.parse(state.pathParameters['id']!);
+            return ShowDetailsScreen(showId: id);
+          },
+        ),
+        GoRoute(
+          path: '/person/:id',
+          builder: (context, state) {
+            final id = int.parse(state.pathParameters['id']!);
+            return PersonDetailsScreen(personId: id);
+          },
+        ),
+        GoRoute(
+          path: '/calendar',
+          builder: (context, state) => const CalendarScreen(),
+        ),
+        GoRoute(
+          path: '/progress',
+          builder: (context, state) => const ProgressScreen(), // Replace with your Progress screen widget
+        ),
+        GoRoute(
+          path: '/watchlist',
+          builder: (context, state) => const WatchlistScreen(), // Replace with your Watchlist screen widget
+        ),
+        GoRoute(
+          path: '/recommended',
+          builder: (context, state) => const RecommendedScreen(), // Replace with your Recommended screen widget
+        ),
+        GoRoute(
+          path: '/history',
+          builder: (context, state) => const HistoryScreen(), // Replace with your History screen widget
+        ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
+        ),
+      ],
     ),
   ],
 );
+
+// Lightweight placeholder widget while building out remaining screens
+class PlaceholderScreen extends StatelessWidget {
+  final String title;
+  const PlaceholderScreen({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090B),
+      body: Center(
+        child: Text(
+          '$title Screen Coming Soon',
+          style: const TextStyle(color: Colors.white54, fontSize: 18),
+        ),
+      ),
+    );
+  }
+}

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
+import '../widgets/trakt_filter_bar.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -11,15 +12,17 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final TextEditingController _searchController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final TextEditingController _searchController = TextEditingController();
+
+  // Active Trakt Filter: 'media', 'shows', 'movies', 'people'
+  String _selectedFilter = 'media';
 
   bool _isLoading = false;
   String _errorMessage = '';
   List<dynamic> _searchResults = [];
 
-  // Active Filter States
-  String _selectedMediaType = 'All'; // 'All', 'Movies', 'Shows', 'Persons'
+  // Active Drawer Filter States
   String _selectedGenre = 'All';
   String _selectedStatus = 'All';
   String _selectedDecade = 'All';
@@ -118,10 +121,11 @@ class _SearchScreenState extends State<SearchScreen> {
               item['title'] != null ||
               item['release_date'] != null);
 
-      // 1. Media Type Filter
-      if (_selectedMediaType == 'Movies' && !isMovie) return false;
-      if (_selectedMediaType == 'Shows' && !isTv) return false;
-      if (_selectedMediaType == 'Persons' && !isPerson) return false;
+      // 1. Trakt Media Filter Selection (Media, Shows, Movies, People)
+      if (_selectedFilter == 'movies' && !isMovie) return false;
+      if (_selectedFilter == 'shows' && !isTv) return false;
+      if (_selectedFilter == 'people' && !isPerson) return false;
+      if (_selectedFilter == 'media' && isPerson) return false; // Media = Movies + Shows only
 
       // Skip non-person filters (genre, status, decade) when evaluating Persons
       if (isPerson) return true;
@@ -165,7 +169,7 @@ class _SearchScreenState extends State<SearchScreen> {
       return 'Released';
     }
     if (dateStr.isEmpty) return 'Released';
-    
+
     final releaseDate = DateTime.tryParse(dateStr);
     if (releaseDate == null) return 'Released';
 
@@ -224,14 +228,14 @@ class _SearchScreenState extends State<SearchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search Input & Filter Drawer Trigger
+              // ── Search Input & Filter Drawer Trigger ────────────────────────
               Row(
                 children: [
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFF131316),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(24),
                         border: Border.all(color: Colors.white10),
                       ),
                       child: TextField(
@@ -254,7 +258,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
                     icon: Stack(
                       children: [
-                        const Icon(Icons.tune_rounded, color: Colors.white, size: 26),
+                        const Icon(Icons.tune_rounded, color: Colors.white, size: 24),
                         if (_selectedGenre != 'All' ||
                             _selectedStatus != 'All' ||
                             _selectedDecade != 'All')
@@ -265,7 +269,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               width: 8,
                               height: 8,
                               decoration: const BoxDecoration(
-                                color: Color(0xFFE11D48),
+                                color: Color(0xFFA855F7),
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -276,7 +280,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       backgroundColor: const Color(0xFF131316),
                       padding: const EdgeInsets.all(12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(20),
                         side: const BorderSide(color: Colors.white10),
                       ),
                     ),
@@ -285,28 +289,21 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Strict Media Type Tabs (All / Movies / Shows / Persons)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildMediaTypeChip('All'),
-                    const SizedBox(width: 8),
-                    _buildMediaTypeChip('Movies'),
-                    const SizedBox(width: 8),
-                    _buildMediaTypeChip('Shows'),
-                    const SizedBox(width: 8),
-                    _buildMediaTypeChip('Persons'),
-                  ],
-                ),
+              // ── Center-Aligned Trakt Filter Bar Capsule ─────────────────────
+              TraktFilterBar(
+                selectedFilter: _selectedFilter,
+                showPeople: true,
+                onFilterChanged: (newFilter) {
+                  setState(() => _selectedFilter = newFilter);
+                },
               ),
               const SizedBox(height: 20),
 
-              // Results Grid
+              // ── Results Grid ──────────────────────────────────────────────
               Expanded(
                 child: _isLoading
                     ? const Center(
-                        child: CircularProgressIndicator(color: Color(0xFFE11D48)),
+                        child: CircularProgressIndicator(color: Color(0xFFA855F7)),
                       )
                     : _errorMessage.isNotEmpty
                         ? Center(
@@ -337,13 +334,13 @@ class _SearchScreenState extends State<SearchScreen> {
                                   final id = item['id'];
                                   final title = item['title'] ?? item['name'] ?? 'Untitled';
 
-                                  // 1. Image Path Handling
+                                  // Image Path Handling
                                   final imagePath = item['poster_path'] ?? item['profile_path'];
                                   final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
                                       ? 'https://image.tmdb.org/t/p/w500$imagePath'
                                       : '';
 
-                                  // 2. Media Type Classification
+                                  // Media Type Classification
                                   final rawMediaType = (item['media_type'] ?? '').toString().toLowerCase();
 
                                   final bool isPerson = rawMediaType == 'person' ||
@@ -358,7 +355,6 @@ class _SearchScreenState extends State<SearchScreen> {
                                   final bool isMovie = !isPerson && !isTv;
 
                                   return GestureDetector(
-                                    // 3. Media-Aware Navigation
                                     onTap: () {
                                       if (isMovie) {
                                         context.go('/movie/$id');
@@ -426,34 +422,13 @@ class _SearchScreenState extends State<SearchScreen> {
                                       ],
                                     ),
                                   );
-                                }
+                                },
                               ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  // --- Media Type Filter Pills ---
-  Widget _buildMediaTypeChip(String label) {
-    final isSelected = _selectedMediaType == label;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) {
-        setState(() => _selectedMediaType = label);
-      },
-      selectedColor: const Color(0xFFE11D48),
-      backgroundColor: const Color(0xFF131316),
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.white60,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        fontSize: 13,
-      ),
-      side: BorderSide(color: isSelected ? Colors.transparent : Colors.white10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
@@ -468,7 +443,6 @@ class _SearchScreenState extends State<SearchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Drawer Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -491,7 +465,6 @@ class _SearchScreenState extends State<SearchScreen> {
               Expanded(
                 child: ListView(
                   children: [
-                    // Genre Dropdown
                     _buildDropdownLabel('Genre'),
                     _buildDropdown(
                       value: _selectedGenre,
@@ -500,7 +473,6 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Status Dropdown
                     _buildDropdownLabel('Status'),
                     _buildDropdown(
                       value: _selectedStatus,
@@ -509,7 +481,6 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Decade Dropdown
                     _buildDropdownLabel('Decade'),
                     _buildDropdown(
                       value: _selectedDecade,
@@ -520,7 +491,6 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
 
-              // Action Buttons
               Row(
                 children: [
                   Expanded(
@@ -542,7 +512,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE11D48),
+                        backgroundColor: const Color(0xFFA855F7),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(

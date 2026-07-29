@@ -8,7 +8,7 @@ class ApiService {
   // Base URL pointing to your FastAPI backend
   static const String baseUrl = 'http://127.0.0.1:8000';
 
-  // --- Token Management Helpers ---
+  // --- Token & User Persistence Helpers ---
 
   /// Retrieve the stored JWT token from local storage
   static Future<String?> getToken() async {
@@ -22,10 +22,23 @@ class ApiService {
     await prefs.setString('access_token', token);
   }
 
-  /// Clear the stored token on logout
+  /// Save username to local storage
+  static Future<void> saveUsername(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', username);
+  }
+
+  /// Retrieve stored username from local storage
+  static Future<String?> getStoredUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('username');
+  }
+
+  /// Clear the stored token and user info on logout
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
+    await prefs.remove('username');
   }
 
   // --- Authentication Endpoints ---
@@ -44,7 +57,9 @@ class ApiService {
     );
 
     if (response.statusCode == 201) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      await saveUsername(username);
+      return data;
     } else {
       final error = jsonDecode(response.body);
       throw Exception(error['detail'] ?? 'Failed to register account');
@@ -67,6 +82,9 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (data['access_token'] != null) {
         await saveToken(data['access_token']);
+      }
+      if (data['username'] != null) {
+        await saveUsername(data['username']);
       }
       return data;
     } else {
@@ -124,63 +142,63 @@ class ApiService {
   }
 
   // Fetch TV Show Details
-static Future<Map<String, dynamic>> getTvDetails(int tvId) async {
-  final response = await http.get(
-    Uri.parse('$baseUrl/movies/tv/$tvId'),
-    headers: {'Content-Type': 'application/json'},
-  );
+  static Future<Map<String, dynamic>> getTvDetails(int tvId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/movies/tv/$tvId'),
+      headers: {'Content-Type': 'application/json'},
+    );
 
-  if (response.statusCode == 200) {
-    return jsonDecode(response.body);
-  } else {
-    throw Exception('Failed to load TV show details');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load TV show details');
+    }
   }
-}
 
-// Fetch Person Details
-static Future<Map<String, dynamic>> getPersonDetails(int personId) async {
-  final response = await http.get(
-    Uri.parse('$baseUrl/movies/person/$personId'),
-    headers: {'Content-Type': 'application/json'},
-  );
+  // Fetch Person Details
+  static Future<Map<String, dynamic>> getPersonDetails(int personId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/movies/person/$personId'),
+      headers: {'Content-Type': 'application/json'},
+    );
 
-  if (response.statusCode == 200) {
-    return jsonDecode(response.body);
-  } else {
-    throw Exception('Failed to load person details');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load person details');
+    }
   }
-}
 
-// Fetch Upcoming Movies/Shows from FastAPI
-static Future<Map<String, dynamic>> getUpcomingMedia({int page = 1}) async {
-  final response = await http.get(
-    Uri.parse('$baseUrl/movies/upcoming?page=$page'),
-    headers: {'Content-Type': 'application/json'},
-  );
+  // Fetch Upcoming Movies/Shows from FastAPI
+  static Future<Map<String, dynamic>> getUpcomingMedia({int page = 1}) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/movies/upcoming?page=$page'),
+      headers: {'Content-Type': 'application/json'},
+    );
 
-  if (response.statusCode == 200) {
-    return jsonDecode(response.body);
-  } else {
-    throw Exception('Failed to load upcoming releases');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load upcoming releases');
+    }
   }
-}
 
-// Fetch Discover Media by Category (Trending, Releases, Anticipated, Popular)
-static Future<Map<String, dynamic>> getDiscoverMedia({
-  String category = 'trending',
-  int page = 1,
-}) async {
-  final response = await http.get(
-    Uri.parse('$baseUrl/movies/discover?category=$category&page=$page'),
-    headers: {'Content-Type': 'application/json'},
-  );
+  // Fetch Discover Media by Category (Trending, Releases, Anticipated, Popular)
+  static Future<Map<String, dynamic>> getDiscoverMedia({
+    String category = 'trending',
+    int page = 1,
+  }) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/movies/discover?category=$category&page=$page'),
+      headers: {'Content-Type': 'application/json'},
+    );
 
-  if (response.statusCode == 200) {
-    return jsonDecode(response.body);
-  } else {
-    throw Exception('Failed to load discover content');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load discover content');
+    }
   }
-}
 
   // --- Watchlist Endpoints (JWT Protected) ---
 
@@ -208,28 +226,35 @@ static Future<Map<String, dynamic>> getDiscoverMedia({
     }
   }
 
-  /// Add a movie to watchlist or update its status
+  /// Add a movie to watchlist or update its status (JWT Protected)
   static Future<void> addToWatchlist({
     required int movieId,
     required String movieTitle,
     String? posterPath,
     String status = 'watchlist',
-    String mediaType = 'movie', // 👈 Add this named parameter
+    String mediaType = 'movie',
   }) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
     final response = await http.post(
       Uri.parse('$baseUrl/watchlist/'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
       body: jsonEncode({
         'movie_id': movieId,
         'movie_title': movieTitle,
         'poster_path': posterPath,
         'status': status,
-        'media_type': mediaType, // 👈 Send media_type to backend
+        'media_type': mediaType,
       }),
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('Failed to update watchlist');
+      final error = jsonDecode(response.body);
+      throw Exception(error['detail'] ?? 'Failed to update watchlist');
     }
   }
 

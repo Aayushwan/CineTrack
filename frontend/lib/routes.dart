@@ -3,29 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'services/api_service.dart';
+import 'widgets/main_layout.dart';
+
+// Screens
 import 'screens/home_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/discover_screen.dart';
-import '../screens/releases_screen.dart';
 import 'screens/discover_category_screen.dart';
+import 'screens/releases_screen.dart';
 import 'screens/lists_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'widgets/main_layout.dart';
 import 'screens/movie_details_screen.dart';
+import 'screens/show_details_screen.dart';
+import 'screens/person_details_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/watchlist_screen.dart';
 import 'screens/recommended_screen.dart';
 import 'screens/calendar_screen.dart';
-import '../screens/show_details_screen.dart';
-import '../screens/person_details_screen.dart';
-
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
-  
+
   // 🔐 Auth Guard / Redirection Logic
   redirect: (context, state) async {
     final token = await ApiService.getToken();
@@ -43,7 +44,7 @@ final GoRouter appRouter = GoRouter(
   },
 
   routes: [
-    // --- Auth Routes ---
+    // --- Auth Routes (Outside MainLayout Shell) ---
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
@@ -53,7 +54,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const RegisterScreen(),
     ),
 
-    // --- Main App Shell Routes ---
+    // --- Main App Shell Routes (With Sidebar Navigation Layout) ---
     ShellRoute(
       builder: (context, state, child) {
         return MainLayout(child: child);
@@ -65,7 +66,7 @@ final GoRouter appRouter = GoRouter(
         ),
         GoRoute(
           path: '/search',
-          builder: (context, state) => const SearchScreen(), 
+          builder: (context, state) => const SearchScreen(),
         ),
         GoRoute(
           path: '/discover',
@@ -75,7 +76,10 @@ final GoRouter appRouter = GoRouter(
           path: '/discover/:category',
           builder: (context, state) {
             final category = state.pathParameters['category'] ?? 'trending';
-            return DiscoverCategoryScreen(category: category);
+            return DiscoverCategoryScreen(
+              key: ValueKey(category), // 👈 Forces screen rebuild when switching categories
+              category: category,
+            );
           },
         ),
         GoRoute(
@@ -90,6 +94,28 @@ final GoRouter appRouter = GoRouter(
           path: '/history',
           builder: (context, state) => const HistoryScreen(),
         ),
+        GoRoute(
+          path: '/calendar',
+          builder: (context, state) => const CalendarScreen(),
+        ),
+        GoRoute(
+          path: '/progress',
+          builder: (context, state) => const ProgressScreen(),
+        ),
+        GoRoute(
+          path: '/watchlist',
+          builder: (context, state) => const WatchlistScreen(),
+        ),
+        GoRoute(
+          path: '/recommended',
+          builder: (context, state) => const RecommendedScreen(),
+        ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
+        ),
+
+        // --- Detail Screens ---
         GoRoute(
           path: '/movie/:id',
           builder: (context, state) {
@@ -111,30 +137,6 @@ final GoRouter appRouter = GoRouter(
             final id = int.parse(state.pathParameters['id']!);
             return PersonDetailsScreen(personId: id);
           },
-        ),
-        GoRoute(
-          path: '/calendar',
-          builder: (context, state) => const CalendarScreen(),
-        ),
-        GoRoute(
-          path: '/progress',
-          builder: (context, state) => const ProgressScreen(), // Replace with your Progress screen widget
-        ),
-        GoRoute(
-          path: '/watchlist',
-          builder: (context, state) => const WatchlistScreen(), // Replace with your Watchlist screen widget
-        ),
-        GoRoute(
-          path: '/recommended',
-          builder: (context, state) => const RecommendedScreen(), // Replace with your Recommended screen widget
-        ),
-        GoRoute(
-          path: '/history',
-          builder: (context, state) => const HistoryScreen(), // Replace with your History screen widget
-        ),
-        GoRoute(
-          path: '/profile',
-          builder: (context, state) => const ProfileScreen(),
         ),
       ],
     ),

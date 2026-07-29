@@ -318,13 +318,21 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
                                         ? 'https://image.tmdb.org/t/p/w500$imagePath'
                                         : '';
 
-                                    // Mock air time / status overlay like Trakt (e.g. "6:30 PM • New")
-                                    final airTimes = ['5:30 PM', '6:30 PM', '7:30 PM', '9:00 PM', '10:15 PM'];
-                                    final overlayBadge = '${airTimes[index % airTimes.length]} • New';
+                                    // Dynamic Subtitle & Air Time Badge handling
+                                    String subtitleText;
+                                    String overlayBadge;
 
-                                    final subtitleText = mediaType == 'tv'
-                                        ? 'S1 • E${(index % 12) + 1} - Episode ${(index % 12) + 1}'
-                                        : 'Movie Release';
+                                    if (mediaType == 'tv') {
+                                      final season = item['season_number'] ?? 1;
+                                      final episode = item['episode_number'] ?? (index % 12) + 1;
+                                      final epName = item['episode_name'] ?? 'Episode $episode';
+                                      subtitleText = 'S$season • E$episode - $epName';
+                                      
+                                      overlayBadge = item['air_time'] ?? '9:30 AM • New';
+                                    } else {
+                                      subtitleText = 'Movie Release';
+                                      overlayBadge = item['air_time'] ?? '5:30 PM • New';
+                                    }
 
                                     return MovieCard(
                                       id: id,

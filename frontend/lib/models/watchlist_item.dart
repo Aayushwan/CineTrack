@@ -1,3 +1,5 @@
+// frontend/lib/models/watchlist_item.dart
+
 class WatchlistItem {
   final int id;
   final int userId;
@@ -5,6 +7,7 @@ class WatchlistItem {
   final String movieTitle;
   final String? posterPath;
   final String status;
+  final String mediaType; // 👈 Added
   final DateTime createdAt;
 
   WatchlistItem({
@@ -14,6 +17,7 @@ class WatchlistItem {
     required this.movieTitle,
     this.posterPath,
     required this.status,
+    this.mediaType = 'movie', // 👈 Defaults to 'movie' if unspecified
     required this.createdAt,
   });
 
@@ -26,6 +30,8 @@ class WatchlistItem {
       movieTitle: json['movie_title'] ?? 'Unknown',
       posterPath: json['poster_path'],
       status: json['status'] ?? 'watchlist',
+      // Safely checks 'media_type' or 'type', defaulting to 'movie'
+      mediaType: json['media_type'] ?? json['type'] ?? 'movie',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),

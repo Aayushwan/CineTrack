@@ -43,7 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadHomeData() async {
     try {
-      final trendingData = await ApiService.getTrendingMovies();
+      // 💡 Fetch trending movies AND TV shows together using type: 'all'
+      final trendingData = await ApiService.getTrendingMovies(type: 'all');
       final upcomingData = await ApiService.getUpcomingMedia();
 
       final trendingList = (trendingData['results'] as List<dynamic>?) ?? [];
@@ -95,10 +96,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return list.where((item) {
       final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
       final bool isTv = rawType == 'tv' ||
+          rawType == 'show' ||
           item['first_air_date'] != null ||
           (item['name'] != null && item['title'] == null);
 
-      // 1. Media Type Filter
+      // 1. Media Type Filter (Capsule bar)
       if (_selectedFilter == 'shows' && !isTv) return false;
       if (_selectedFilter == 'movies' && isTv) return false;
 
@@ -356,7 +358,10 @@ class _HomeScreenState extends State<HomeScreen> {
             final item = displayItems[index];
             final id = item['id'];
             final title = item['title'] ?? item['name'] ?? 'Untitled';
-            final mediaType = item['media_type'] ?? (item['name'] != null ? 'tv' : 'movie');
+            
+            // Normalize mediaType
+            final rawType = (item['media_type'] ?? '').toString().toLowerCase();
+            final mediaType = (rawType == 'tv' || rawType == 'show' || item['name'] != null) ? 'tv' : 'movie';
 
             final imagePath = isLandscape
                 ? (item['backdrop_path'] ?? item['poster_path'])
@@ -408,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 id: id,
                 title: title,
                 imageUrl: imageUrl,
-                mediaType: mediaType,
+                mediaType: mediaType, // 👈 Dynamically routes /tv/:id vs /movie/:id
                 isLandscape: isLandscape,
                 year: metadataLeftText,
                 rating: voteAverage.toDouble(),

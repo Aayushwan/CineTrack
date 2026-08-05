@@ -53,8 +53,8 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
 
   void _applyFilter() {
     _filteredItems = _allWatchlistItems.where((item) {
-      final mediaType = (item['media_type'] ?? 'movie').toString().toLowerCase();
-      final bool isTv = mediaType == 'tv';
+      final mediaType = (item['media_type'] ?? item['type'] ?? 'movie').toString().toLowerCase();
+      final bool isTv = mediaType == 'tv' || mediaType == 'show';
 
       // 1. Trakt Media Type Filter
       if (_selectedFilter == 'shows' && !isTv) return false;
@@ -310,22 +310,25 @@ class _WatchlistGridCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int movieId = item['movie_id'] ?? item['id'] ?? 0;
-    final String title = item['movie_title'] ?? item['title'] ?? 'Untitled';
-    final String mediaType = (item['media_type'] ?? 'movie').toString().toLowerCase();
+    final String title = item['movie_title'] ?? item['title'] ?? item['name'] ?? 'Untitled';
+    final String rawMediaType = (item['media_type'] ?? item['type'] ?? 'movie').toString().toLowerCase();
+    final bool isTv = rawMediaType == 'tv' || rawMediaType == 'show';
+    final String mediaTypeLabel = isTv ? 'tv' : 'movie';
+
     final String posterPath = item['poster_path'] ?? '';
     final String imageUrl = posterPath.isNotEmpty
         ? (posterPath.startsWith('http') ? posterPath : 'https://image.tmdb.org/t/p/w500$posterPath')
-        : 'https://via.placeholder.com/180x270';
+        : '';
 
     final String dateStr = item['release_date'] ?? item['first_air_date'] ?? item['year'] ?? '';
-    final String year = dateStr.length >= 4 ? dateStr.substring(0, 4) : '2025';
+    final String year = dateStr.length >= 4 ? dateStr.substring(0, 4) : '2026';
 
     final double ratingVal = (item['vote_average'] ?? item['rating'] ?? 0.0).toDouble();
     final String ratingStr = ratingVal > 0 ? ratingVal.toStringAsFixed(1) : '7.5';
 
     return GestureDetector(
       onTap: () {
-        if (mediaType == 'tv') {
+        if (isTv) {
           context.go('/tv/$movieId');
         } else {
           context.go('/movie/$movieId');
@@ -343,13 +346,17 @@ class _WatchlistGridCard extends StatelessWidget {
                     width: double.infinity,
                     height: double.infinity,
                     color: const Color(0xFF1E1E24),
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const Center(
-                        child: Icon(Icons.movie_rounded, color: Colors.white24, size: 40),
-                      ),
-                    ),
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const Center(
+                              child: Icon(Icons.movie_rounded, color: Colors.white24, size: 40),
+                            ),
+                          )
+                        : const Center(
+                            child: Icon(Icons.movie_rounded, color: Colors.white24, size: 40),
+                          ),
                   ),
                 ),
 
@@ -364,7 +371,7 @@ class _WatchlistGridCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      mediaType.toUpperCase(),
+                      mediaTypeLabel.toUpperCase(),
                       style: const TextStyle(
                         color: Color(0xFFA855F7),
                         fontSize: 9,

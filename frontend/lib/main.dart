@@ -1,3 +1,4 @@
+// frontend/lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -22,7 +23,7 @@ class CineTrackApp extends StatelessWidget {
           create: (_) => AuthProvider()..checkAuthStatus(),
         ),
         ChangeNotifierProvider(
-          create: (_) => WatchlistProvider(),
+          create: (_) => WatchlistProvider()..fetchWatchlist(), // 👈 Auto-fetches watchlist state on launch
         ),
       ],
       child: MaterialApp.router(
@@ -32,11 +33,11 @@ class CineTrackApp extends StatelessWidget {
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.dark,
-          scaffoldBackgroundColor: const Color(0xFF0F172A), // Slate 900
+          scaffoldBackgroundColor: const Color(0xFF09090B),
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFFE11D48), // Cinematic Red
-            secondary: Color(0xFFF59E0B), // Amber accent
-            surface: Color(0xFF1E293B), // Slate 800
+            primary: Color(0xFFA855F7), // Trakt Purple Accent
+            secondary: Color(0xFF38BDF8), // Cyan Accent
+            surface: Color(0xFF131316),
           ),
           textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
         ),

@@ -121,43 +121,33 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) {
             final movieIdStr = state.pathParameters['id']!;
             final movieId = int.parse(movieIdStr);
-            return MovieDetailsScreen(movieId: movieId);
+            return MovieDetailsScreen(
+              key: ValueKey('movie_$movieId'), // 👈 Forces reload when navigating movie-to-movie
+              movieId: movieId,
+            );
           },
         ),
         GoRoute(
           path: '/tv/:id',
           builder: (context, state) {
             final id = int.parse(state.pathParameters['id']!);
-            return ShowDetailsScreen(showId: id);
+            return ShowDetailsScreen(
+              key: ValueKey('tv_$id'), // 👈 Forces reload when navigating show-to-show
+              showId: id,
+            );
           },
         ),
         GoRoute(
           path: '/person/:id',
           builder: (context, state) {
             final id = int.parse(state.pathParameters['id']!);
-            return PersonDetailsScreen(personId: id);
+            return PersonDetailsScreen(
+              key: ValueKey('person_$id'), // 👈 Forces reload when navigating person-to-person
+              personId: id,
+            );
           },
         ),
       ],
     ),
   ],
 );
-
-// Lightweight placeholder widget while building out remaining screens
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const PlaceholderScreen({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF09090B),
-      body: Center(
-        child: Text(
-          '$title Screen Coming Soon',
-          style: const TextStyle(color: Colors.white54, fontSize: 18),
-        ),
-      ),
-    );
-  }
-}

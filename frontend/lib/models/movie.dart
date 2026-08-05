@@ -6,6 +6,7 @@ class Movie {
   final String? backdropPath;
   final double voteAverage;
   final String? releaseDate;
+  final String mediaType; // 👈 Added mediaType field
 
   Movie({
     required this.id,
@@ -15,10 +16,17 @@ class Movie {
     this.backdropPath,
     required this.voteAverage,
     this.releaseDate,
+    this.mediaType = 'movie', // 👈 Defaults to 'movie'
   });
 
   /// Factory constructor to parse JSON from TMDB API
   factory Movie.fromJson(Map<String, dynamic> json) {
+    // Detect TV show if explicit 'media_type' is 'tv' OR if TV-specific keys ('name', 'first_air_date') exist
+    final rawMediaType = json['media_type']?.toString().toLowerCase();
+    final isTv = rawMediaType == 'tv' || 
+                 json.containsKey('first_air_date') || 
+                 (json.containsKey('name') && !json.containsKey('title'));
+
     return Movie(
       id: json['id'] ?? 0,
       title: json['title'] ?? json['name'] ?? 'Untitled',
@@ -27,6 +35,7 @@ class Movie {
       backdropPath: json['backdrop_path'],
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
       releaseDate: json['release_date'] ?? json['first_air_date'],
+      mediaType: isTv ? 'tv' : 'movie',
     );
   }
 

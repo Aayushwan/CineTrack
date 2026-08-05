@@ -1,8 +1,8 @@
-# backend/app/routers/history.py
-from datetime import datetime
-from typing import List, Optional, Any
+from datetime import datetime, timezone
+from typing import List, Optional, Any, Sequence
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.history import WatchHistory, ShowProgress
@@ -14,9 +14,9 @@ router = APIRouter(prefix="/user", tags=["User Activity & History"])
 
 
 @router.post("/history", status_code=status.HTTP_201_CREATED)
-def log_watch_history(
+async def log_watch_history(
     item: HistoryCreate, 
-    db: Session = Depends(get_db), 
+    db: AsyncSession = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
     new_entry = WatchHistory(
@@ -24,57 +24,59 @@ def log_watch_history(
         movie_id=item.movie_id,
         media_type=item.media_type,
         title=item.title,
-        subtitle=item.subtitle,
         poster_path=item.poster_path,
-        user_rating=item.user_rating,
-        runtime_minutes=item.runtime_minutes,
-        watched_at=datetime.utcnow()
+        watched_at=datetime.now(timezone.utc)
     )
     db.add(new_entry)
-    db.commit()
-    db.refresh(new_entry)
-    return {"message": "Logged successfully", "id": getattr(new_entry, "id")}
+    await db.commit()
+    await db.refresh(new_entry)
+    return {"message": "Logged successfully", "id": new_entry.id}
 
 
 @router.get("/history")
-def get_watch_history(
+async def get_watch_history(
     media_type: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(WatchHistory).filter(WatchHistory.user_id == current_user.id)
+    stmt = select(WatchHistory).where(WatchHistory.user_id == current_user.id)
     
     if media_type and media_type.lower() in ["movie", "tv"]:
-        query = query.filter(WatchHistory.media_type == media_type.lower())
+        stmt = stmt.where(WatchHistory.media_type == media_type.lower())
 
-    history = query.order_by(WatchHistory.watched_at.desc()).all()
+    stmt = stmt.order_by(WatchHistory.watched_at.desc())
+    
+    result = await db.scalars(stmt)
+    history = result.all()
     
     return [
         {
-            "id": getattr(h, "movie_id"),
-            "title": getattr(h, "title"),
-            "subtitle": getattr(h, "subtitle"),
-            "type": "Movie" if str(getattr(h, "media_type", "")) == "movie" else "Show",
-            "poster": f"https://image.tmdb.org/t/p/w500{getattr(h, 'poster_path')}" if getattr(h, "poster_path") else "",
-            "watchedDate": getattr(h, "watched_at").strftime("%b %d, %Y") if getattr(h, "watched_at") else "",
-            "watchedTime": getattr(h, "watched_at").strftime("%I:%M %p") if getattr(h, "watched_at") else "",
-            "userRating": getattr(h, "user_rating") or 0.0,
+            "id": h.movie_id,
+            "title": h.title,
+            "subtitle": None,
+            "type": "Movie" if str(h.media_type or "") == "movie" else "Show",
+            "poster": f"https://image.tmdb.org/t/p/w500{h.poster_path}" if h.poster_path else "",
+            "watchedDate": h.watched_at.strftime("%b %d, %Y") if h.watched_at else "",
+            "watchedTime": h.watched_at.strftime("%I:%M %p") if h.watched_at else "",
+            "userRating": 0.0,
         }
         for h in history
     ]
 
 
 @router.post("/progress/episode")
-def update_show_progress(
+async def update_show_progress(
     progress: EpisodeProgressUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    record = db.query(ShowProgress).filter(
+    stmt = select(ShowProgress).where(
         ShowProgress.user_id == current_user.id,
         ShowProgress.show_id == progress.show_id,
         ShowProgress.season == progress.season
-    ).first()
+    )
+    result = await db.scalars(stmt)
+    record = result.first()
 
     if not record:
         record = ShowProgress(
@@ -87,35 +89,37 @@ def update_show_progress(
         )
         db.add(record)
     else:
-        current_episodes = int(getattr(record, "watched_episodes", 0))
+        current_episodes = record.watched_episodes or 0
         new_count = min(current_episodes + progress.increment, progress.total_episodes)
-        setattr(record, "watched_episodes", new_count)
+        record.watched_episodes = new_count
 
-    db.commit()
+    await db.commit()
     return {
-        "title": getattr(record, "title"),
-        "watchedEpisodes": getattr(record, "watched_episodes"),
-        "totalEpisodes": getattr(record, "total_episodes")
+        "title": record.title,
+        "watchedEpisodes": record.watched_episodes,
+        "totalEpisodes": record.total_episodes
     }
 
 
 @router.get("/profile/stats")
-def get_profile_analytics(
-    db: Session = Depends(get_db),
+async def get_profile_analytics(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    all_history = db.query(WatchHistory).filter(WatchHistory.user_id == current_user.id).all()
+    stmt = select(WatchHistory).where(WatchHistory.user_id == current_user.id)
+    result = await db.scalars(stmt)
+    all_history = result.all()
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     month_history = [
         h for h in all_history 
-        if getattr(h, "watched_at") and getattr(h, "watched_at").year == now.year and getattr(h, "watched_at").month == now.month
+        if h.watched_at and h.watched_at.year == now.year and h.watched_at.month == now.month
     ]
 
-    def calculate_stats(entries: List[Any]):
-        total_minutes = sum(int(getattr(e, "runtime_minutes", 120) or 120) for e in entries)
-        movies_count = len([e for e in entries if str(getattr(e, "media_type", "")) == "movie"])
-        episodes_count = len([e for e in entries if str(getattr(e, "media_type", "")) == "tv"])
+    def calculate_stats(entries: Sequence[Any]):
+        total_minutes = len(entries) * 120
+        movies_count = len([e for e in entries if str(e.media_type or "") == "movie"])
+        episodes_count = len([e for e in entries if str(e.media_type or "") == "tv"])
         
         hours = total_minutes // 60
         mins = total_minutes % 60

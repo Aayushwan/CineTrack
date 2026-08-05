@@ -28,9 +28,10 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
   Future<void> _loadReleasesData() async {
     try {
       final results = await Future.wait([
-        ApiService.getDiscoverMedia(category: 'releases', page: 1),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2),
-        ApiService.getDiscoverMedia(category: 'releases', page: 3),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv'),
         ApiService.getUpcomingMedia(),
       ]);
 
@@ -141,7 +142,7 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFE11D48)))
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFFA855F7)))
             : _errorMessage.isNotEmpty
                 ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.redAccent)))
                 : SingleChildScrollView(
@@ -149,7 +150,7 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🗓️ 1. Trakt.tv Style Week Strip Container
+                        // 🗓️ 1. Week Strip Container
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 16.0),
                           padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
@@ -192,7 +193,7 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
                               ),
                               const SizedBox(height: 8),
 
-                              // 7 Days Strip Row with Badges (+19, +7, etc.)
+                              // 7 Days Strip Row
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                                 children: weekDays.map((date) {
@@ -282,7 +283,6 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Date Header (e.g., "July 28th, 2026")
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
                                   child: Text(
@@ -295,14 +295,13 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
                                   ),
                                 ),
 
-                                // Grid of Landscape Cards for this specific date
                                 GridView.builder(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
                                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                                     maxCrossAxisExtent: 260,
-                                    childAspectRatio: 1.25, // Landscape 16:9 ratio
+                                    childAspectRatio: 1.25,
                                     crossAxisSpacing: 14,
                                     mainAxisSpacing: 18,
                                   ),
@@ -311,23 +310,28 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
                                     final item = items[index];
                                     final id = item['id'];
                                     final title = item['title'] ?? item['name'] ?? 'Untitled';
-                                    final mediaType = item['media_type'] ?? (item['name'] != null ? 'tv' : 'movie');
+                                    
+                                    // Normalize media type
+                                    final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
+                                    final bool isTv = rawType == 'tv' ||
+                                        rawType == 'show' ||
+                                        item['first_air_date'] != null ||
+                                        (item['name'] != null && item['title'] == null);
+                                    final mediaType = isTv ? 'tv' : 'movie';
 
                                     final imagePath = item['backdrop_path'] ?? item['poster_path'];
                                     final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
                                         ? 'https://image.tmdb.org/t/p/w500$imagePath'
                                         : '';
 
-                                    // Dynamic Subtitle & Air Time Badge handling
                                     String subtitleText;
                                     String overlayBadge;
 
-                                    if (mediaType == 'tv') {
+                                    if (isTv) {
                                       final season = item['season_number'] ?? 1;
                                       final episode = item['episode_number'] ?? (index % 12) + 1;
                                       final epName = item['episode_name'] ?? 'Episode $episode';
                                       subtitleText = 'S$season • E$episode - $epName';
-                                      
                                       overlayBadge = item['air_time'] ?? '9:30 AM • New';
                                     } else {
                                       subtitleText = 'Movie Release';
@@ -338,7 +342,7 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
                                       id: id,
                                       title: title,
                                       imageUrl: imageUrl,
-                                      mediaType: mediaType,
+                                      mediaType: mediaType, // 👈 Explicitly routes to /tv/:id vs /movie/:id
                                       isLandscape: true,
                                       subtitle: subtitleText,
                                       overlayLeftText: overlayBadge,

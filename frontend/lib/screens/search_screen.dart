@@ -112,14 +112,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
       final bool isTv = !isPerson &&
           (rawMediaType == 'tv' ||
+              rawMediaType == 'show' ||
               item['first_air_date'] != null ||
               (item['name'] != null && item['title'] == null));
 
-      final bool isMovie = !isPerson &&
-          !isTv &&
-          (rawMediaType == 'movie' ||
-              item['title'] != null ||
-              item['release_date'] != null);
+      final bool isMovie = !isPerson && !isTv;
 
       // 1. Trakt Media Filter Selection (Media, Shows, Movies, People)
       if (_selectedFilter == 'movies' && !isMovie) return false;
@@ -349,10 +346,12 @@ class _SearchScreenState extends State<SearchScreen> {
 
                                   final bool isTv = !isPerson &&
                                       (rawMediaType == 'tv' ||
+                                          rawMediaType == 'show' ||
                                           item['first_air_date'] != null ||
                                           (item['name'] != null && item['title'] == null));
 
                                   final bool isMovie = !isPerson && !isTv;
+                                  final String badgeText = isPerson ? 'PERSON' : (isTv ? 'TV' : 'MOVIE');
 
                                   return GestureDetector(
                                     onTap: () {
@@ -368,34 +367,61 @@ class _SearchScreenState extends State<SearchScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Expanded(
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(12),
-                                              color: const Color(0xFF1E293B),
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(12),
-                                              child: imageUrl.isNotEmpty
-                                                  ? Image.network(
-                                                      imageUrl,
-                                                      fit: BoxFit.cover,
-                                                      width: double.infinity,
-                                                      errorBuilder: (context, error, stackTrace) => Center(
-                                                        child: Icon(
-                                                          isPerson ? Icons.person_rounded : Icons.movie_rounded,
-                                                          color: Colors.white24,
-                                                          size: 40,
+                                          child: Stack(
+                                            children: [
+                                              Container(
+                                                width: double.infinity,
+                                                height: double.infinity,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  color: const Color(0xFF1E293B),
+                                                ),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  child: imageUrl.isNotEmpty
+                                                      ? Image.network(
+                                                          imageUrl,
+                                                          fit: BoxFit.cover,
+                                                          width: double.infinity,
+                                                          errorBuilder: (context, error, stackTrace) => Center(
+                                                            child: Icon(
+                                                              isPerson ? Icons.person_rounded : Icons.movie_rounded,
+                                                              color: Colors.white24,
+                                                              size: 40,
+                                                            ),
+                                                          ),
+                                                        )
+                                                      : Center(
+                                                          child: Icon(
+                                                            isPerson ? Icons.person_rounded : Icons.movie_rounded,
+                                                            color: Colors.white24,
+                                                            size: 40,
+                                                          ),
                                                         ),
-                                                      ),
-                                                    )
-                                                  : Center(
-                                                      child: Icon(
-                                                        isPerson ? Icons.person_rounded : Icons.movie_rounded,
-                                                        color: Colors.white24,
-                                                        size: 40,
-                                                      ),
+                                                ),
+                                              ),
+
+                                              // 🏷️ Media Type Tag Badge
+                                              Positioned(
+                                                top: 6,
+                                                left: 6,
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black.withValues(alpha: 0.75),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    badgeText,
+                                                    style: const TextStyle(
+                                                      color: Color(0xFFA855F7),
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.bold,
                                                     ),
-                                            ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                         const SizedBox(height: 6),

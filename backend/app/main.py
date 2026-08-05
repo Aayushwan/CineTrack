@@ -11,16 +11,18 @@ from app.routers.auth import router as auth_router
 from app.routers.media import router as media_router
 from app.routers.watchlist import router as watchlist_router
 from app.routers.reviews import router as reviews_router
-from app.routers.history import router as history_router  # 👈 1. Import history router
+from app.routers.history import router as history_router
 
-# Model Imports (Ensures metadata is registered before create_all runs)
+# Model Imports (Importing all models ensures Base.metadata detects all tables)
+import app.models.user
+import app.models.watchlist
 import app.models.review
-import app.models.history  # 👈 2. Import history models
+import app.models.history
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB tables
+    # Initialize DB tables on startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
@@ -42,9 +44,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Allow any localhost/127.0.0.1 port dynamically for Flutter Web development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,7 +58,7 @@ app.include_router(auth_router)
 app.include_router(media_router)
 app.include_router(watchlist_router)
 app.include_router(reviews_router)
-app.include_router(history_router)  # 👈 3. Include history router
+app.include_router(history_router)
 
 
 @app.get("/", tags=["Health Check"])

@@ -44,9 +44,9 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
 
     try {
       final results = await Future.wait([
-        ApiService.getDiscoverMedia(category: 'trending', page: 1),
-        ApiService.getDiscoverMedia(category: 'trending', page: 2),
-        ApiService.getDiscoverMedia(category: 'trending', page: 3),
+        ApiService.getDiscoverMedia(category: 'trending', page: 1, type: 'all'),
+        ApiService.getDiscoverMedia(category: 'trending', page: 2, type: 'all'),
+        ApiService.getDiscoverMedia(category: 'trending', page: 3, type: 'all'),
       ]);
 
       List<dynamic> combined = [];
@@ -92,6 +92,7 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
       final data = await ApiService.getDiscoverMedia(
         category: 'trending',
         page: nextPage,
+        type: 'all',
       );
       final newItems = (data['results'] as List<dynamic>?) ?? [];
 
@@ -144,7 +145,7 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
       body: SafeArea(
         child: _isLoadingInitial
             ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFFE11D48)),
+                child: CircularProgressIndicator(color: Color(0xFFA855F7)),
               )
             : _errorMessage.isNotEmpty
                 ? Center(
@@ -154,8 +155,8 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
                     ),
                   )
                 : RefreshIndicator(
-                    color: const Color(0xFFE11D48),
-                    backgroundColor: const Color(0xFF1E293B),
+                    color: const Color(0xFFA855F7),
+                    backgroundColor: const Color(0xFF131316),
                     onRefresh: _fetchInitialData,
                     child: GridView.builder(
                       controller: _scrollController,
@@ -173,7 +174,7 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
                             child: Padding(
                               padding: EdgeInsets.all(16.0),
                               child: CircularProgressIndicator(
-                                color: Color(0xFFE11D48),
+                                color: Color(0xFFA855F7),
                                 strokeWidth: 2.5,
                               ),
                             ),
@@ -183,7 +184,14 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
                         final item = _items[index];
                         final id = item['id'];
                         final title = item['title'] ?? item['name'] ?? 'Untitled';
-                        final mediaType = item['media_type'] ?? (item['name'] != null ? 'tv' : 'movie');
+                        
+                        // Normalize mediaType to 'tv' or 'movie'
+                        final rawType = (item['media_type'] ?? '').toString().toLowerCase();
+                        final bool isTv = rawType == 'tv' ||
+                            rawType == 'show' ||
+                            item['first_air_date'] != null ||
+                            (item['name'] != null && item['title'] == null);
+                        final mediaType = isTv ? 'tv' : 'movie';
                         
                         final posterPath = item['poster_path'];
                         final posterUrl = (posterPath != null && posterPath.toString().trim().isNotEmpty)
@@ -198,7 +206,7 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
                           id: id,
                           title: title,
                           imageUrl: posterUrl,
-                          mediaType: mediaType,
+                          mediaType: mediaType, // 👈 Ensures dynamic routing to /tv/:id vs /movie/:id
                           isLandscape: false,
                           year: yearStr,
                           rating: voteAverage.toDouble(),

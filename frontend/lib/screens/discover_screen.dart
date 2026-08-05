@@ -20,7 +20,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  String _selectedFilter = 'media';
+  String _selectedFilter = 'media'; // 'media', 'shows', 'movies'
   String _selectedGenre = 'All';
   String _selectedStatus = 'All';
   String _selectedDecade = 'All';
@@ -36,13 +36,26 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     _loadDiscoverData();
   }
 
+  // Maps capsule bar filter to API type parameter ('movie' or 'tv')
+  String get _apiMediaType {
+    if (_selectedFilter == 'shows') return 'tv';
+    return 'movie';
+  }
+
   Future<void> _loadDiscoverData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
     try {
+      final targetType = _apiMediaType;
+
       final results = await Future.wait([
-        ApiService.getDiscoverMedia(category: 'trending'),
-        ApiService.getDiscoverMedia(category: 'releases'),
-        ApiService.getDiscoverMedia(category: 'anticipated'),
-        ApiService.getDiscoverMedia(category: 'popular'),
+        ApiService.getDiscoverMedia(category: 'trending', type: targetType),
+        ApiService.getDiscoverMedia(category: 'releases', type: targetType),
+        ApiService.getDiscoverMedia(category: 'anticipated', type: targetType),
+        ApiService.getDiscoverMedia(category: 'popular', type: targetType),
       ]);
 
       if (mounted) {
@@ -67,7 +80,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   List<dynamic> _filterList(List<dynamic> list) {
     return list.where((item) {
       final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
-      final bool isTv = rawType == 'tv' || item['first_air_date'] != null || item['name'] != null;
+      final bool isTv = rawType == 'tv' ||
+          rawType == 'show' ||
+          item['first_air_date'] != null ||
+          (item['name'] != null && item['title'] == null);
 
       if (_selectedFilter == 'shows' && !isTv) return false;
       if (_selectedFilter == 'movies' && isTv) return false;
@@ -130,7 +146,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   TraktFilterBar(
                     selectedFilter: _selectedFilter,
                     showPeople: false,
-                    onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
+                    onFilterChanged: (filter) {
+                      if (_selectedFilter != filter) {
+                        setState(() => _selectedFilter = filter);
+                        _loadDiscoverData(); // 💡 Re-fetch TMDB API data for TV or Movie specifically
+                      }
+                    },
                   ),
                   const SizedBox(width: 8),
                   IconButton(
@@ -255,7 +276,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           final item = displayItems[index];
           final id = item['id'];
           final title = item['title'] ?? item['name'] ?? 'Untitled';
-          final mediaType = item['media_type'] ?? (item['name'] != null ? 'tv' : 'movie');
+
+          // 💡 Dynamically resolve mediaType to 'tv' or 'movie'
+          final rawType = (item['media_type'] ?? '').toString().toLowerCase();
+          final mediaType = (rawType == 'tv' || rawType == 'show' || item['name'] != null) ? 'tv' : 'movie';
 
           final imagePath = isLandscape
               ? (item['backdrop_path'] ?? item['poster_path'])
@@ -276,7 +300,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               id: id,
               title: title,
               imageUrl: imageUrl,
-              mediaType: mediaType,
+              mediaType: mediaType, // 👈 Ensures dynamic routing to /tv/:id vs /movie/:id
               isLandscape: isLandscape,
               year: yearStr,
               rating: voteAverage.toDouble(),

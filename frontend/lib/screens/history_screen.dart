@@ -33,6 +33,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _fetchHistory();
   }
 
+  String? get _apiMediaType {
+    if (_selectedFilter == 'shows') return 'tv';
+    if (_selectedFilter == 'movies') return 'movie';
+    return null;
+  }
+
   Future<void> _fetchHistory() async {
     setState(() {
       _isLoading = true;
@@ -40,7 +46,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
 
     try {
-      final data = await ApiService.getWatchHistory();
+      final data = await ApiService.getWatchHistory(_apiMediaType);
       if (mounted) {
         setState(() {
           _historyLog = data;
@@ -61,7 +67,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<dynamic> get _filteredHistory {
     return _historyLog.where((item) {
       final String rawType = (item['type'] ?? item['media_type'] ?? '').toString().toLowerCase();
-      final bool isTv = rawType == 'show' || rawType == 'tv';
+      final bool isTv = rawType == 'show' || rawType == 'tv' || item['subtitle'] != null;
 
       // 1. Trakt Media Type Filter
       if (_selectedFilter == 'shows' && !isTv) return false;
@@ -131,7 +137,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── STICKY TOP HEADER BAR (REMAINS VISIBLE WHEN SCROLLING) ────────
+            // ── STICKY TOP HEADER BAR ──────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Row(
@@ -160,7 +166,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   TraktFilterBar(
                     selectedFilter: _selectedFilter,
                     showPeople: false,
-                    onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
+                    onFilterChanged: (filter) {
+                      if (_selectedFilter != filter) {
+                        setState(() => _selectedFilter = filter);
+                        _fetchHistory();
+                      }
+                    },
                   ),
                   const SizedBox(width: 8),
 
@@ -231,8 +242,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 itemBuilder: (context, index) {
                                   final item = filtered[index];
                                   final int id = item['movie_id'] ?? item['id'] ?? 0;
+                                  final String title = item['movie_title'] ?? item['title'] ?? 'Untitled';
                                   final String rawType = (item['type'] ?? item['media_type'] ?? '').toString().toLowerCase();
-                                  final bool isShow = rawType == 'show' || rawType == 'tv';
+                                  final bool isShow = rawType == 'show' || rawType == 'tv' || item['subtitle'] != null;
 
                                   final String posterUrl = item['poster'] ?? item['poster_path'] ?? '';
                                   final String imageUrl = posterUrl.isNotEmpty
@@ -277,7 +289,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         ),
                                       ),
                                       title: Text(
-                                        item['title'] ?? 'Untitled',
+                                        title,
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
@@ -301,10 +313,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                           const SizedBox(height: 6),
                                           Row(
                                             children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white10,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  isShow ? 'TV' : 'MOVIE',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFFA855F7),
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
                                               const Icon(
                                                 Icons.access_time_rounded,
                                                 color: Colors.white38,
-                                                size: 14,
+                                                size: 13,
                                               ),
                                               const SizedBox(width: 4),
                                               Text(

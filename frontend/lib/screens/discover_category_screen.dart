@@ -30,6 +30,12 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
   // Active Trakt Filter: 'media', 'shows', 'movies'
   String _selectedFilter = 'media';
 
+  // Maps active capsule filter to API target type parameter ('movie' or 'tv')
+  String get _apiMediaType {
+    if (_selectedFilter == 'shows') return 'tv';
+    return 'movie';
+  }
+
   String get _title {
     switch (widget.category.toLowerCase()) {
       case 'anticipated':
@@ -56,20 +62,24 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
     super.dispose();
   }
 
-  // Fetch TMDB pages 1 through 5 simultaneously to yield 100 cards on load
+  // Fetch TMDB pages 1 through 5 simultaneously based on selected target type
   Future<void> _fetchInitialData() async {
     setState(() {
       _isLoadingInitial = true;
       _errorMessage = '';
+      _currentPage = 5;
+      _hasMore = true;
     });
 
     try {
+      final targetType = _apiMediaType;
+
       final results = await Future.wait([
-        ApiService.getDiscoverMedia(category: widget.category, page: 1),
-        ApiService.getDiscoverMedia(category: widget.category, page: 2),
-        ApiService.getDiscoverMedia(category: widget.category, page: 3),
-        ApiService.getDiscoverMedia(category: widget.category, page: 4),
-        ApiService.getDiscoverMedia(category: widget.category, page: 5),
+        ApiService.getDiscoverMedia(category: widget.category, page: 1, type: targetType),
+        ApiService.getDiscoverMedia(category: widget.category, page: 2, type: targetType),
+        ApiService.getDiscoverMedia(category: widget.category, page: 3, type: targetType),
+        ApiService.getDiscoverMedia(category: widget.category, page: 4, type: targetType),
+        ApiService.getDiscoverMedia(category: widget.category, page: 5, type: targetType),
       ]);
 
       List<dynamic> combined = [];
@@ -115,6 +125,7 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
       final data = await ApiService.getDiscoverMedia(
         category: widget.category,
         page: nextPage,
+        type: _apiMediaType,
       );
       final newItems = (data['results'] as List<dynamic>?) ?? [];
 
@@ -140,11 +151,10 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
 
   // Filter items based on active Trakt filter
   List<dynamic> get _filteredItems {
-    if (_selectedFilter == 'media') return _items;
-
     return _items.where((item) {
       final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
       final bool isTv = rawType == 'tv' ||
+          rawType == 'show' ||
           item['first_air_date'] != null ||
           (item['name'] != null && item['title'] == null);
 
@@ -191,7 +201,12 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
             TraktFilterBar(
               selectedFilter: _selectedFilter,
               showPeople: false,
-              onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
+              onFilterChanged: (filter) {
+                if (_selectedFilter != filter) {
+                  setState(() => _selectedFilter = filter);
+                  _fetchInitialData(); // 💡 Re-fetch pages 1-5 for selected media type
+                }
+              },
             ),
 
             const SizedBox(height: 12),
@@ -246,7 +261,10 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
                                   final item = filteredList[index];
                                   final id = item['id'];
                                   final title = item['title'] ?? item['name'] ?? 'Untitled';
-                                  final mediaType = item['media_type'] ?? (item['name'] != null ? 'tv' : 'movie');
+                                  
+                                  // Normalize mediaType to 'tv' or 'movie'
+                                  final rawType = (item['media_type'] ?? '').toString().toLowerCase();
+                                  final mediaType = (rawType == 'tv' || rawType == 'show' || item['name'] != null) ? 'tv' : 'movie';
 
                                   final posterPath = item['poster_path'];
                                   final imageUrl = (posterPath != null && posterPath.toString().trim().isNotEmpty)
@@ -261,7 +279,7 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
                                     id: id,
                                     title: title,
                                     imageUrl: imageUrl,
-                                    mediaType: mediaType,
+                                    mediaType: mediaType, // 👈 Dynamically routes /tv/:id vs /movie/:id
                                     isLandscape: false,
                                     year: yearStr,
                                     rating: voteAverage.toDouble(),

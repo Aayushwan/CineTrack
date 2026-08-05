@@ -1,6 +1,8 @@
 // frontend/lib/screens/show_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../providers/watchlist_provider.dart';
 import '../services/api_service.dart';
 
 class ShowDetailsScreen extends StatefulWidget {
@@ -48,7 +50,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       return const Scaffold(
         backgroundColor: Color(0xFF09090B),
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFFE11D48)),
+          child: CircularProgressIndicator(color: Color(0xFFA855F7)),
         ),
       );
     }
@@ -90,6 +92,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     final backdropUrl = backdropPath != null
         ? 'https://image.tmdb.org/t/p/w1280$backdropPath'
         : (posterPath != null ? 'https://image.tmdb.org/t/p/w500$posterPath' : '');
+
+    final watchlistProvider = Provider.of<WatchlistProvider>(context);
+    final currentStatus = watchlistProvider.getMediaStatus(widget.showId);
+    final isWatchlist = currentStatus == 'watchlist';
+    final isFavorite = currentStatus == 'favorite';
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
@@ -152,7 +159,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE11D48),
+                          color: const Color(0xFFA855F7),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
@@ -182,6 +189,87 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           style: const TextStyle(color: Colors.white60, fontSize: 13),
                         ),
                       ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ⚡ Watchlist & Favorite Quick-Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            if (isWatchlist) {
+                              await watchlistProvider.removeFromWatchlist(widget.showId);
+                            } else {
+                              await watchlistProvider.addToWatchlist(
+                                movieId: widget.showId,
+                                movieTitle: name,
+                                posterPath: posterPath,
+                                status: 'watchlist',
+                                mediaType: 'tv', // 👈 Explicitly passing 'tv'
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            isWatchlist ? Icons.bookmark_added_rounded : Icons.bookmark_add_outlined,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          label: Text(
+                            isWatchlist ? 'In Watchlist' : 'Watchlist',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isWatchlist ? const Color(0xFFA855F7) : const Color(0xFF131316),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(color: Colors.white10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            if (isFavorite) {
+                              await watchlistProvider.removeFromWatchlist(widget.showId);
+                            } else {
+                              await watchlistProvider.addToWatchlist(
+                                movieId: widget.showId,
+                                movieTitle: name,
+                                posterPath: posterPath,
+                                status: 'favorite',
+                                mediaType: 'tv', // 👈 Explicitly passing 'tv'
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                            color: isFavorite ? Colors.redAccent : Colors.white,
+                            size: 18,
+                          ),
+                          label: Text(
+                            isFavorite ? 'Favorited' : 'Favorite',
+                            style: TextStyle(
+                              color: isFavorite ? Colors.redAccent : Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF131316),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: isFavorite ? Colors.redAccent.withValues(alpha: 0.5) : Colors.white10,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),

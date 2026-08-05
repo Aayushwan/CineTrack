@@ -1,4 +1,3 @@
-// frontend/lib/providers/auth_provider.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
@@ -14,17 +13,21 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get username => _username;
 
-  /// Check if a JWT token already exists on app startup
+  /// Check if a valid, non-expired JWT token exists on app startup
   Future<void> checkAuthStatus() async {
     final token = await ApiService.getToken();
     
-    if (token != null && token.isNotEmpty) {
+    if (token != null && token.isNotEmpty && !_isTokenExpired(token)) {
       _isAuthenticated = true;
       // 1. Try local storage first
       _username = await ApiService.getStoredUsername();
       // 2. Fallback to decoding token if missing
       _username ??= _parseUsernameFromToken(token);
     } else {
+      // Token is missing or expired -> clear stored credentials
+      if (token != null && token.isNotEmpty) {
+        await ApiService.clearToken();
+      }
       _isAuthenticated = false;
       _username = null;
     }
@@ -41,13 +44,13 @@ class AuthProvider extends ChangeNotifier {
       await ApiService.register(username, email, password);
       _username = username;
       await ApiService.saveUsername(username);
+      _setLoading(false);
       // Auto-login after registration
       return await login(email, password);
     } catch (e) {
       _setError(e.toString().replaceAll('Exception: ', ''));
-      return false;
-    } finally {
       _setLoading(false);
+      return false;
     }
   }
 
@@ -60,9 +63,9 @@ class AuthProvider extends ChangeNotifier {
       final response = await ApiService.login(email, password);
       _isAuthenticated = true;
 
-      // Extract username from login response or email name prefix
+      // Extract username from login response or token claims
       String? extractedName;
-      if (response['username'] != null) { // 👈 Removed unnecessary 'response != null' check
+      if (response['username'] != null) {
         extractedName = response['username'];
       } else {
         final token = await ApiService.getToken();
@@ -71,7 +74,7 @@ class AuthProvider extends ChangeNotifier {
         }
       }
 
-      // Fallback to email username if still not found
+      // Fallback to email prefix if still missing
       extractedName ??= email.split('@')[0];
 
       _username = extractedName;
@@ -93,6 +96,28 @@ class AuthProvider extends ChangeNotifier {
     _isAuthenticated = false;
     _username = null;
     notifyListeners();
+  }
+
+  /// Check if the JWT token's 'exp' claim is past the current UTC time
+  bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final resp = utf8.decode(base64Url.decode(normalized));
+      final Map<String, dynamic> payloadMap = json.decode(resp);
+
+      if (payloadMap.containsKey('exp')) {
+        final exp = payloadMap['exp'] as int;
+        final expiryDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000, isUtc: true);
+        return DateTime.now().toUtc().isAfter(expiryDate);
+      }
+      return false;
+    } catch (_) {
+      return true;
+    }
   }
 
   /// Helper to decode JWT payload safely and extract display username

@@ -34,18 +34,18 @@ class MovieCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 💡 Normalize mediaType check ('tv' or 'show')
+    final normalizedType = mediaType.toLowerCase();
+    final isTvShow = normalizedType == 'tv' || normalizedType == 'show';
+    final targetType = isTvShow ? 'tv' : 'movie';
+    final targetRoute = '/$targetType/$id';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: GestureDetector(
-            onTap: () {
-              if (mediaType == 'tv') {
-                context.go('/tv/$id');
-              } else {
-                context.go('/movie/$id');
-              }
-            },
+            onTap: () => context.go(targetRoute),
             child: Stack(
               children: [
                 // 1. Poster / Backdrop Image
@@ -133,7 +133,7 @@ class MovieCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress,
                         backgroundColor: Colors.white24,
-                        color: Colors.white,
+                        color: const Color(0xFFA855F7),
                         minHeight: 3,
                       ),
                     ),
@@ -157,9 +157,10 @@ class MovieCard extends StatelessWidget {
                         color: Colors.white,
                         size: 16,
                       ),
-                      color: const Color(0xFF1E293B),
+                      color: const Color(0xFF131316),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(color: Colors.white12),
                       ),
                       onSelected: (value) {
                         final watchlistProvider =
@@ -170,11 +171,13 @@ class MovieCard extends StatelessWidget {
                             movieId: id,
                             movieTitle: title,
                             posterPath: imageUrl,
+                            mediaType: targetType,
                             status: 'watchlist',
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Added "$title" to Watchlist'),
+                              backgroundColor: const Color(0xFF131316),
                               duration: const Duration(seconds: 2),
                             ),
                           );
@@ -183,11 +186,13 @@ class MovieCard extends StatelessWidget {
                             movieId: id,
                             movieTitle: title,
                             posterPath: imageUrl,
+                            mediaType: targetType,
                             status: 'favorite',
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Added "$title" to Favorites'),
+                              backgroundColor: const Color(0xFF131316),
                               duration: const Duration(seconds: 2),
                             ),
                           );
@@ -232,13 +237,7 @@ class MovieCard extends StatelessWidget {
 
         // Title
         GestureDetector(
-          onTap: () {
-            if (mediaType == 'tv') {
-              context.go('/tv/$id');
-            } else {
-              context.go('/movie/$id');
-            }
-          },
+          onTap: () => context.go(targetRoute),
           child: Text(
             title,
             maxLines: 1,
@@ -278,7 +277,7 @@ class MovieCard extends StatelessWidget {
               if (rating != null && rating! > 0)
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded, color: Colors.amber, size: 12),
+                    const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 12),
                     const SizedBox(width: 3),
                     Text(
                       rating!.toStringAsFixed(1),

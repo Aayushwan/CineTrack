@@ -35,13 +35,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
-  // Load releases across multiple pages
+  // Load movie AND TV releases across multiple pages
   Future<void> _loadCalendarData() async {
     try {
       final results = await Future.wait([
         ApiService.getUpcomingMedia(),
-        ApiService.getDiscoverMedia(category: 'releases', page: 1),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv'),
       ]);
 
       Map<String, List<dynamic>> tempMap = {};
@@ -171,7 +173,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return '${diff.abs()} days ago';
   }
 
-  // Ordinal Date Header (e.g., "July 31st, 2026")
+  // Ordinal Date Header (e.g., "August 5th, 2026")
   String _getFormattedHeaderDate(DateTime dt) {
     final List<String> months = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -218,7 +220,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFE11D48)))
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFFA855F7)))
             : _errorMessage.isNotEmpty
                 ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.redAccent)))
                 : SingleChildScrollView(
@@ -226,7 +228,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🗓️ 1. Trakt.tv Date Strip Card Container
+                        // 🗓️ 1. Date Strip Card Container
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 16.0),
                           padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
@@ -358,7 +360,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                         const SizedBox(height: 28),
 
-                        // 📅 2. Selected Date Header (e.g. "July 31st, 2026")
+                        // 📅 2. Selected Date Header
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),
                           child: Text(
@@ -396,7 +398,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 20.0),
                             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                               maxCrossAxisExtent: 260,
-                              childAspectRatio: 1.25, // Landscape 16:9 aspect ratio
+                              childAspectRatio: 1.25,
                               crossAxisSpacing: 14,
                               mainAxisSpacing: 18,
                             ),
@@ -405,7 +407,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               final item = selectedItems[index];
                               final id = item['id'];
                               final title = item['title'] ?? item['name'] ?? 'Untitled';
-                              final mediaType = item['media_type'] ?? (item['name'] != null ? 'tv' : 'movie');
+                              
+                              // Normalize media type
+                              final rawType = (item['media_type'] ?? '').toString().toLowerCase();
+                              final bool isTv = rawType == 'tv' ||
+                                  rawType == 'show' ||
+                                  item['first_air_date'] != null ||
+                                  (item['name'] != null && item['title'] == null);
+                              final mediaType = isTv ? 'tv' : 'movie';
 
                               final imagePath = item['backdrop_path'] ?? item['poster_path'];
                               final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
@@ -413,13 +422,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   : '';
 
                               final relativeBadge = _getRelativeDateText(_selectedDate);
-                              final subtitleText = mediaType == 'tv' ? 'TV Show' : 'Movie';
+                              final subtitleText = isTv ? 'TV Show' : 'Movie';
 
                               return MovieCard(
                                 id: id,
                                 title: title,
                                 imageUrl: imageUrl,
-                                mediaType: mediaType,
+                                mediaType: mediaType, // 👈 Explicitly routes to /tv/:id vs /movie/:id
                                 isLandscape: true,
                                 subtitle: subtitleText,
                                 overlayLeftText: relativeBadge,

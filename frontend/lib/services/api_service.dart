@@ -1,4 +1,3 @@
-// frontend/lib/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,16 +94,19 @@ class ApiService {
 
   // --- Movies & Media Endpoints (TMDB via FastAPI) ---
 
-  /// Fetch daily trending movies
-  static Future<Map<String, dynamic>> getTrendingMovies({int page = 1}) async {
+  /// Fetch daily trending media ('movie', 'tv', or 'all')
+  static Future<Map<String, dynamic>> getTrendingMovies({
+    int page = 1,
+    String type = 'movie',
+  }) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/movies/trending?page=$page'),
+      Uri.parse('$baseUrl/movies/trending?page=$page&type=$type'),
     );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Failed to load trending movies');
+      throw Exception('Failed to load trending content');
     }
   }
 
@@ -183,13 +185,15 @@ class ApiService {
     }
   }
 
-  // Fetch Discover Media by Category (Trending, Releases, Anticipated, Popular)
+  /// Fetch Discover Media by Category (Trending, Releases, Anticipated, Popular)
+  /// Pass [type] = 'tv' or 'movie' to load target media type
   static Future<Map<String, dynamic>> getDiscoverMedia({
     String category = 'trending',
     int page = 1,
+    String type = 'movie',
   }) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/movies/discover?category=$category&page=$page'),
+      Uri.parse('$baseUrl/movies/discover?category=$category&page=$page&type=$type'),
       headers: {'Content-Type': 'application/json'},
     );
 
@@ -202,14 +206,25 @@ class ApiService {
 
   // --- Watchlist Endpoints (JWT Protected) ---
 
-  /// Retrieve user's saved watchlist items
-  static Future<List<dynamic>> getWatchlist({String? status}) async {
+  /// Retrieve user's saved watchlist items with optional status and mediaType filters
+  static Future<List<dynamic>> getWatchlist({
+    String? status,
+    String? mediaType,
+  }) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
 
-    final uri = status != null
-        ? Uri.parse('$baseUrl/watchlist/?status=$status')
-        : Uri.parse('$baseUrl/watchlist/');
+    final Map<String, String> queryParams = {};
+    if (status != null && status.isNotEmpty) {
+      queryParams['status'] = status;
+    }
+    if (mediaType != null && mediaType.isNotEmpty) {
+      queryParams['media_type'] = mediaType;
+    }
+
+    final uri = Uri.parse('$baseUrl/watchlist/').replace(
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+    );
 
     final response = await http.get(
       uri,
@@ -226,7 +241,7 @@ class ApiService {
     }
   }
 
-  /// Add a movie to watchlist or update its status (JWT Protected)
+  /// Add a movie/show to watchlist or update its status (JWT Protected)
   static Future<void> addToWatchlist({
     required int movieId,
     required String movieTitle,
@@ -258,13 +273,25 @@ class ApiService {
     }
   }
 
-  /// Remove a movie from user's watchlist
-  static Future<void> removeFromWatchlist(int movieId) async {
+  /// Remove an item from user's watchlist with optional mediaType
+  static Future<void> removeFromWatchlist(
+    int movieId, {
+    String? mediaType,
+  }) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
 
+    final Map<String, String> queryParams = {};
+    if (mediaType != null && mediaType.isNotEmpty) {
+      queryParams['media_type'] = mediaType;
+    }
+
+    final uri = Uri.parse('$baseUrl/watchlist/$movieId').replace(
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+    );
+
     final response = await http.delete(
-      Uri.parse('$baseUrl/watchlist/$movieId'),
+      uri,
       headers: {
         'Authorization': 'Bearer $token',
       },
@@ -277,7 +304,7 @@ class ApiService {
 
   // --- Reviews Endpoints ---
 
-  /// Fetch all user reviews for a specific movie
+  /// Fetch all user reviews for a specific movie/show
   static Future<List<Review>> getMovieReviews(int movieId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/reviews/movie/$movieId'),
@@ -289,11 +316,11 @@ class ApiService {
     } else if (response.statusCode == 404) {
       return [];
     } else {
-      throw Exception('Failed to load movie reviews');
+      throw Exception('Failed to load reviews');
     }
   }
 
-  /// Submit a review for a movie (JWT protected)
+  /// Submit a review for a movie/show (JWT protected)
   static Future<bool> postReview({
     required int movieId,
     required double rating,

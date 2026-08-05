@@ -48,7 +48,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
       return const Scaffold(
         backgroundColor: Color(0xFF09090B),
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFFE11D48)),
+          child: CircularProgressIndicator(color: Color(0xFFA855F7)),
         ),
       );
     }
@@ -144,7 +144,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
                         const SizedBox(height: 6),
                         Text(
                           knownFor,
-                          style: const TextStyle(color: Color(0xFFE11D48), fontWeight: FontWeight.w600),
+                          style: const TextStyle(color: Color(0xFFA855F7), fontWeight: FontWeight.w600),
                         ),
                       ],
                       if (birthday.isNotEmpty) ...[
@@ -198,7 +198,7 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 180,
+                height: 185,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: credits.length,
@@ -206,7 +206,14 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
                     final item = credits[index];
                     final mediaId = item['id'];
                     final mediaTitle = item['title'] ?? item['name'] ?? 'Untitled';
-                    final mediaType = item['media_type'] ?? 'movie';
+                    
+                    // Normalize media type
+                    final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
+                    final bool isTv = rawType == 'tv' ||
+                        rawType == 'show' ||
+                        item['first_air_date'] != null ||
+                        (item['name'] != null && item['title'] == null);
+
                     final itemPoster = item['poster_path'];
                     final itemPosterUrl = itemPoster != null
                         ? 'https://image.tmdb.org/t/p/w185$itemPoster'
@@ -214,40 +221,66 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
 
                     return GestureDetector(
                       onTap: () {
-                        if (mediaType == 'tv') {
+                        if (isTv) {
                           context.go('/tv/$mediaId');
                         } else {
                           context.go('/movie/$mediaId');
                         }
                       },
                       child: Container(
-                        width: 100,
+                        width: 105,
                         margin: const EdgeInsets.only(right: 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: const Color(0xFF131316),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: itemPosterUrl.isNotEmpty
-                                      ? Image.network(
-                                          itemPosterUrl,
-                                          fit: BoxFit.cover,
-                                          width: double.infinity,
-                                          errorBuilder: (context, error, stackTrace) =>
-                                              const Center(
-                                            child: Icon(Icons.movie_rounded, color: Colors.white24),
-                                          ),
-                                        )
-                                      : const Center(
-                                          child: Icon(Icons.movie_rounded, color: Colors.white24),
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: const Color(0xFF131316),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: itemPosterUrl.isNotEmpty
+                                          ? Image.network(
+                                              itemPosterUrl,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              errorBuilder: (context, error, stackTrace) =>
+                                                  const Center(
+                                                child: Icon(Icons.movie_rounded, color: Colors.white24),
+                                              ),
+                                            )
+                                          : const Center(
+                                              child: Icon(Icons.movie_rounded, color: Colors.white24),
+                                            ),
+                                    ),
+                                  ),
+
+                                  // Top Left Media Badge (TV / MOVIE)
+                                  Positioned(
+                                    top: 4,
+                                    left: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.75),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        isTv ? 'TV' : 'MOVIE',
+                                        style: const TextStyle(
+                                          color: Color(0xFFA855F7),
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 6),

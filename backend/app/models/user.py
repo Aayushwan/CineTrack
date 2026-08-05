@@ -19,6 +19,14 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    # Relationships
-    history: Mapped[List[WatchHistory]] = relationship("WatchHistory", back_populates="user")
-    show_progress: Mapped[List[ShowProgress]] = relationship("ShowProgress", back_populates="user")
+    # Relationships with automatic cascading cleanup
+    history: Mapped[List[WatchHistory]] = relationship(
+        "WatchHistory", 
+        back_populates="user", 
+        cascade="all, delete-orphan"
+    )
+    show_progress: Mapped[List[ShowProgress]] = relationship(
+        "ShowProgress", 
+        back_populates="user", 
+        cascade="all, delete-orphan"
+    )

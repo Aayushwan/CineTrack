@@ -8,7 +8,7 @@ class WatchlistCreate(BaseModel):
     movie_title: str
     poster_path: Optional[str] = None
     status: str = "watchlist"
-    media_type: str = "movie"  # 👈 Added "movie" or "tv"
+    media_type: str = "movie"
 
 class WatchlistResponse(BaseModel):
     id: int

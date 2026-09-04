@@ -241,7 +241,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                                 itemBuilder: (context, index) {
                                   final item = filtered[index];
-                                  final int id = item['movie_id'] ?? item['id'] ?? 0;
+                                  final rawId = item['movie_id'] ?? item['id'] ?? 0;
+                                  final int id = int.tryParse(rawId.toString()) ?? 0;
                                   final String title = item['movie_title'] ?? item['title'] ?? 'Untitled';
                                   final String rawType = (item['type'] ?? item['media_type'] ?? '').toString().toLowerCase();
                                   final bool isShow = rawType == 'show' || rawType == 'tv' || item['subtitle'] != null;

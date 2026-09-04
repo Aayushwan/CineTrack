@@ -7,7 +7,7 @@ class WatchlistItem {
   final String movieTitle;
   final String? posterPath;
   final String status;
-  final String mediaType; // 👈 Added
+  final String mediaType;
   final DateTime createdAt;
 
   WatchlistItem({
@@ -17,20 +17,21 @@ class WatchlistItem {
     required this.movieTitle,
     this.posterPath,
     required this.status,
-    this.mediaType = 'movie', // 👈 Defaults to 'movie' if unspecified
+    this.mediaType = 'movie', 
     required this.createdAt,
   });
 
   /// Factory constructor to parse JSON from FastAPI Watchlist endpoint
   factory WatchlistItem.fromJson(Map<String, dynamic> json) {
     return WatchlistItem(
-      id: json['id'] ?? 0,
-      userId: json['user_id'] ?? 0,
-      movieId: json['movie_id'] ?? 0,
+      // Safely parse integers whether they arrive as Strings or Ints
+      id: json['id'] != null ? int.tryParse(json['id'].toString()) ?? 0 : 0,
+      userId: json['user_id'] != null ? int.tryParse(json['user_id'].toString()) ?? 0 : 0,
+      movieId: json['movie_id'] != null ? int.tryParse(json['movie_id'].toString()) ?? 0 : 0,
+      
       movieTitle: json['movie_title'] ?? 'Unknown',
       posterPath: json['poster_path'],
       status: json['status'] ?? 'watchlist',
-      // Safely checks 'media_type' or 'type', defaulting to 'movie'
       mediaType: json['media_type'] ?? json['type'] ?? 'movie',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])

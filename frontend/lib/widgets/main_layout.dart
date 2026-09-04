@@ -1,8 +1,6 @@
 // frontend/lib/widgets/main_layout.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
 
 class MainLayout extends StatefulWidget {
   final Widget child;
@@ -22,35 +20,26 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     final String currentRoute = GoRouterState.of(context).uri.toString();
-    final authProvider = Provider.of<AuthProvider>(context);
-    final String username = authProvider.username ?? 'User';
-    final String initial = username.isNotEmpty ? username[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       body: Row(
         children: [
-          // ─── 1. TRAKT-STYLE DUAL-STATE SIDEBAR ───────────────────────────
+          // ─── 1. TRAKT-STYLE FLOATING SIDEBAR ───────────────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             curve: Curves.fastOutSlowIn,
-            width: _isExpanded ? 240 : 68,
-            clipBehavior: Clip.hardEdge, // 👈 Prevents pixel overflow warnings
-            decoration: BoxDecoration(
-              color: const Color(0xFF131316),
-              border: Border(
-                right: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  width: 1,
-                ),
-              ),
+            width: _isExpanded ? 240 : 72,
+            clipBehavior: Clip.hardEdge,
+            decoration: const BoxDecoration(
+              color: Colors.transparent,
             ),
             child: Column(
               children: [
-                // ── Top Header: [≡] Toggle + Logo ─────────────────────────
+                // ── Top Header: Hamburger Menu ─────────────────────────
                 Container(
-                  height: 64,
-                  padding: EdgeInsets.symmetric(horizontal: _isExpanded ? 14 : 8),
+                  height: 80,
+                  padding: EdgeInsets.symmetric(horizontal: _isExpanded ? 16 : 0),
                   alignment: Alignment.center,
                   child: Row(
                     mainAxisAlignment: _isExpanded
@@ -58,28 +47,13 @@ class _MainLayoutState extends State<MainLayout> {
                         : MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
+                        icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
                         onPressed: () => setState(() => _isExpanded = !_isExpanded),
                         tooltip: _isExpanded ? 'Collapse Menu' : 'Expand Menu',
-                        splashRadius: 20,
+                        splashRadius: 24,
                       ),
                       if (_isExpanded) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFA855F7),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Icon(
-                            Icons.check_box_outlined,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12),
                         const Text(
                           'cinetrack',
                           style: TextStyle(
@@ -94,136 +68,91 @@ class _MainLayoutState extends State<MainLayout> {
                   ),
                 ),
 
-                const Divider(color: Colors.white12, height: 1),
-
-                // ── Navigation Menu Items ─────────────────────────────────
+                // ── Middle: Trakt Floating Pill Container (Non-Scrollable) ──
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: _isExpanded ? 8 : 4, // 👈 Tighter horizontal space when collapsed
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Search
-                        _SidebarNavItem(
-                          icon: Icons.search_rounded,
-                          label: 'Search',
-                          route: '/search',
-                          currentRoute: currentRoute,
-                          isExpanded: _isExpanded,
-                        ),
-
-                        // Home & Sub-items
-                        _SidebarNavItem(
-                          icon: Icons.home_rounded,
-                          label: 'Home',
-                          route: '/',
-                          currentRoute: currentRoute,
-                          isExpanded: _isExpanded,
-                          subItems: [
-                            _SubNavItem(label: 'Continue Watching', route: '/'),
-                            _SubNavItem(label: 'Calendar', route: '/calendar'),
-                            _SubNavItem(label: 'Recommended', route: '/recommended'),
-                          ],
-                        ),
-
-                        // Discover & Sub-items
-                        _SidebarNavItem(
-                          icon: Icons.auto_awesome_rounded,
-                          label: 'Discover',
-                          route: '/discover',
-                          currentRoute: currentRoute,
-                          isExpanded: _isExpanded,
-                          subItems: [
-                            _SubNavItem(label: 'Trending', route: '/discover/trending'),
-                            _SubNavItem(label: 'Releases', route: '/releases'),
-                            _SubNavItem(label: 'Anticipated', route: '/discover/anticipated'),
-                            _SubNavItem(label: 'Popular', route: '/discover/popular'),
-                          ],
-                        ),
-
-                        // Lists & Sub-items
-                        _SidebarNavItem(
-                          icon: Icons.format_list_bulleted_rounded,
-                          label: 'Lists',
-                          route: '/lists',
-                          currentRoute: currentRoute,
-                          isExpanded: _isExpanded,
-                          subItems: [
-                            _SubNavItem(label: 'Watchlist', route: '/watchlist'),
-                            _SubNavItem(label: 'My Lists', route: '/lists'),
-                          ],
-                        ),
-
-                        // History
-                        _SidebarNavItem(
-                          icon: Icons.access_time_rounded,
-                          label: 'History',
-                          route: '/history',
-                          currentRoute: currentRoute,
-                          isExpanded: _isExpanded,
-                        ),
-
-                        // Settings / Profile
-                        _SidebarNavItem(
-                          icon: Icons.settings_rounded,
-                          label: 'Settings',
-                          route: '/profile',
-                          currentRoute: currentRoute,
-                          isExpanded: _isExpanded,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const Divider(color: Colors.white12, height: 1),
-
-                // ── Footer: Dynamic Logged-in User Profile ───────────────
-                InkWell(
-                  onTap: () => context.go('/profile'),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: _isExpanded ? 14 : 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: _isExpanded
-                          ? MainAxisAlignment.start
-                          : MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: const Color(0xFFA855F7).withValues(alpha: 0.2),
-                          child: Text(
-                            initial,
-                            style: const TextStyle(
-                              color: Color(0xFFA855F7),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: _isExpanded ? 8 : 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF131316),
+                        borderRadius: BorderRadius.circular(_isExpanded ? 16 : 40),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SidebarNavItem(
+                            icon: Icons.search_rounded,
+                            label: 'Search',
+                            route: '/search',
+                            currentRoute: currentRoute,
+                            isExpanded: _isExpanded,
                           ),
-                        ),
-                        if (_isExpanded) ...[
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              username,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          _SidebarNavItem(
+                            icon: Icons.home_outlined, 
+                            label: 'Home',
+                            route: '/',
+                            currentRoute: currentRoute,
+                            isExpanded: _isExpanded,
+                            subItems: _isExpanded ? [
+                              _SubNavItem(label: 'Continue Watching', route: '/'),
+                              _SubNavItem(label: 'Calendar', route: '/calendar'),
+                              _SubNavItem(label: 'Recommended', route: '/recommended'),
+                            ] : null,
+                          ),
+                          _SidebarNavItem(
+                            icon: Icons.auto_awesome_rounded, 
+                            label: 'Discover',
+                            route: '/discover',
+                            currentRoute: currentRoute,
+                            isExpanded: _isExpanded,
+                            subItems: _isExpanded ? [
+                              _SubNavItem(label: 'Trending', route: '/discover/trending'),
+                              _SubNavItem(label: 'Releases', route: '/releases'),
+                              _SubNavItem(label: 'Anticipated', route: '/discover/anticipated'),
+                              _SubNavItem(label: 'Popular', route: '/discover/popular'),
+                            ] : null,
+                          ),
+                          _SidebarNavItem(
+                            icon: Icons.format_list_bulleted_rounded,
+                            label: 'Lists',
+                            route: '/lists',
+                            currentRoute: currentRoute,
+                            isExpanded: _isExpanded,
+                            subItems: _isExpanded ? [
+                              _SubNavItem(label: 'Watchlist', route: '/watchlist'),
+                              _SubNavItem(label: 'My Lists', route: '/lists'),
+                            ] : null,
+                          ),
+                          _SidebarNavItem(
+                            icon: Icons.access_time_rounded,
+                            label: 'History',
+                            route: '/history',
+                            currentRoute: currentRoute,
+                            isExpanded: _isExpanded,
+                          ),
+                          _SidebarNavItem(
+                            icon: Icons.person_rounded,
+                            label: 'Profile',
+                            route: '/profile',
+                            currentRoute: currentRoute,
+                            isExpanded: _isExpanded,
                           ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
+
+                // ── Footer Spacer ──────────────────────────────────────
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -239,7 +168,7 @@ class _MainLayoutState extends State<MainLayout> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SIDEBAR ITEM WIDGET (WHITE DEFAULT -> PURPLE ON HOVER / CLICK / ACTIVE)
+// SIDEBAR ITEM WIDGET
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SidebarNavItem extends StatefulWidget {
@@ -283,6 +212,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -291,13 +221,13 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
           child: InkWell(
             onTap: () => context.go(widget.route),
             onHighlightChanged: (pressed) => setState(() => _isPressed = pressed),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(widget.isExpanded ? 8 : 30),
             splashColor: activePurple.withValues(alpha: 0.2),
             highlightColor: activePurple.withValues(alpha: 0.1),
             child: Container(
               padding: EdgeInsets.symmetric(
-                vertical: 10,
-                horizontal: widget.isExpanded ? 12 : 8, // 👈 Reduced padding when collapsed
+                vertical: 8,
+                horizontal: widget.isExpanded ? 10 : 0,
               ),
               decoration: BoxDecoration(
                 color: _isActiveRoute
@@ -305,12 +235,12 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                     : _isHovered
                         ? Colors.white.withValues(alpha: 0.05)
                         : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(widget.isExpanded ? 8 : 30),
               ),
               child: Row(
                 mainAxisAlignment: widget.isExpanded
                     ? MainAxisAlignment.start
-                    : MainAxisAlignment.center, // 👈 Center icon in collapsed mode
+                    : MainAxisAlignment.center,
                 children: [
                   Icon(
                     widget.icon,
@@ -318,13 +248,13 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                     size: 22,
                   ),
                   if (widget.isExpanded) ...[
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         widget.label,
                         style: TextStyle(
                           color: currentColor,
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: _isActiveRoute ? FontWeight.bold : FontWeight.w500,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -337,15 +267,14 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
           ),
         ),
 
-        // Sub-items rendered only when Sidebar is Expanded
         if (widget.isExpanded && widget.subItems != null)
           Padding(
-            padding: const EdgeInsets.only(left: 36, top: 2, bottom: 6),
+            padding: const EdgeInsets.only(left: 34, top: 1, bottom: 3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: widget.subItems!.map((sub) {
                 final bool isSubActive = widget.currentRoute == sub.route;
-
                 return _SubItemTile(
                   label: sub.label,
                   route: sub.route,
@@ -354,8 +283,6 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
               }).toList(),
             ),
           ),
-
-        const SizedBox(height: 4),
       ],
     );
   }
@@ -364,7 +291,6 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 class _SubNavItem {
   final String label;
   final String route;
-
   _SubNavItem({required this.label, required this.route});
 }
 

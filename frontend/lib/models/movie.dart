@@ -6,7 +6,7 @@ class Movie {
   final String? backdropPath;
   final double voteAverage;
   final String? releaseDate;
-  final String mediaType; // 👈 Added mediaType field
+  final String mediaType; 
 
   Movie({
     required this.id,
@@ -16,7 +16,7 @@ class Movie {
     this.backdropPath,
     required this.voteAverage,
     this.releaseDate,
-    this.mediaType = 'movie', // 👈 Defaults to 'movie'
+    this.mediaType = 'movie', 
   });
 
   /// Factory constructor to parse JSON from TMDB API
@@ -28,7 +28,9 @@ class Movie {
                  (json.containsKey('name') && !json.containsKey('title'));
 
     return Movie(
-      id: json['id'] ?? 0,
+      // 👈 THE FIX: Safely parse the ID to an int regardless of whether it arrives as a String or Int
+      id: json['id'] != null ? int.tryParse(json['id'].toString()) ?? 0 : 0,
+      
       title: json['title'] ?? json['name'] ?? 'Untitled',
       overview: json['overview'],
       posterPath: json['poster_path'],

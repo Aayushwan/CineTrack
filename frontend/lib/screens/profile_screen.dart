@@ -1,6 +1,7 @@
 // frontend/lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -14,6 +15,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedAnalyticsPeriod = 0; // 0 = Current Month, 1 = All Time
   bool _isLoadingStats = true;
   Map<String, dynamic>? _statsData;
+  
+  // 👇 Added dynamic username state with a personalized default fallback
+  String _username = 'User'; 
 
   // Mock Favorites
   final List<Map<String, String>> _favorites = [
@@ -57,9 +61,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfileData() async {
     try {
+      // 👇 Fetch the authenticated username dynamically from local storage
+      final prefs = await SharedPreferences.getInstance();
+      final storedName = prefs.getString('username');
+      
       final stats = await ApiService.getProfileStats();
+      
       if (mounted) {
         setState(() {
+          if (storedName != null && storedName.isNotEmpty) {
+            _username = storedName;
+          }
           _statsData = stats;
           _isLoadingStats = false;
         });
@@ -153,17 +165,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildUserHeader(BuildContext context) {
     return Row(
-      children: const [
-        CircleAvatar(
+      children: [
+        const CircleAvatar(
           radius: 36,
           backgroundColor: Color(0xFF1E293B),
           child: Icon(Icons.person_rounded, size: 40, color: Colors.white54),
         ),
-        SizedBox(width: 16),
+        const SizedBox(width: 16),
         Expanded(
           child: Text(
-            'Harshwardhan',
-            style: TextStyle(
+            _username, // 👈 Bound to dynamic state instead of hardcoded text
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Colors.white,

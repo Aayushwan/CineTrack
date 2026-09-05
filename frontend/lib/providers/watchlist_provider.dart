@@ -53,6 +53,10 @@ class WatchlistProvider extends ChangeNotifier {
     String? posterPath,
     String status = 'watchlist',
     String mediaType = 'movie',
+    String? releaseYear,
+    int? runtime,
+    int? totalEpisodes,
+    double? voteAverage,
   }) async {
     _errorMessage = null;
     try {
@@ -62,6 +66,11 @@ class WatchlistProvider extends ChangeNotifier {
         posterPath: posterPath,
         status: status,
         mediaType: mediaType,
+        // Pass the metadata to the backend API
+        releaseYear: releaseYear,
+        runtime: runtime,
+        totalEpisodes: totalEpisodes,
+        voteAverage: voteAverage,
       );
       // Refresh list to update state across all screens
       await fetchWatchlist();

@@ -40,31 +40,34 @@ class _MainLayoutState extends State<MainLayout> {
                 Container(
                   height: 80,
                   padding: EdgeInsets.symmetric(horizontal: _isExpanded ? 16 : 0),
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisAlignment: _isExpanded
-                        ? MainAxisAlignment.start
-                        : MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
-                        onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                        tooltip: _isExpanded ? 'Collapse Menu' : 'Expand Menu',
-                        splashRadius: 24,
-                      ),
-                      if (_isExpanded) ...[
-                        const SizedBox(width: 12),
-                        const Text(
-                          'cinetrack',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
+                  // dynamically align based on state to ensure icon stays centered when collapsed
+                  alignment: _isExpanded ? Alignment.centerLeft : Alignment.center,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const NeverScrollableScrollPhysics(), // 👈 Prevents animation layout overflow
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
+                          onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                          tooltip: _isExpanded ? 'Collapse Menu' : 'Expand Menu',
+                          splashRadius: 24,
                         ),
+                        if (_isExpanded) ...[
+                          const SizedBox(width: 12),
+                          const Text(
+                            'cinetrack',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
 
@@ -151,7 +154,6 @@ class _MainLayoutState extends State<MainLayout> {
                   ),
                 ),
 
-                // ── Footer Spacer ──────────────────────────────────────
                 const SizedBox(height: 24),
               ],
             ),
@@ -225,6 +227,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
             splashColor: activePurple.withValues(alpha: 0.2),
             highlightColor: activePurple.withValues(alpha: 0.1),
             child: Container(
+              alignment: widget.isExpanded ? Alignment.centerLeft : Alignment.center,
               padding: EdgeInsets.symmetric(
                 vertical: 8,
                 horizontal: widget.isExpanded ? 10 : 0,
@@ -237,50 +240,54 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                         : Colors.transparent,
                 borderRadius: BorderRadius.circular(widget.isExpanded ? 8 : 30),
               ),
-              child: Row(
-                mainAxisAlignment: widget.isExpanded
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    widget.icon,
-                    color: currentColor,
-                    size: 22,
-                  ),
-                  if (widget.isExpanded) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(), // 👈 Prevents animation layout overflow
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      widget.icon,
+                      color: currentColor,
+                      size: 22,
+                    ),
+                    if (widget.isExpanded) ...[
+                      const SizedBox(width: 12),
+                      Text(
                         widget.label,
                         style: TextStyle(
                           color: currentColor,
                           fontSize: 14,
                           fontWeight: _isActiveRoute ? FontWeight.bold : FontWeight.w500,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
         ),
 
+        // Sub-items list
         if (widget.isExpanded && widget.subItems != null)
           Padding(
             padding: const EdgeInsets.only(left: 34, top: 1, bottom: 3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: widget.subItems!.map((sub) {
-                final bool isSubActive = widget.currentRoute == sub.route;
-                return _SubItemTile(
-                  label: sub.label,
-                  route: sub.route,
-                  isActive: isSubActive,
-                );
-              }).toList(),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(), // 👈 Prevents animation layout overflow
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: widget.subItems!.map((sub) {
+                  final bool isSubActive = widget.currentRoute == sub.route;
+                  return _SubItemTile(
+                    label: sub.label,
+                    route: sub.route,
+                    isActive: isSubActive,
+                  );
+                }).toList(),
+              ),
             ),
           ),
       ],
@@ -338,7 +345,6 @@ class _SubItemTileState extends State<_SubItemTile> {
               fontSize: 13,
               fontWeight: widget.isActive ? FontWeight.bold : FontWeight.normal,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),

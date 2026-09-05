@@ -82,6 +82,19 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     );
   }
 
+  String _formatRuntime(int totalMinutes) {
+    if (totalMinutes <= 0) return '';
+    final int hours = totalMinutes ~/ 60;
+    final int minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) {
+      return '${hours}h ${minutes}m';
+    } else if (hours > 0) {
+      return '${hours}h';
+    } else {
+      return '${minutes}m';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -99,7 +112,13 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/');
+              }
+            },
           ),
         ),
         body: Center(
@@ -116,7 +135,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     final posterPath = _movieData!['poster_path'];
     final backdropPath = _movieData!['backdrop_path'];
     final releaseDate = _movieData!['release_date'] ?? '';
-    final runtime = _movieData!['runtime'] ?? 0;
+    final runtime = _movieData!['runtime'] is int
+        ? (_movieData!['runtime'] as int)
+        : int.tryParse(_movieData!['runtime']?.toString() ?? '0') ?? 0;
+    final formattedRuntime = _formatRuntime(runtime);
     final voteAverage = (_movieData!['vote_average'] ?? 0.0).toStringAsFixed(1);
     final genres = (_movieData!['genres'] as List<dynamic>?)
             ?.map((g) => g['name'].toString())
@@ -151,7 +173,13 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                 ),
                 child: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               ),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: backdropUrl.isNotEmpty
@@ -211,10 +239,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           ],
                         ),
                       ),
-                      if (runtime > 0) ...[
+                      if (formattedRuntime.isNotEmpty) ...[
                         const SizedBox(width: 12),
                         Text(
-                          '${runtime}m',
+                          formattedRuntime,
                           style: const TextStyle(color: Colors.white60, fontSize: 13),
                         ),
                       ],
@@ -270,7 +298,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                               movieTitle: title,
                               posterPath: posterPath,
                               status: 'watchlist',
-                              mediaType: 'movie', // 👈 Explicitly passing 'movie'
+                              mediaType: 'movie',
+                              releaseYear: releaseDate.length >= 4 ? releaseDate.substring(0, 4) : releaseDate,
+                              runtime: runtime,
+                              voteAverage: double.tryParse(voteAverage) ?? 0.0,
                             );
                           }
                         },
@@ -300,7 +331,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                               movieTitle: title,
                               posterPath: posterPath,
                               status: 'favorite',
-                              mediaType: 'movie', // 👈 Explicitly passing 'movie'
+                              mediaType: 'movie',
+                              releaseYear: releaseDate.length >= 4 ? releaseDate.substring(0, 4) : releaseDate,
+                              runtime: runtime,
+                              voteAverage: double.tryParse(voteAverage) ?? 0.0,
                             );
                           }
                         },

@@ -19,6 +19,7 @@ import 'screens/movie_details_screen.dart';
 import 'screens/show_details_screen.dart';
 import 'screens/person_details_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/favorites_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/watchlist_screen.dart';
 import 'screens/recommended_screen.dart';
@@ -113,6 +114,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfileScreen(),
+        ),
+        GoRoute(
+          path: '/favorites',
+          builder: (context, state) => const FavoritesScreen(),
         ),
 
         // --- Detail Screens ---

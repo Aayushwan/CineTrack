@@ -9,6 +9,12 @@ class WatchlistItem {
   final String status;
   final String mediaType;
   final DateTime createdAt;
+  
+  // New optional fields for UI details
+  final String? releaseYear;
+  final int? runtime;
+  final int? totalEpisodes;
+  final double? voteAverage;
 
   WatchlistItem({
     required this.id,
@@ -19,6 +25,10 @@ class WatchlistItem {
     required this.status,
     this.mediaType = 'movie', 
     required this.createdAt,
+    this.releaseYear,
+    this.runtime,
+    this.totalEpisodes,
+    this.voteAverage,
   });
 
   /// Factory constructor to parse JSON from FastAPI Watchlist endpoint
@@ -36,6 +46,12 @@ class WatchlistItem {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
+          
+      // Safely parse new fields supporting camelCase and snake_case backend standards
+      releaseYear: json['releaseYear']?.toString() ?? json['release_year']?.toString(),
+      runtime: json['runtime'] != null ? int.tryParse(json['runtime'].toString()) : null,
+      totalEpisodes: json['totalEpisodes'] != null ? int.tryParse(json['totalEpisodes'].toString()) : (json['total_episodes'] != null ? int.tryParse(json['total_episodes'].toString()) : null),
+      voteAverage: json['voteAverage'] != null ? double.tryParse(json['voteAverage'].toString()) : (json['vote_average'] != null ? double.tryParse(json['vote_average'].toString()) : null),
     );
   }
 

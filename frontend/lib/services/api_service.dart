@@ -241,13 +241,18 @@ class ApiService {
     }
   }
 
-  /// Add a movie/show to watchlist or update its status (JWT Protected)
+/// Add a movie/show to watchlist or update its status (JWT Protected)
   static Future<void> addToWatchlist({
     required int movieId,
     required String movieTitle,
     String? posterPath,
     String status = 'watchlist',
     String mediaType = 'movie',
+    // 👇 Added these parameters to match WatchlistProvider
+    String? releaseYear,
+    int? runtime,
+    int? totalEpisodes,
+    double? voteAverage,
   }) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -264,6 +269,11 @@ class ApiService {
         'poster_path': posterPath,
         'status': status,
         'media_type': mediaType,
+        // 👇 Added these keys to send the data to your backend body payload
+        'release_year': releaseYear,
+        'runtime': runtime,
+        'total_episodes': totalEpisodes,
+        'vote_average': voteAverage,
       }),
     );
 

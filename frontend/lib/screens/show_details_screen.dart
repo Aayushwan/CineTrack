@@ -63,7 +63,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/');
+              }
+            },
           ),
         ),
         body: Center(
@@ -116,7 +122,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 ),
                 child: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               ),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: backdropUrl.isNotEmpty
@@ -207,7 +219,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                                 movieTitle: name,
                                 posterPath: posterPath,
                                 status: 'watchlist',
-                                mediaType: 'tv', // 👈 Explicitly passing 'tv'
+                                mediaType: 'tv',
                               );
                             }
                           },
@@ -242,7 +254,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                                 movieTitle: name,
                                 posterPath: posterPath,
                                 status: 'favorite',
-                                mediaType: 'tv', // 👈 Explicitly passing 'tv'
+                                mediaType: 'tv',
                               );
                             }
                           },

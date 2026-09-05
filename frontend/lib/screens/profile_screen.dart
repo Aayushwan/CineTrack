@@ -1,8 +1,10 @@
 // frontend/lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../providers/watchlist_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,42 +18,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoadingStats = true;
   Map<String, dynamic>? _statsData;
   
-  // 👇 Added dynamic username state with a personalized default fallback
   String _username = 'User'; 
 
-  // Mock Favorites
-  final List<Map<String, String>> _favorites = [
-    {
-      'title': 'Interstellar',
-      'poster': 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
-    },
-    {
-      'title': 'Spider-Man: Across the Spider-Verse',
-      'poster': 'https://image.tmdb.org/t/p/w500/8Vt6m294P31C3fa63891xS35B4.jpg',
-    },
-    {
-      'title': 'Panchayat',
-      'poster': 'https://image.tmdb.org/t/p/w500/xg27NrFcsWGVR9Pqk37k34P033n.jpg',
-    },
-  ];
-
-  // Mock Ongoing Show Progress
-  final List<Map<String, dynamic>> _showProgress = [
-    {
-      'title': 'Panchayat',
-      'season': 'Season 4',
-      'watchedEpisodes': 2,
-      'totalEpisodes': 8,
-      'backdrop': 'https://image.tmdb.org/t/p/w780/xg27NrFcsWGVR9Pqk37k34P033n.jpg',
-    },
-    {
-      'title': 'Sapne vs Everyone',
-      'season': 'Season 1',
-      'watchedEpisodes': 4,
-      'totalEpisodes': 5,
-      'backdrop': 'https://image.tmdb.org/t/p/w780/8Y43POKjjKDGI9MH89NW0NAzzp8.jpg',
-    },
-  ];
+  // Empty list ready to be connected to your actual Continue Watching backend data
+  final List<Map<String, dynamic>> _continueWatching = [];
 
   @override
   void initState() {
@@ -61,7 +31,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfileData() async {
     try {
-      // 👇 Fetch the authenticated username dynamically from local storage
       final prefs = await SharedPreferences.getInstance();
       final storedName = prefs.getString('username');
       
@@ -103,22 +72,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               const SizedBox(height: 16),
 
-              // 3. Analytics Dashboard (Dynamic)
+              // 3. Analytics Dashboard
               _buildAnalyticsCard(),
 
               const SizedBox(height: 28),
 
-              // 4. Show Progress Section
-              _buildSectionTitle('Show Progress'),
+              // 4. Continue Watching Section
+              _buildSectionTitle('Continue Watching'),
               const SizedBox(height: 12),
-              _buildShowProgressList(),
+              _buildContinueWatchingList(),
 
               const SizedBox(height: 28),
 
-              // 5. Favorites Section
-              _buildSectionTitle('Favorites'),
-              const SizedBox(height: 12),
-              _buildFavoritesList(),
+              // 5. Favorites Section (Dynamic connected to WatchlistProvider)
+              _buildDynamicFavoritesSection(context),
 
               const SizedBox(height: 28),
 
@@ -174,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: Text(
-            _username, // 👈 Bound to dynamic state instead of hardcoded text
+            _username,
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -308,14 +275,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildShowProgressList() {
+  Widget _buildContinueWatchingList() {
+    if (_continueWatching.isEmpty) {
+      return const Text(
+        'Nothing in progress. Start watching something!',
+        style: TextStyle(color: Colors.white54, fontSize: 14),
+      );
+    }
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _showProgress.length,
+      itemCount: _continueWatching.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final show = _showProgress[index];
+        final show = _continueWatching[index];
         final double factor = show['watchedEpisodes'] / show['totalEpisodes'];
 
         return Container(
@@ -363,33 +337,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildFavoritesList() {
-    return SizedBox(
-      height: 160,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _favorites.length,
-        itemBuilder: (context, index) {
-          final favorite = _favorites[index];
-          return Container(
-            width: 110,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: const Color(0xFF1E293B),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                favorite['poster']!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Center(child: Icon(Icons.favorite_rounded, color: Colors.white24)),
+Widget _buildDynamicFavoritesSection(BuildContext context) {
+    return Consumer<WatchlistProvider>(
+      builder: (context, watchlistProvider, child) {
+        // 👇 Use the built-in getter from your provider
+        final favorites = watchlistProvider.favoriteItems; 
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => context.go('/favorites'),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Favorites',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 20),
+                  ],
+                ),
               ),
             ),
-          );
-        },
-      ),
+            const SizedBox(height: 12),
+            
+            if (favorites.isEmpty)
+              const Text('No favorites yet. Go heart some movies!', style: TextStyle(color: Colors.white54))
+            else
+              SizedBox(
+                height: 160,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: favorites.length > 10 ? 10 : favorites.length,
+                  itemBuilder: (context, index) {
+                    final item = favorites[index];
+                    // 👇 Use dot notation because 'item' is a WatchlistItem object
+                    final posterUrl = item.posterPath != null 
+                        ? 'https://image.tmdb.org/t/p/w300${item.posterPath}' 
+                        : '';
+                    final mediaType = item.mediaType.isNotEmpty ? item.mediaType : 'movie';
+                    final id = item.movieId;
+
+                    return GestureDetector(
+                      onTap: () => context.go('/$mediaType/$id'),
+                      child: Container(
+                        width: 110,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(10),
+                          image: posterUrl.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(posterUrl),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        alignment: Alignment.bottomRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(6.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.black87,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check_rounded, size: 10, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

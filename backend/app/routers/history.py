@@ -19,18 +19,37 @@ async def log_watch_history(
     db: AsyncSession = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    new_entry = WatchHistory(
-        user_id=current_user.id,
-        movie_id=item.movie_id,
-        media_type=item.media_type,
-        title=item.title,
-        poster_path=item.poster_path,
-        watched_at=datetime.now(timezone.utc)
-    )
+    media_identifier = str(item.media_id or item.movie_id or "")
+    duration_val = item.duration_watched_seconds or ((item.runtime_minutes or 120) * 60)
+    # Map Flutter's date or fallback to now
+    watched_time = item.watched_at if item.watched_at else datetime.now(timezone.utc)
+    
+    # We use **kwargs so we don't crash if your SQLAlchemy model uses `movie_id` vs `media_id`
+    kwargs = {
+        "user_id": current_user.id,
+        "media_type": item.media_type,
+        "title": item.title,
+        "poster_path": item.poster_path,
+        "watched_at": watched_time
+    }
+    
+    # Safely assign dynamic DB columns
+    if hasattr(WatchHistory, "duration_watched_seconds"):
+        kwargs["duration_watched_seconds"] = duration_val
+    if hasattr(WatchHistory, "media_id"):
+        kwargs["media_id"] = media_identifier
+    if hasattr(WatchHistory, "movie_id"):
+        try:
+            kwargs["movie_id"] = int(media_identifier)
+        except (ValueError, TypeError):
+            kwargs["movie_id"] = media_identifier
+
+    new_entry = WatchHistory(**kwargs)
+    
     db.add(new_entry)
     await db.commit()
     await db.refresh(new_entry)
-    return {"message": "Logged successfully", "id": new_entry.id}
+    return {"message": "Logged successfully", "id": getattr(new_entry, "id", None)}
 
 
 @router.get("/history")
@@ -51,14 +70,14 @@ async def get_watch_history(
     
     return [
         {
-            "id": h.movie_id,
+            "id": getattr(h, "media_id", getattr(h, "movie_id", None)),
             "title": h.title,
-            "subtitle": None,
-            "type": "Movie" if str(h.media_type or "") == "movie" else "Show",
-            "poster": f"https://image.tmdb.org/t/p/w500{h.poster_path}" if h.poster_path else "",
+            "subtitle": getattr(h, "subtitle", None),
+            "type": "Movie" if str(h.media_type or "").lower() == "movie" else "Show",
+            "poster": f"https://image.tmdb.org/t/p/w500{h.poster_path}" if h.poster_path and not h.poster_path.startswith("http") else (h.poster_path or ""),
             "watchedDate": h.watched_at.strftime("%b %d, %Y") if h.watched_at else "",
             "watchedTime": h.watched_at.strftime("%I:%M %p") if h.watched_at else "",
-            "userRating": 0.0,
+            "userRating": getattr(h, "user_rating", 0.0) or 0.0,
         }
         for h in history
     ]
@@ -117,7 +136,10 @@ async def get_profile_analytics(
     ]
 
     def calculate_stats(entries: Sequence[Any]):
-        total_minutes = len(entries) * 120
+        # Safely fetch precise duration from the database if available, otherwise default to 120 mins per item
+        total_seconds = sum(getattr(e, "duration_watched_seconds", None) or 7200 for e in entries)
+        total_minutes = total_seconds // 60
+        
         movies_count = len([e for e in entries if str(e.media_type or "") == "movie"])
         episodes_count = len([e for e in entries if str(e.media_type or "") == "tv"])
         

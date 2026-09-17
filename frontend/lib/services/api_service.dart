@@ -241,14 +241,13 @@ class ApiService {
     }
   }
 
-/// Add a movie/show to watchlist or update its status (JWT Protected)
+  /// Add a movie/show to watchlist or update its status (JWT Protected)
   static Future<void> addToWatchlist({
     required int movieId,
     required String movieTitle,
     String? posterPath,
     String status = 'watchlist',
     String mediaType = 'movie',
-    // 👇 Added these parameters to match WatchlistProvider
     String? releaseYear,
     int? runtime,
     int? totalEpisodes,
@@ -269,7 +268,6 @@ class ApiService {
         'poster_path': posterPath,
         'status': status,
         'media_type': mediaType,
-        // 👇 Added these keys to send the data to your backend body payload
         'release_year': releaseYear,
         'runtime': runtime,
         'total_episodes': totalEpisodes,
@@ -392,6 +390,7 @@ class ApiService {
     String? posterPath,
     double? userRating,
     int runtimeMinutes = 120,
+    String? watchedAt, // Added for custom Trakt-style tracking
   }) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -403,13 +402,16 @@ class ApiService {
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
-        'movie_id': movieId,
+        // Aligning with DB schema string type for media_id
+        'media_id': movieId.toString(),
         'media_type': mediaType,
         'title': title,
-        'subtitle': subtitle,
         'poster_path': posterPath,
-        'user_rating': userRating,
-        'runtime_minutes': runtimeMinutes,
+        // Convert minutes to seconds for duration_watched_seconds
+        'duration_watched_seconds': runtimeMinutes * 60,
+        // Optional user rating logic can be appended separately if needed by backend schema
+        // 'user_rating': userRating, 
+        'watched_at': watchedAt ?? DateTime.now().toUtc().toIso8601String(),
       }),
     );
 

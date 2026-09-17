@@ -4,7 +4,8 @@ from typing import Optional
 
 class ReviewCreate(BaseModel):
     movie_id: int
-    rating: float = Field(..., ge=1.0, le=5.0)
+    # 👇 Increased max limit to 10.0 to match the frontend slider
+    rating: float = Field(..., ge=1.0, le=10.0)
     comment: Optional[str] = None
 
 class ReviewResponse(BaseModel):

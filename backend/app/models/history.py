@@ -16,10 +16,16 @@ class WatchHistory(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 
-    movie_id: Mapped[int] = mapped_column("media_id", Integer, nullable=False)
+    # Updated to String to perfectly match 'varchar' in your Supabase database
+    movie_id: Mapped[str] = mapped_column("media_id", String, nullable=False)
     media_type: Mapped[str] = mapped_column(String, nullable=False)  # "movie" or "tv"
     title: Mapped[str] = mapped_column(String, nullable=False)
     poster_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # 👇 Added the missing columns to match your Supabase database schema
+    season_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    episode_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    duration_watched_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     watched_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

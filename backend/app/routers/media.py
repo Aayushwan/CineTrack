@@ -14,7 +14,6 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-
 # =====================================================================
 # 1. STATIC & SPECIFIC ROUTES (Must come first to prevent 422 errors)
 # =====================================================================
@@ -49,7 +48,6 @@ async def get_trending_movies(page: int = 1, type: str = "movie"):
             
             data = response.json()
 
-            # Inject media_type into all results since TMDB omits it on specific endpoints
             for item in data.get("results", []):
                 if "media_type" not in item or not item["media_type"]:
                     item["media_type"] = "tv" if "name" in item else "movie"
@@ -93,7 +91,6 @@ async def search_media(query: str, page: int = 1):
                 headers=HEADERS,
             )
             if response.status_code != 200:
-                print(f"❌ TMDB Error ({response.status_code}): {response.text}")
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail=f"TMDB API returned error: {response.status_code}"
@@ -101,7 +98,6 @@ async def search_media(query: str, page: int = 1):
             
             data = response.json()
 
-            # Ensure media_type is present on all search items
             for item in data.get("results", []):
                 if "media_type" not in item or not item["media_type"]:
                     item["media_type"] = "tv" if "name" in item else "movie"
@@ -112,7 +108,6 @@ async def search_media(query: str, page: int = 1):
         except HTTPException:
             raise
         except Exception as exc:
-            print(f"❌ Network Exception connecting to TMDB: {exc}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Failed to connect to TMDB: {exc}"
@@ -148,7 +143,6 @@ async def get_upcoming_media(page: int = 1):
             
             data = response.json()
 
-            # Inject media_type explicitly
             for item in data.get("results", []):
                 item["media_type"] = "movie"
 
@@ -184,7 +178,6 @@ async def discover_media(category: str = "trending", page: int = 1, type: str = 
 
     async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
         try:
-            # Combined Releases Feed
             if category == "releases":
                 params = {"api_key": settings.TMDB_API_KEY, "page": page}
                 
@@ -227,7 +220,6 @@ async def discover_media(category: str = "trending", page: int = 1, type: str = 
                     "total_pages": 50
                 }
 
-            # Single Category Endpoints (Supports both movie and tv)
             else:
                 if media_type == "tv":
                     if category == "anticipated":
@@ -251,7 +243,6 @@ async def discover_media(category: str = "trending", page: int = 1, type: str = 
                 )
                 
                 if response.status_code != 200:
-                    print(f"❌ TMDB Error ({response.status_code}): {response.text}")
                     raise HTTPException(
                         status_code=status.HTTP_502_BAD_GATEWAY,
                         detail=f"TMDB returned status {response.status_code}"
@@ -259,7 +250,6 @@ async def discover_media(category: str = "trending", page: int = 1, type: str = 
                 
                 data = response.json()
 
-                # Inject media_type into all results
                 for item in data.get("results", []):
                     item["media_type"] = media_type
 
@@ -273,7 +263,6 @@ async def discover_media(category: str = "trending", page: int = 1, type: str = 
         except HTTPException:
             raise
         except Exception as exc:
-            print(f"❌ Connection Error: {exc}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Failed to connect to TMDB: {exc}"
@@ -299,7 +288,8 @@ async def get_tv_details(tv_id: int):
                 f"{TMDB_BASE_URL}/tv/{tv_id}",
                 params={
                     "api_key": settings.TMDB_API_KEY,
-                    "append_to_response": "credits,videos"
+                    # 👇 Added watch/providers
+                    "append_to_response": "credits,videos,watch/providers" 
                 },
                 headers=HEADERS,
             )
@@ -310,7 +300,6 @@ async def get_tv_details(tv_id: int):
                 )
             
             data = response.json()
-            # Explicitly attach media_type = "tv"
             data["media_type"] = "tv"
 
             await set_cache(cache_key, data, expire_seconds=43200)
@@ -393,7 +382,8 @@ async def get_movie_details(movie_id: int):
                 f"{TMDB_BASE_URL}/movie/{movie_id}",
                 params={
                     "api_key": settings.TMDB_API_KEY,
-                    "append_to_response": "credits,videos"
+                    # 👇 Added watch/providers
+                    "append_to_response": "credits,videos,watch/providers"
                 },
                 headers=HEADERS,
             )
@@ -404,7 +394,6 @@ async def get_movie_details(movie_id: int):
                 )
             
             data = response.json()
-            # Explicitly attach media_type = "movie"
             data["media_type"] = "movie"
 
             await set_cache(cache_key, data, expire_seconds=43200)

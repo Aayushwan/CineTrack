@@ -1,17 +1,22 @@
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional
-
+from typing import Optional, Union
+from datetime import datetime
 
 # --- Request Schemas ---
 
 class HistoryCreate(BaseModel):
-    movie_id: int = Field(..., description="Media or TMDB ID")
+    # Support both media_id and movie_id to ensure strict compatibility with the DB and UI
+    media_id: Optional[Union[str, int]] = None
+    movie_id: Optional[Union[int, str]] = Field(None, description="Media or TMDB ID")
     media_type: str = Field(..., description="'movie' or 'tv'")
     title: str
     subtitle: Optional[str] = None
     poster_path: Optional[str] = None
     user_rating: Optional[float] = Field(None, ge=0.0, le=10.0)
     runtime_minutes: Optional[int] = 120
+    # 👇 Added to support exact Trakt logging
+    duration_watched_seconds: Optional[int] = None
+    watched_at: Optional[datetime] = None
 
 
 class EpisodeProgressUpdate(BaseModel):

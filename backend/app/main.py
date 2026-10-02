@@ -12,6 +12,7 @@ from app.routers.media import router as media_router
 from app.routers.watchlist import router as watchlist_router
 from app.routers.reviews import router as reviews_router
 from app.routers.history import router as history_router
+from app.routers import custom_lists
 
 # Model Imports (Importing all models ensures Base.metadata detects all tables)
 import app.models.user
@@ -59,6 +60,7 @@ app.include_router(media_router)
 app.include_router(watchlist_router)
 app.include_router(reviews_router)
 app.include_router(history_router)
+app.include_router(custom_lists.router)
 
 
 @app.get("/", tags=["Health Check"])

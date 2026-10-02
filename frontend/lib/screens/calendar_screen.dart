@@ -46,47 +46,45 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv'),
       ]);
 
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
       Map<String, List<dynamic>> tempMap = {};
 
       for (var res in results) {
         final list = (res['results'] as List<dynamic>?) ?? [];
         for (var item in list) {
-          final dateStr = item['release_date'] ?? item['first_air_date'];
+          final dateStr = item['calendar_date'] ?? item['release_date'] ?? item['first_air_date'];
           if (dateStr != null && dateStr.toString().trim().isNotEmpty) {
-            final key = dateStr.toString().substring(0, 10); // 'YYYY-MM-DD'
-            tempMap.putIfAbsent(key, () => []);
-            
-            // Avoid duplicate items per date
-            if (!tempMap[key]!.any((existing) => existing['id'] == item['id'])) {
-              tempMap[key]!.add(item);
-            }
+            try {
+              final dt = DateTime.parse(dateStr.toString());
+              final itemDay = DateTime(dt.year, dt.month, dt.day);
+              
+              // 👇 NO FILTER: We keep all past, present, and future dates
+              final key = _formatDateKey(itemDay);
+              tempMap.putIfAbsent(key, () => []);
+              if (!tempMap[key]!.any((existing) => existing['id'] == item['id'])) {
+                tempMap[key]!.add(item);
+              }
+            } catch (_) {}
           }
         }
       }
 
-      // Sort release dates chronologically
-      List<DateTime> sortedDates = tempMap.keys
-          .map((k) => DateTime.parse(k))
-          .toList()
-        ..sort((a, b) => a.compareTo(b));
-
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-
-      // Default selected date to today or the closest upcoming/past release date
-      DateTime initialSelected = today;
-      if (sortedDates.isNotEmpty) {
-        initialSelected = sortedDates.firstWhere(
-          (d) => d.isAfter(today.subtract(const Duration(days: 1))),
-          orElse: () => sortedDates.last,
-        );
+      // 👇 GUARANTEE ANCHOR: Ensure "Today" is in the timeline so we can start there
+      final todayKey = _formatDateKey(today);
+      if (!tempMap.containsKey(todayKey)) {
+        tempMap[todayKey] = [];
       }
+
+      List<DateTime> sortedDates = tempMap.keys.map((k) => DateTime.parse(k)).toList();
+      sortedDates.sort((a, b) => a.compareTo(b));
 
       if (mounted) {
         setState(() {
           _dateReleaseMap = tempMap;
           _releaseDates = sortedDates;
-          _selectedDate = initialSelected;
+          // 👇 Force the calendar to open exactly on Today
+          _selectedDate = today; 
           _isLoading = false;
         });
       }

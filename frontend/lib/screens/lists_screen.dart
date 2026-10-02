@@ -1,10 +1,7 @@
 // frontend/lib/screens/lists_screen.dart
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../services/api_service.dart';
-import '../widgets/trakt_filter_bar.dart';
+import '../providers/watchlist_provider.dart';
 
 class ListsScreen extends StatefulWidget {
   const ListsScreen({super.key});
@@ -14,156 +11,86 @@ class ListsScreen extends StatefulWidget {
 }
 
 class _ListsScreenState extends State<ListsScreen> {
-  bool _isLoading = true;
-  List<dynamic> _watchlistItems = [];
-
-  // Active Trakt Filter: 'media', 'shows', 'movies'
-  String _selectedFilter = 'media';
-
-  // Custom User Lists
-  final List<Map<String, dynamic>> _myLists = [];
-
   @override
   void initState() {
     super.initState();
-    _fetchWatchlist();
-  }
-
-  Future<void> _fetchWatchlist() async {
-    try {
-      final items = await ApiService.getWatchlist();
-      if (mounted) {
-        setState(() {
-          _watchlistItems = items;
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // Filter Watchlist items based on selected Trakt capsule filter
-  List<dynamic> get _filteredWatchlist {
-    return _watchlistItems.where((item) {
-      final String mediaType = (item['media_type'] ?? '').toString().toLowerCase();
-      final bool isTv = mediaType == 'tv' || item['first_air_date'] != null;
-      final bool isMovie = !isTv;
-
-      if (_selectedFilter == 'movies' && !isMovie) return false;
-      if (_selectedFilter == 'shows' && !isTv) return false;
-      return true; // 'media' includes both movies and shows
-    }).toList();
+    // Fetch permanent custom lists from the database on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
+    });
   }
 
   // ─── Modal to Create New List ──────────────────────────────────────────────
-  void _showCreateListModal() {
+  void _showCreateListModal(WatchlistProvider provider) {
     final TextEditingController titleController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF131316),
-        title: const Text(
-          'Create New List',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: TextField(
-          controller: titleController,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Enter list title...',
-            hintStyle: const TextStyle(color: Colors.white38),
-            enabledBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.white24),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: Color(0xFFA855F7)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA855F7)),
-            onPressed: () {
-              if (titleController.text.trim().isNotEmpty) {
-                setState(() {
-                  _myLists.insert(0, {
-                    'title': titleController.text.trim(),
-                    'posters': <String>[],
-                  });
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Create', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Modal to Rename List ──────────────────────────────────────────────────
-  void _showRenameListModal(int index) {
-    final currentTitle = _myLists[index]['title'] ?? '';
-    final TextEditingController controller = TextEditingController(text: currentTitle);
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF131316),
-        title: const Text(
-          'Rename List',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: TextField(
-          controller: controller,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Enter new list title...',
-            hintStyle: const TextStyle(color: Colors.white38),
-            enabledBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.white24),
-              borderRadius: BorderRadius.circular(8),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF131316),
+            title: const Text(
+              'Create New List',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: Color(0xFFA855F7)),
-              borderRadius: BorderRadius.circular(8),
+            content: TextField(
+              controller: titleController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Enter list title...',
+                hintStyle: const TextStyle(color: Colors.white38),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.white24),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Color(0xFFA855F7)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA855F7)),
-            onPressed: () {
-              final newTitle = controller.text.trim();
-              if (newTitle.isNotEmpty) {
-                setState(() {
-                  _myLists[index]['title'] = newTitle;
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA855F7)),
+                onPressed: isSubmitting ? null : () async {
+                  final title = titleController.text.trim();
+                  if (title.isNotEmpty) {
+                    setModalState(() => isSubmitting = true);
+                    try {
+                      await provider.createList(title);
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Created "$title"'), backgroundColor: const Color(0xFF131316))
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent)
+                      );
+                      setModalState(() => isSubmitting = false);
+                    }
+                  }
+                },
+                child: isSubmitting 
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Create', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        }
       ),
     );
   }
 
   // ─── Dialog to Confirm Delete List ─────────────────────────────────────────
-  void _showDeleteListConfirmation(int index) {
-    final title = _myLists[index]['title'] ?? 'this list';
-
+  void _showDeleteListConfirmation(WatchlistProvider provider, int listId, String title) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -184,9 +111,7 @@ class _ListsScreenState extends State<ListsScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () {
-              setState(() {
-                _myLists.removeAt(index);
-              });
+              provider.deleteList(listId);
               Navigator.pop(context);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -196,11 +121,78 @@ class _ListsScreenState extends State<ListsScreen> {
     );
   }
 
+  // ─── Bottom Sheet Modal to View All Items in List ────────────────────────
+  void _showListDetailsModal(String listTitle, List<String> posters) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF131316),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7, // Opens taking up 70% of screen
+          minChildSize: 0.4,
+          maxChildSize: 0.95, // Can be dragged to nearly full screen
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Pop-up Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        listTitle,
+                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white70),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+                
+                // Grid of Posters
+                Expanded(
+                  child: posters.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No movies in this list yet.',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        )
+                      : GridView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3, // 3 posters per row
+                            childAspectRatio: 2 / 3,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: posters.length,
+                          itemBuilder: (context, index) {
+                            return _buildSimplePosterCard(posters[index]);
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final String username = authProvider.username ?? 'User';
-    final filteredList = _filteredWatchlist;
+    final watchlistProvider = Provider.of<WatchlistProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
@@ -208,9 +200,17 @@ class _ListsScreenState extends State<ListsScreen> {
         backgroundColor: const Color(0xFF09090B),
         elevation: 0,
         title: const Text(
-          'Lists',
+          'My Lists',
           style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+            onPressed: () => _showCreateListModal(watchlistProvider),
+            tooltip: 'Create New List',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -218,91 +218,145 @@ class _ListsScreenState extends State<ListsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Center-Aligned Trakt Filter Bar ───────────────────────────
-              TraktFilterBar(
-                selectedFilter: _selectedFilter,
-                showPeople: false, // Only Media, Shows, Movies needed for lists
-                onFilterChanged: (filter) {
-                  setState(() => _selectedFilter = filter);
-                },
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
-              // ─── 1. WATCHLIST SECTION ───────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: _SectionHeader(
-                  title: 'Watchlist',
-                  onTap: () => context.go('/watchlist'),
-                ),
-              ),
-              const SizedBox(height: 14),
+              // ─── CUSTOM LISTS STACKED ROWS ────────────────────────────
+              if (watchlistProvider.customLists.isEmpty)
+                _buildEmptyState('No custom lists created yet. Tap + to add one!')
+              else
+                ...watchlistProvider.customLists.map((listData) {
+                  final listId = listData['id'];
+                  final listTitle = listData['name'] ?? listData['title'] ?? 'Untitled';
+                  final List<String> posters = List<String>.from(listData['posters'] ?? []);
 
-              SizedBox(
-                height: 245,
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Color(0xFFA855F7)),
-                      )
-                    : filteredList.isEmpty
-                        ? _buildEmptyState('No $_selectedFilter items in your watchlist.')
-                        : ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: filteredList.length,
-                            itemBuilder: (context, index) {
-                              final item = filteredList[index];
-                              return _WatchlistPosterCard(item: item);
-                            },
-                          ),
-              ),
-
-              const SizedBox(height: 36),
-
-              // ─── 2. MY LISTS SECTION ────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _SectionHeader(
-                      title: 'My Lists',
-                      onTap: () {},
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_rounded, color: Colors.white, size: 26),
-                      onPressed: _showCreateListModal,
-                      tooltip: 'Create New List',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              SizedBox(
-                height: 230,
-                child: _myLists.isEmpty
-                    ? _buildEmptyState('No custom lists created yet. Tap + to add one!')
-                    : ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: _myLists.length,
-                        itemBuilder: (context, index) {
-                          final listData = _myLists[index];
-                          return _MyListCard(
-                            title: listData['title'],
-                            author: username,
-                            posters: List<String>.from(listData['posters']),
-                            onRename: () => _showRenameListModal(index),
-                            onDelete: () => _showDeleteListConfirmation(index),
-                          );
-                        },
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // List Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              // 👇 Opens the Bottom Sheet Modal
+                              child: InkWell(
+                                onTap: () => _showListDetailsModal(listTitle, posters),
+                                borderRadius: BorderRadius.circular(6),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.remove_circle_outline_rounded, color: Colors.white54, size: 16),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        listTitle,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 20),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // 3-Dots Menu for Deleting
+                            IconButton(
+                              icon: const Icon(Icons.more_vert_rounded, color: Colors.white54, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _showDeleteListConfirmation(watchlistProvider, listId, listTitle),
+                            ),
+                          ],
+                        ),
                       ),
-              ),
+                      const SizedBox(height: 12),
+
+                      // Horizontal Poster Row (Preview)
+                      SizedBox(
+                        height: 220,
+                        child: posters.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.only(left: 20.0),
+                                child: Text('No movies in this list yet.', style: TextStyle(color: Colors.white38)),
+                              )
+                            : ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                itemCount: posters.length,
+                                itemBuilder: (context, index) {
+                                  return Container(
+                                    width: 130,
+                                    margin: const EdgeInsets.only(right: 14),
+                                    child: _buildSimplePosterCard(posters[index]),
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  );
+                }),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // Refactored to seamlessly work inside both ListView and GridView
+  Widget _buildSimplePosterCard(String posterPath) {
+    final String imageUrl = posterPath.isNotEmpty
+        ? (posterPath.startsWith('http') ? posterPath : 'https://image.tmdb.org/t/p/w500$posterPath')
+        : 'https://via.placeholder.com/130x195';
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(
+              color: const Color(0xFF1E1E24),
+              child: const Icon(Icons.movie_rounded, color: Colors.white24, size: 40),
+            ),
+          ),
+        ),
+        // Top Right 3-Dots (Decorative)
+        Positioned(
+          top: 6,
+          right: 6,
+          child: Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 16),
+          ),
+        ),
+        // Bottom Right Checkmark (Decorative)
+        Positioned(
+          bottom: 6,
+          right: 6,
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 4),
+              ],
+            ),
+            child: const Icon(Icons.check_rounded, color: Colors.black, size: 12, weight: 800),
+          ),
+        ),
+      ],
     );
   }
 
@@ -329,368 +383,6 @@ class _ListsScreenState extends State<ListsScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TRAKT SECTION HEADER: (^) Title >
-// ─────────────────────────────────────────────────────────────────────────────
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final VoidCallback onTap;
-
-  const _SectionHeader({required this.title, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white54, width: 1.5),
-            ),
-            child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 12),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 22),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. WATCHLIST POSTER CARD WIDGET
-// ─────────────────────────────────────────────────────────────────────────────
-class _WatchlistPosterCard extends StatelessWidget {
-  final Map<String, dynamic> item;
-
-  const _WatchlistPosterCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final int movieId = item['movie_id'] ?? item['id'] ?? 0;
-    final String mediaType = (item['media_type'] ?? '').toString().toLowerCase();
-    final bool isTv = mediaType == 'tv' || item['first_air_date'] != null;
-
-    final String posterPath = item['poster_path'] ?? '';
-    final String imageUrl = posterPath.isNotEmpty
-        ? (posterPath.startsWith('http') ? posterPath : 'https://image.tmdb.org/t/p/w500$posterPath')
-        : 'https://via.placeholder.com/130x195';
-
-    final String dateStr = item['release_date'] ?? item['first_air_date'] ?? item['year'] ?? '';
-    final String year = dateStr.length >= 4 ? dateStr.substring(0, 4) : '2025';
-
-    final double ratingVal = (item['vote_average'] ?? item['rating'] ?? 0.0).toDouble();
-    final String ratingStr = ratingVal > 0 ? ratingVal.toStringAsFixed(1) : '7.5';
-
-    return GestureDetector(
-      onTap: () {
-        if (isTv) {
-          context.go('/tv/$movieId');
-        } else {
-          context.go('/movie/$movieId');
-        }
-      },
-      child: Container(
-        width: 130,
-        margin: const EdgeInsets.only(right: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: AspectRatio(
-                    aspectRatio: 2 / 3,
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        color: const Color(0xFF1E1E24),
-                        child: const Icon(Icons.movie_rounded, color: Colors.white24, size: 40),
-                      ),
-                    ),
-                  ),
-                ),
-
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 16),
-                  ),
-                ),
-
-                Positioned(
-                  bottom: 6,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.bookmark_rounded,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.public_rounded, color: Colors.white38, size: 11),
-                    const SizedBox(width: 4),
-                    Text(
-                      year,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 12),
-                    const SizedBox(width: 2),
-                    Text(
-                      ratingStr,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. MY LIST CARD
-// ─────────────────────────────────────────────────────────────────────────────
-class _MyListCard extends StatelessWidget {
-  final String title;
-  final String author;
-  final List<String> posters;
-  final VoidCallback onRename;
-  final VoidCallback onDelete;
-
-  const _MyListCard({
-    required this.title,
-    required this.author,
-    required this.posters,
-    required this.onRename,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final String initial = author.isNotEmpty ? author[0].toUpperCase() : 'U';
-
-    return Container(
-      width: 320,
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF131316),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: const Color(0xFFA855F7).withValues(alpha: 0.2),
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Color(0xFFA855F7),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    RichText(
-                      text: TextSpan(
-                        style: const TextStyle(fontSize: 11, color: Colors.white54),
-                        children: [
-                          const TextSpan(text: 'by '),
-                          TextSpan(
-                            text: author,
-                            style: const TextStyle(
-                              color: Color(0xFFA855F7),
-                              decoration: TextDecoration.underline,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded, color: Colors.white54, size: 20),
-                color: const Color(0xFF1E1E24),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                ),
-                onSelected: (value) {
-                  if (value == 'rename') {
-                    onRename();
-                  } else if (value == 'delete') {
-                    onDelete();
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem<String>(
-                    value: 'rename',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, color: Colors.white70, size: 18),
-                        SizedBox(width: 10),
-                        Text(
-                          'Rename',
-                          style: TextStyle(color: Colors.white, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
-                        SizedBox(width: 10),
-                        Text(
-                          'Delete',
-                          style: TextStyle(color: Colors.redAccent, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          SizedBox(
-            height: 125,
-            child: posters.isEmpty
-                ? Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E24),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'No items in list',
-                        style: TextStyle(color: Colors.white38, fontSize: 12),
-                      ),
-                    ),
-                  )
-                : Stack(
-                    children: List.generate(posters.length.clamp(0, 5), (index) {
-                      final double leftOffset = index * 42.0;
-                      return Positioned(
-                        left: leftOffset,
-                        top: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 85,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                blurRadius: 6,
-                                offset: const Offset(-2, 0),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              posters[index],
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: const Color(0xFF22222A),
-                                child: const Icon(Icons.movie_rounded, color: Colors.white24, size: 24),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-          ),
-        ],
       ),
     );
   }

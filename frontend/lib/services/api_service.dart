@@ -1,3 +1,4 @@
+// frontend/lib/services/api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -471,6 +472,86 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to fetch profile stats');
+    }
+  }
+
+  // --- Custom Lists Endpoints ---
+
+  /// Retrieve user's custom lists
+  static Future<List<dynamic>> getCustomLists() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/lists/'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch custom lists');
+    }
+  }
+
+  /// Create a new custom list
+  static Future<Map<String, dynamic>> createCustomList(String name) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/lists/'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'name': name}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to create list');
+    }
+  }
+
+  /// Delete a custom list
+  static Future<void> deleteCustomList(int listId) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/lists/$listId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception('Failed to delete list');
+    }
+  }
+
+  /// Add a movie to a custom list
+  static Future<void> addMediaToCustomList(int listId, int movieId, String? posterPath) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/lists/$listId/items'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'movie_id': movieId,
+        'poster_path': posterPath,
+      }),
+    );
+
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Failed to add media to list');
     }
   }
 }

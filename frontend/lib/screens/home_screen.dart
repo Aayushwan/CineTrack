@@ -43,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadHomeData() async {
     try {
-      // 💡 Fetch trending movies AND TV shows together using type: 'all'
       final trendingData = await ApiService.getTrendingMovies(type: 'all');
       final upcomingData = await ApiService.getUpcomingMedia();
 
@@ -54,20 +53,22 @@ class _HomeScreenState extends State<HomeScreen> {
       final today = DateTime(now.year, now.month, now.day);
 
       final upcomingFromToday = upcomingList.where((item) {
-        final dateStr = item['release_date'] ?? item['first_air_date'];
+        final dateStr = item['calendar_date'] ?? item['release_date'] ?? item['first_air_date'];
         if (dateStr == null || dateStr.toString().trim().isEmpty) return false;
         try {
-          final releaseDate = DateTime.parse(dateStr.toString());
-          final releaseDay = DateTime(releaseDate.year, releaseDate.month, releaseDate.day);
-          return !releaseDay.isBefore(today);
+          final dt = DateTime.parse(dateStr.toString());
+          final releaseDay = DateTime(dt.year, dt.month, dt.day);
+          
+          // 👇 STRICT FILTER: Keep only items releasing TODAY or in the FUTURE
+          return !releaseDay.isBefore(today); 
         } catch (_) {
           return false;
         }
       }).toList();
 
       upcomingFromToday.sort((a, b) {
-        final dateA = DateTime.tryParse(a['release_date'] ?? a['first_air_date'] ?? '') ?? DateTime(2099);
-        final dateB = DateTime.tryParse(b['release_date'] ?? b['first_air_date'] ?? '') ?? DateTime(2099);
+        final dateA = DateTime.tryParse(a['calendar_date'] ?? a['release_date'] ?? a['first_air_date'] ?? '') ?? DateTime(2099);
+        final dateB = DateTime.tryParse(b['calendar_date'] ?? b['release_date'] ?? b['first_air_date'] ?? '') ?? DateTime(2099);
         return dateA.compareTo(dateB);
       });
 
@@ -274,7 +275,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               _buildMediaList(
                                 items: filteredUpcoming,
                                 emptyMessage: 'No upcoming $_selectedFilter found',
-                                isLandscape: true,
+                                // 👇 Changed to false so it displays as sliding vertical posters!
+                                isLandscape: false, 
                                 isCalendar: true,
                               ),
                               const SizedBox(height: 28),
@@ -381,7 +383,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
                 ];
-                metadataLeftText = '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+                // 👇 Shorten the date for narrower vertical cards (e.g., "Oct 24")
+                metadataLeftText = isLandscape 
+                    ? '${months[dt.month - 1]} ${dt.day}, ${dt.year}' 
+                    : '${months[dt.month - 1]} ${dt.day}';
               } catch (_) {
                 metadataLeftText = releaseDate;
               }
@@ -413,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 id: id,
                 title: title,
                 imageUrl: imageUrl,
-                mediaType: mediaType, // 👈 Dynamically routes /tv/:id vs /movie/:id
+                mediaType: mediaType, 
                 isLandscape: isLandscape,
                 year: metadataLeftText,
                 rating: voteAverage.toDouble(),

@@ -116,7 +116,7 @@ async def search_media(query: str, page: int = 1):
 
 @router.get("/upcoming", summary="Get Upcoming Movies and Shows Calendar")
 async def get_upcoming_media(page: int = 1):
-    # 👇 Bumped to v5 to force Redis to fetch fresh data
+    # ⚡ Bumped to v5 to force Redis to fetch fresh data
     cache_key = f"calendar:upcoming:v5:page:{page}"
 
     cached_data = await get_cache(cache_key)
@@ -131,7 +131,7 @@ async def get_upcoming_media(page: int = 1):
 
     async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
         try:
-            # 👇 Added region="IN" to pull regional releases (like Drishyam 3)
+            # ⚡ Added region="IN" to pull regional releases (like Drishyam 3)
             params = {"api_key": settings.TMDB_API_KEY, "page": page, "region": "IN"}
             
             movie_res, tv_res = await asyncio.gather(
@@ -179,7 +179,7 @@ async def get_upcoming_media(page: int = 1):
 @router.get("/discover", summary="Discover Media by Category")
 async def discover_media(category: str = "trending", page: int = 1, type: str = "movie"):
     media_type = type.lower() if type in ["movie", "tv"] else "movie"
-    # 👇 Bumped to v5
+    # ⚡ Bumped to v5
     cache_key = f"movies:discover:v5:cat:{category}:type:{media_type}:page:{page}"
 
     try:
@@ -198,7 +198,7 @@ async def discover_media(category: str = "trending", page: int = 1, type: str = 
     async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
         try:
             if category == "releases":
-                # 👇 Added region="IN" here as well
+                # ⚡ Added region="IN" here as well
                 params = {"api_key": settings.TMDB_API_KEY, "page": page, "region": "IN"}
                 
                 movie_res, tv_res = await asyncio.gather(
@@ -306,7 +306,7 @@ async def get_tv_details(tv_id: int):
                 f"{TMDB_BASE_URL}/tv/{tv_id}",
                 params={
                     "api_key": settings.TMDB_API_KEY,
-                    # 👇 Added watch/providers
+                    # ⚡ Added watch/providers
                     "append_to_response": "credits,videos,watch/providers" 
                 },
                 headers=HEADERS,
@@ -322,6 +322,51 @@ async def get_tv_details(tv_id: int):
 
             await set_cache(cache_key, data, expire_seconds=43200)
             return data
+
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Failed to connect to TMDB: {exc}"
+            )
+
+
+# 👇 NEW ROUTE: Get Specific Season Details
+@router.get("/tv/{tv_id}/season/{season_number}", summary="Get TV Season Details")
+async def get_tv_season(tv_id: int, season_number: int):
+    cache_key = f"tv:season:v1:{tv_id}:{season_number}"
+    
+    cached_data = await get_cache(cache_key)
+    if cached_data:
+        return cached_data
+
+    if not settings.TMDB_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="TMDB API Key is not configured."
+        )
+
+    async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+        try:
+            response = await client.get(
+                f"{TMDB_BASE_URL}/tv/{tv_id}/season/{season_number}",
+                params={"api_key": settings.TMDB_API_KEY},
+                headers=HEADERS,
+            )
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"TMDB API returned error: {response.status_code}"
+                )
+            
+            data = response.json()
+            
+            # We only need the episodes list for the UI
+            episodes = data.get("episodes", [])
+
+            await set_cache(cache_key, episodes, expire_seconds=43200)
+            return episodes
 
         except HTTPException:
             raise
@@ -400,7 +445,7 @@ async def get_movie_details(movie_id: int):
                 f"{TMDB_BASE_URL}/movie/{movie_id}",
                 params={
                     "api_key": settings.TMDB_API_KEY,
-                    # 👇 Added watch/providers
+                    # ⚡ Added watch/providers
                     "append_to_response": "credits,videos,watch/providers"
                 },
                 headers=HEADERS,

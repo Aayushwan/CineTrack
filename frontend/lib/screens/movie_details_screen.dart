@@ -29,7 +29,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     super.initState();
     _fetchDetails();
     
-    // 👇 Ensure custom lists are loaded in the background for the 3-dots menu
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
     });
@@ -61,25 +60,50 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     }
   }
 
+  // ─── Watched Menu Logic ──────────────────────────────────────────────────
   Future<void> _markAsWatched(String title, String? poster, int runtime, String option, {String? releaseDateStr}) async {
     Navigator.pop(context); 
-    
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
     if (_isLogging) return;
     setState(() => _isLogging = true);
 
     DateTime? watchedAtDate;
-    if (option == 'Just now' || option == 'Now watching') {
+
+    if (option == 'Just now') {
       watchedAtDate = DateTime.now().toUtc();
-    } else if (option == 'Release date' && releaseDateStr != null && releaseDateStr.isNotEmpty) {
-      try {
-        watchedAtDate = DateTime.parse(releaseDateStr).toUtc();
-      } catch (_) {
+    } else if (option == 'Release date') {
+      if (releaseDateStr != null && releaseDateStr.isNotEmpty) {
+        try { watchedAtDate = DateTime.parse(releaseDateStr).toUtc(); } catch (_) { watchedAtDate = DateTime.now().toUtc(); }
+      } else {
         watchedAtDate = DateTime.now().toUtc();
       }
-    } else if (option == 'Unknown date') {
-      watchedAtDate = DateTime.utc(1970, 1, 1); 
+    } else if (option == 'Other date') {
+      final DateTime? pickedDate = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: DateTime(1900), 
+        lastDate: DateTime.now(), 
+        builder: (context, child) {
+          return Theme(
+            data: ThemeData.dark().copyWith(
+              colorScheme: const ColorScheme.dark(
+                primary: Color(0xFFA855F7), 
+                onPrimary: Colors.white,
+                surface: Color(0xFF131316),
+                onSurface: Colors.white,
+              ), dialogTheme: DialogThemeData(backgroundColor: const Color(0xFF131316)),
+            ),
+            child: child!,
+          );
+        },
+      );
+
+      if (pickedDate == null) {
+        if (mounted) setState(() => _isLogging = false);
+        return;
+      }
+      watchedAtDate = pickedDate.toUtc();
     }
 
     try {
@@ -92,13 +116,9 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
         userRating: 0.0,
         watchedAt: watchedAtDate?.toIso8601String(),
       );
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Marked "$title" as Watched!', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF131316), behavior: SnackBarBehavior.floating),
-      );
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Marked "$title" as Watched!', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF131316), behavior: SnackBarBehavior.floating));
     } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Failed to log watch history: $e', style: const TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating),
-      );
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Failed to log watch history: $e', style: const TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
     } finally {
       if (mounted) setState(() => _isLogging = false);
     }
@@ -127,11 +147,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                 ),
               ),
               Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
-              _buildMenuOption(Icons.visibility_outlined, 'Now watching', () => _markAsWatched(title, poster, runtime, 'Now watching')),
               _buildMenuOption(Icons.check_rounded, 'Just now', () => _markAsWatched(title, poster, runtime, 'Just now')),
               _buildMenuOption(Icons.calendar_today_rounded, 'Release date', () => _markAsWatched(title, poster, runtime, 'Release date', releaseDateStr: releaseDate)),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0), child: Divider(color: Colors.white.withValues(alpha: 0.1), height: 1)),
               _buildMenuOption(Icons.edit_calendar_rounded, 'Other date', () => _markAsWatched(title, poster, runtime, 'Other date')),
-              _buildMenuOption(Icons.help_outline_rounded, 'Unknown date', () => _markAsWatched(title, poster, runtime, 'Unknown date')),
             ],
           ),
         );
@@ -139,7 +158,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     );
   }
 
-  // 👇 New 3-Dot More Options Menu
   void _showMoreOptions(WatchlistProvider provider, String? posterPath) {
     showModalBottomSheet(
       context: context,
@@ -163,28 +181,16 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                 ),
               ),
               Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
-              
-              // Map through Custom Lists dynamically from the Database
               if (provider.customLists.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Text('No custom lists found. Create one in the Lists tab!', style: TextStyle(color: Colors.white54)),
-                )
+                const Padding(padding: EdgeInsets.all(24.0), child: Text('No custom lists found. Create one in the Lists tab!', style: TextStyle(color: Colors.white54)))
               else
                 ...provider.customLists.map((listData) {
                   int listId = listData['id'];
                   String listTitle = listData['title'] ?? listData['name'];
-                  
                   return _buildMenuOption(Icons.playlist_add_rounded, listTitle, () {
                     provider.addMediaToList(listId, widget.movieId, posterPath);
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Added to "$listTitle"', style: const TextStyle(color: Colors.white)),
-                        backgroundColor: const Color(0xFF131316),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added to "$listTitle"', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF131316), behavior: SnackBarBehavior.floating));
                   });
                 }),
             ],
@@ -206,6 +212,168 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
           ],
         ),
+      ),
+    );
+  }
+
+  // ─── Where to Watch Logic ──────────────────────────────────────────────────
+  void _showWhereToWatchModal(String movieTitle) {
+    final results = _movieData!['watch/providers']?['results'] as Map<String, dynamic>? ?? {};
+    final providers = results['IN'] ?? results['US'] ?? {}; 
+    
+    final flatrate = providers['flatrate'] as List<dynamic>? ?? [];
+    final rent = providers['rent'] as List<dynamic>? ?? [];
+    final buy = providers['buy'] as List<dynamic>? ?? [];
+
+    if (flatrate.isEmpty && rent.isEmpty && buy.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No streaming providers available.', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316)));
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF131316),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24.0, top: 8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Where to Watch', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+              
+              if (flatrate.isNotEmpty) ...[
+                const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Text('Subscription', style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold))),
+                ...flatrate.map((p) => _buildProviderTile(p, movieTitle)),
+              ],
+              if (rent.isNotEmpty) ...[
+                const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Text('Rent', style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold))),
+                ...rent.map((p) => _buildProviderTile(p, movieTitle)),
+              ],
+              if (buy.isNotEmpty) ...[
+                const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Text('Buy', style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold))),
+                ...buy.map((p) => _buildProviderTile(p, movieTitle)),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 👇 Updated to bypass TMDB tracking and jump dynamically straight to the requested platform
+  Widget _buildProviderTile(dynamic provider, String movieTitle) {
+    final logoPath = provider['logo_path'];
+    final name = provider['provider_name'] ?? 'Unknown';
+    final logoUrl = logoPath != null ? 'https://image.tmdb.org/t/p/w92$logoPath' : '';
+
+    return InkWell(
+      onTap: () async {
+        // Build a targeted search URL to bypass TMDB's native JustWatch link
+        final query = Uri.encodeComponent('Watch $movieTitle on $name');
+        final url = Uri.parse('https://www.google.com/search?q=$query');
+        
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        } else {
+           if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch provider link', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316)));
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: const Color(0xFF1E1E24), borderRadius: BorderRadius.circular(8)),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: logoUrl.isNotEmpty ? Image.network(logoUrl, width: 40, height: 40, fit: BoxFit.cover) : Container(width: 40, height: 40, color: Colors.black26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    const Text('India', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.open_in_new_rounded, color: Colors.white24, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getTopProviderLogoUrl() {
+    if (_movieData == null) return '';
+    final results = _movieData!['watch/providers']?['results'] as Map<String, dynamic>? ?? {};
+    final providers = results['IN'] ?? results['US'] ?? {};
+    
+    final flatrate = providers['flatrate'] as List<dynamic>? ?? [];
+    if (flatrate.isNotEmpty && flatrate.first['logo_path'] != null) {
+      return 'https://image.tmdb.org/t/p/w92${flatrate.first['logo_path']}';
+    }
+    
+    final rent = providers['rent'] as List<dynamic>? ?? [];
+    if (rent.isNotEmpty && rent.first['logo_path'] != null) {
+      return 'https://image.tmdb.org/t/p/w92${rent.first['logo_path']}';
+    }
+    
+    return '';
+  }
+
+  void _showTrailerPopupDialog() {
+    final videos = _movieData!['videos']?['results'] as List<dynamic>?;
+    final trailer = videos?.firstWhere((v) => v['site'] == 'YouTube' && v['type'] == 'Trailer', orElse: () => videos.firstOrNull) ?? videos?.firstOrNull;
+
+    if (trailer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No trailer available', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316)));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Trailer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.play_circle_fill_rounded, color: Color(0xFFA855F7), size: 64),
+            const SizedBox(height: 16),
+            Text(trailer['name'] ?? 'Watch Official Trailer', style: const TextStyle(color: Colors.white70, fontSize: 15), textAlign: TextAlign.center),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA855F7)),
+            onPressed: () {
+              Navigator.pop(context);
+              final url = Uri.parse('https://www.youtube.com/watch?v=${trailer['key']}');
+              launchUrl(url, mode: LaunchMode.externalApplication);
+            },
+            child: const Text('Watch on YouTube', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
+        ],
       ),
     );
   }
@@ -252,15 +420,12 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           setDialogState(() => isSubmitting = true);
                           try {
                             await ApiService.postReview(movieId: widget.movieId, rating: currentRating, comment: reviewController.text);
-                            
                             if (!context.mounted) return; 
-                            
                             Navigator.pop(context);
                             _fetchDetails(); 
                             scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Review added successfully!', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
                           } catch (e) {
                             if (!context.mounted) return; 
-                            
                             scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Failed to post review', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
                             setDialogState(() => isSubmitting = false);
                           }
@@ -274,20 +439,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
         );
       },
     );
-  }
-
-  Future<void> _launchTrailer() async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final videos = _movieData!['videos']?['results'] as List<dynamic>?;
-    if (videos != null && videos.isNotEmpty) {
-      final trailer = videos.firstWhere((v) => v['site'] == 'YouTube' && v['type'] == 'Trailer', orElse: () => videos.first);
-      final url = Uri.parse('https://www.youtube.com/watch?v=${trailer['key']}');
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-        return;
-      }
-    }
-    scaffoldMessenger.showSnackBar(const SnackBar(content: Text('No trailer available', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
   }
 
   String _formatRuntime(int totalMinutes) {
@@ -381,38 +532,43 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           const SizedBox(height: 16),
                           SizedBox(
                             height: 190,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: cast.length,
-                              itemBuilder: (context, index) {
-                                final person = cast[index];
-                                final personId = person['id'];
-                                final personName = person['name'] ?? '';
-                                final character = person['character'] ?? '';
-                                final profileUrl = person['profile_path'] != null ? 'https://image.tmdb.org/t/p/w185${person['profile_path']}' : '';
+                            child: ScrollConfiguration(
+                              behavior: ScrollConfiguration.of(context).copyWith(
+                                dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+                              ),
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: cast.length,
+                                itemBuilder: (context, index) {
+                                  final person = cast[index];
+                                  final personId = person['id'];
+                                  final personName = person['name'] ?? '';
+                                  final character = person['character'] ?? '';
+                                  final profileUrl = person['profile_path'] != null ? 'https://image.tmdb.org/t/p/w185${person['profile_path']}' : '';
 
-                                return GestureDetector(
-                                  onTap: () => context.go('/person/$personId'),
-                                  child: Container(
-                                    width: 110,
-                                    margin: const EdgeInsets.only(right: 12),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: profileUrl.isNotEmpty 
-                                              ? Image.network(profileUrl, height: 140, width: 110, fit: BoxFit.cover)
-                                              : Container(height: 140, width: 110, color: const Color(0xFF131316), child: const Icon(Icons.person_rounded, color: Colors.white24, size: 40)),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(personName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                                        Text(character, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-                                      ],
+                                  return GestureDetector(
+                                    onTap: () => context.go('/person/$personId'),
+                                    child: Container(
+                                      width: 110,
+                                      margin: const EdgeInsets.only(right: 12),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: profileUrl.isNotEmpty 
+                                                ? Image.network(profileUrl, height: 140, width: 110, fit: BoxFit.cover)
+                                                : Container(height: 140, width: 110, color: const Color(0xFF131316), child: const Icon(Icons.person_rounded, color: Colors.white24, size: 40)),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(personName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                          Text(character, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
                           ),
                           const SizedBox(height: 32),
@@ -496,6 +652,9 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     List<String> genres, String overview, String? posterPath, int runtime, String releaseDate, 
     bool isWatchlist, bool isFavorite, WatchlistProvider watchlistProvider, ScaffoldMessengerState scaffoldMessenger
   ) {
+    // Get the provider logo
+    final providerLogoUrl = _getTopProviderLogoUrl();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -504,13 +663,24 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: Text(title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1))),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(children: [Text('Where to Watch', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)), SizedBox(width: 4), Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 10)]),
-                SizedBox(height: 8),
-                Text('No services', style: TextStyle(color: Colors.white38, fontSize: 12)),
-              ],
+            
+            // 👇 Interactive "Where to Watch" Button
+            GestureDetector(
+              onTap: () => _showWhereToWatchModal(title),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Row(children: [Text('Where to Watch', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)), SizedBox(width: 4), Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 10)]),
+                  const SizedBox(height: 8),
+                  // Display Logo if available, else show "No services" text
+                  providerLogoUrl.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(providerLogoUrl, width: 32, height: 32, fit: BoxFit.cover),
+                        )
+                      : const Text('No services', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                ],
+              ),
             ),
           ],
         ),
@@ -548,7 +718,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
         Row(
           children: [
-            // 1. Watched Button (Wide)
+            // 1. Watched Button
             InkWell(
               onTap: () => _showMarkWatchedMenu(title, posterPath, runtime, releaseDate),
               borderRadius: BorderRadius.circular(10),
@@ -578,11 +748,11 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             ),
             const SizedBox(width: 12),
 
-            // 3. Trailer Button
+            // 3. Trailer Pop-up Button
             _buildIconButton(
               icon: Icons.play_circle_outline_rounded,
               isActive: false,
-              onTap: _launchTrailer,
+              onTap: _showTrailerPopupDialog,
             ),
             const SizedBox(width: 12),
 
@@ -603,7 +773,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             ),
             const SizedBox(width: 12),
 
-            // 👇 5. 3-Dots wired to open Custom List menu
+            // 5. 3-Dots wired to open Custom List menu
             _buildIconButton(
               icon: Icons.more_vert_rounded, 
               isActive: false, 

@@ -6,7 +6,7 @@ import '../models/review.dart';
 
 class ApiService {
   // Base URL pointing to your FastAPI backend
-  static const String baseUrl = 'http://127.0.0.1:8000';
+  static const String baseUrl = 'http://localhost:8000';
 
   // --- Token & User Persistence Helpers ---
 
@@ -169,6 +169,24 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to load person details');
+    }
+  }
+
+  // Fetch TV Show Season Details (Added for real episodes)
+  static Future<List<dynamic>> getTvSeasonDetails(int tvId, int seasonNumber) async {
+    try {
+      final response = await http.get(
+        // Matches the /movies prefix in media.py
+        Uri.parse('$baseUrl/movies/tv/$tvId/season/$seasonNumber'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      return [];
     }
   }
 
@@ -391,7 +409,7 @@ class ApiService {
     String? posterPath,
     double? userRating,
     int runtimeMinutes = 120,
-    String? watchedAt, // Added for custom Trakt-style tracking
+    String? watchedAt, 
   }) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -403,15 +421,11 @@ class ApiService {
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
-        // Aligning with DB schema string type for media_id
         'media_id': movieId.toString(),
         'media_type': mediaType,
         'title': title,
         'poster_path': posterPath,
-        // Convert minutes to seconds for duration_watched_seconds
         'duration_watched_seconds': runtimeMinutes * 60,
-        // Optional user rating logic can be appended separately if needed by backend schema
-        // 'user_rating': userRating, 
         'watched_at': watchedAt ?? DateTime.now().toUtc().toIso8601String(),
       }),
     );

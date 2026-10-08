@@ -25,7 +25,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   List<Review> _reviews = [];
   
   List<dynamic> _episodes = [];
-  // 👇 State variable to track the currently selected season
   int _currentSeason = 1;
 
   @override
@@ -49,7 +48,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
       List<dynamic> fetchedEpisodes = [];
       try { 
-        // 👇 Fetch the currently selected season (defaults to 1)
         fetchedEpisodes = await ApiService.getTvSeasonDetails(widget.showId, _currentSeason); 
       } catch (_) {}
 
@@ -96,7 +94,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 onPrimary: Colors.white,
                 surface: Color(0xFF131316),
                 onSurface: Colors.white,
-              ), dialogTheme: DialogThemeData(backgroundColor: const Color(0xFF131316)),
+              ), dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF131316)),
             ),
             child: child!,
           );
@@ -107,8 +105,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         return;
       }
       watchedAtDate = pickedDate.toUtc();
-    } else if (option == 'Unknown date') {
-      watchedAtDate = DateTime.utc(1970, 1, 1); 
     }
 
     try {
@@ -161,7 +157,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               _buildMenuOption(Icons.calendar_today_outlined, 'Release date', () => _markAsWatched(title, poster, episodes, 'Release date', releaseDateStr: releaseDate)),
               Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0), child: Divider(color: Colors.white.withValues(alpha: 0.1), height: 1)),
               _buildMenuOption(Icons.edit_outlined, 'Other date', () => _markAsWatched(title, poster, episodes, 'Other date')),
-              _buildMenuOption(Icons.help_outline_rounded, 'Unknown date', () => _markAsWatched(title, poster, episodes, 'Unknown date')),
             ],
           ),
         );
@@ -231,9 +226,129 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
+  // ─── Where to Watch Logic ──────────────────────────────────────────────────
+  void _showWhereToWatchModal(String showTitle) {
+    final results = _showDetails!['watch/providers']?['results'] as Map<String, dynamic>? ?? {};
+    final providers = results['IN'] ?? results['US'] ?? {}; 
+    
+    final flatrate = providers['flatrate'] as List<dynamic>? ?? [];
+    final rent = providers['rent'] as List<dynamic>? ?? [];
+    final buy = providers['buy'] as List<dynamic>? ?? [];
+
+    if (flatrate.isEmpty && rent.isEmpty && buy.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No streaming providers available.', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316)));
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF131316),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24.0, top: 8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Where to Watch', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+              
+              if (flatrate.isNotEmpty) ...[
+                const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Text('Subscription', style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold))),
+                ...flatrate.map((p) => _buildProviderTile(p, showTitle)),
+              ],
+              if (rent.isNotEmpty) ...[
+                const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Text('Rent', style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold))),
+                ...rent.map((p) => _buildProviderTile(p, showTitle)),
+              ],
+              if (buy.isNotEmpty) ...[
+                const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Text('Buy', style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold))),
+                ...buy.map((p) => _buildProviderTile(p, showTitle)),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProviderTile(dynamic provider, String showTitle) {
+    final logoPath = provider['logo_path'];
+    final name = provider['provider_name'] ?? 'Unknown';
+    final logoUrl = logoPath != null ? 'https://image.tmdb.org/t/p/w92$logoPath' : '';
+
+    return InkWell(
+      onTap: () async {
+        final query = Uri.encodeComponent('Watch $showTitle on $name');
+        final url = Uri.parse('https://www.google.com/search?q=$query');
+        
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        } else {
+           if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch provider link', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316)));
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: const Color(0xFF1E1E24), borderRadius: BorderRadius.circular(8)),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: logoUrl.isNotEmpty ? Image.network(logoUrl, width: 40, height: 40, fit: BoxFit.cover) : Container(width: 40, height: 40, color: Colors.black26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    const Text('India', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.open_in_new_rounded, color: Colors.white24, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getTopProviderLogoUrl() {
+    if (_showDetails == null) return '';
+    final results = _showDetails!['watch/providers']?['results'] as Map<String, dynamic>? ?? {};
+    final providers = results['IN'] ?? results['US'] ?? {};
+    
+    final flatrate = providers['flatrate'] as List<dynamic>? ?? [];
+    if (flatrate.isNotEmpty && flatrate.first['logo_path'] != null) {
+      return 'https://image.tmdb.org/t/p/w92${flatrate.first['logo_path']}';
+    }
+    
+    final rent = providers['rent'] as List<dynamic>? ?? [];
+    if (rent.isNotEmpty && rent.first['logo_path'] != null) {
+      return 'https://image.tmdb.org/t/p/w92${rent.first['logo_path']}';
+    }
+    
+    return '';
+  }
+
   // ─── Season Episodes Bottom Sheet ────────────────────────────────────────
   void _showSeasonEpisodesModal(String fallbackBackdrop) {
-    // 👇 Extract available seasons safely from TMDB response
     final seasons = (_showDetails!['seasons'] as List<dynamic>?)?.where((s) => s['season_number'] != null).toList() ?? [];
     bool isFetchingSeason = false;
 
@@ -243,7 +358,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (context) {
-        // StatefulBuilder allows us to refresh the modal when a new season is clicked
         return StatefulBuilder(
           builder: (context, setModalState) {
             return DraggableScrollableSheet(
@@ -260,7 +374,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // 👇 Interactive Seasons Popup Menu
                           PopupMenuButton<int>(
                             color: const Color(0xFF1E1E24),
                             initialValue: _currentSeason,
@@ -274,13 +387,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                                 newEpisodes = await ApiService.getTvSeasonDetails(widget.showId, selectedSeason);
                               } catch (_) {}
                               
-                              // Update the background screen state
                               setState(() {
                                 _currentSeason = selectedSeason;
                                 _episodes = newEpisodes;
                               });
                               
-                              // Update the modal's internal state
                               setModalState(() => isFetchingSeason = false);
                             },
                             itemBuilder: (context) {
@@ -510,7 +621,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       backgroundColor: const Color(0xFF09090B),
       body: Stack(
         children: [
-          // Background Backdrop Layer
           if (backdropUrl.isNotEmpty) Positioned.fill(child: Image.network(backdropUrl, fit: BoxFit.cover)),
           Positioned.fill(child: Container(color: const Color(0xFF09090B).withValues(alpha: 0.85))), 
           Positioned.fill(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40), child: Container(color: Colors.transparent))),
@@ -533,7 +643,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Responsive Header Section
                         if (isWide)
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,7 +674,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                                 children: [
                                   const Icon(Icons.access_time_rounded, color: Colors.white70, size: 18),
                                   const SizedBox(width: 8),
-                                  // 👇 Updated Header text dynamically
                                   Text('Seasons / Season $_currentSeason', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                                   const SizedBox(width: 4),
                                   const Icon(Icons.chevron_right_rounded, color: Colors.white),
@@ -577,7 +685,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           
                           SizedBox(
                             height: 180,
-                            // 👇 ScrollConfiguration enables mouse dragging on web
                             child: ScrollConfiguration(
                               behavior: ScrollConfiguration.of(context).copyWith(
                                 dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
@@ -649,7 +756,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           const SizedBox(height: 32),
                         ],
 
-                        // Actors Strip
                         if (cast.isNotEmpty) ...[
                           const Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -661,7 +767,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           const SizedBox(height: 16),
                           SizedBox(
                             height: 200,
-                            // 👇 ScrollConfiguration enables mouse dragging on web
                             child: ScrollConfiguration(
                               behavior: ScrollConfiguration.of(context).copyWith(
                                 dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
@@ -715,7 +820,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           const SizedBox(height: 32),
                         ],
 
-                        // Reviews Strip
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -733,7 +837,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             ? const Text('No reviews yet for this show.', style: TextStyle(color: Colors.white54, fontSize: 14))
                             : SizedBox(
                                 height: 160,
-                                // 👇 ScrollConfiguration enables mouse dragging on web
                                 child: ScrollConfiguration(
                                   behavior: ScrollConfiguration.of(context).copyWith(
                                     dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
@@ -827,6 +930,8 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     String overview, String? posterPath, String voteAverage, String firstAirDate, 
     bool isWatchlist, bool isFavorite, WatchlistProvider watchlistProvider
   ) {
+    final providerLogoUrl = _getTopProviderLogoUrl();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -835,13 +940,21 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: Text(title, style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1))),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(children: [Text('Where to Watch', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)), SizedBox(width: 4), Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 10)]),
-                SizedBox(height: 8),
-                Text('JustWatch', style: TextStyle(color: Colors.yellow, fontSize: 12, fontWeight: FontWeight.bold)),
-              ],
+            GestureDetector(
+              onTap: () => _showWhereToWatchModal(title),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Row(children: [Text('Where to Watch', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)), SizedBox(width: 4), Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 10)]),
+                  const SizedBox(height: 8),
+                  providerLogoUrl.isNotEmpty 
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(providerLogoUrl, width: 32, height: 32, fit: BoxFit.cover),
+                        )
+                      : const Text('No services', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                ],
+              ),
             ),
           ],
         ),

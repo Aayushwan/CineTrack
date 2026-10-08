@@ -21,17 +21,15 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  // Active Trakt Capsule Filter: 'media', 'shows', 'movies'
   String _selectedFilter = 'media';
 
-  // Sidebar Filters
   String _selectedGenre = 'All';
   String _selectedStatus = 'All';
   String _selectedDecade = 'All';
 
   List<dynamic> _continueWatching = [];
   List<dynamic> _startWatching = [];
-  List<dynamic> _upcomingReleases = [];
+  List<dynamic> _upcomingReleases = []; // Re-purposed for Last 30 Days
   List<dynamic> _recommended = [];
   List<dynamic> _history = [];
 
@@ -43,42 +41,79 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadHomeData() async {
     try {
-      final trendingData = await ApiService.getTrendingMovies(type: 'all');
-      final upcomingData = await ApiService.getUpcomingMedia();
+      // Fetch Watchlist and History data safely
+      List<dynamic> watchlistData = [];
+      try {
+        watchlistData = await ApiService.getWatchlist();
+      } catch (_) {}
 
-      final trendingList = (trendingData['results'] as List<dynamic>?) ?? [];
-      final upcomingList = (upcomingData['results'] as List<dynamic>?) ?? [];
+      List<dynamic> historyData = [];
+      try {
+        historyData = await ApiService.getWatchHistory();
+      } catch (_) {
+        try {
+          historyData = (await (ApiService as dynamic).getHistory()) as List<dynamic>;
+        } catch (_) {}
+      }
+
+      // 💡 Fetching multiple endpoints to guarantee a rich pool of recent releases
+      final results = await Future.wait([
+        ApiService.getTrendingMovies(type: 'all'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie'),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv'),
+      ]);
+
+      final trendingList = (results[0]['results'] as List<dynamic>?) ?? [];
+
+      List<dynamic> rawReleases = [];
+      rawReleases.addAll((results[1]['results'] as List<dynamic>?) ?? []);
+      rawReleases.addAll((results[2]['results'] as List<dynamic>?) ?? []);
+      rawReleases.addAll((results[3]['results'] as List<dynamic>?) ?? []);
+      rawReleases.addAll((results[4]['results'] as List<dynamic>?) ?? []);
 
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
+      final thirtyDaysAgo = today.subtract(const Duration(days: 30));
 
-      final upcomingFromToday = upcomingList.where((item) {
+      // 1. Strict Filter: Only keep releases from the LAST 30 days
+      List<dynamic> last30DaysReleases = rawReleases.where((item) {
         final dateStr = item['calendar_date'] ?? item['release_date'] ?? item['first_air_date'];
         if (dateStr == null || dateStr.toString().trim().isEmpty) return false;
         try {
           final dt = DateTime.parse(dateStr.toString());
           final releaseDay = DateTime(dt.year, dt.month, dt.day);
           
-          // 👇 STRICT FILTER: Keep only items releasing TODAY or in the FUTURE
-          return !releaseDay.isBefore(today); 
+          return !releaseDay.isBefore(thirtyDaysAgo) && !releaseDay.isAfter(today); 
         } catch (_) {
           return false;
         }
       }).toList();
 
-      upcomingFromToday.sort((a, b) {
-        final dateA = DateTime.tryParse(a['calendar_date'] ?? a['release_date'] ?? a['first_air_date'] ?? '') ?? DateTime(2099);
-        final dateB = DateTime.tryParse(b['calendar_date'] ?? b['release_date'] ?? b['first_air_date'] ?? '') ?? DateTime(2099);
-        return dateA.compareTo(dateB);
+      // 2. Sort Descending (Newest releases closest to today show up first)
+      last30DaysReleases.sort((a, b) {
+        final dateA = DateTime.tryParse(a['calendar_date'] ?? a['release_date'] ?? a['first_air_date'] ?? '') ?? DateTime(1900);
+        final dateB = DateTime.tryParse(b['calendar_date'] ?? b['release_date'] ?? b['first_air_date'] ?? '') ?? DateTime(1900);
+        return dateB.compareTo(dateA); 
       });
+
+      // 3. Remove duplicates
+      final seenIds = <int>{};
+      last30DaysReleases = last30DaysReleases.where((item) {
+        final id = item['id'] as int? ?? 0;
+        if (seenIds.contains(id)) return false;
+        seenIds.add(id);
+        return true;
+      }).toList();
 
       if (mounted) {
         setState(() {
-          _startWatching = trendingList;
-          _recommended = trendingList.reversed.toList();
-          _upcomingReleases = upcomingFromToday;
+          _startWatching = watchlistData; 
+          _recommended = trendingList;
+          _upcomingReleases = last30DaysReleases; // Assigned to the Calendar section
           _continueWatching = [];
-          _history = [];
+          _history = historyData; 
           _isLoading = false;
         });
       }
@@ -92,27 +127,23 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- Combined Capsule & Sidebar Filtering Logic ---
   List<dynamic> _filterList(List<dynamic> list) {
     return list.where((item) {
-      final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
+      final String rawType = (item['media_type'] ?? item['type'] ?? '').toString().toLowerCase();
       final bool isTv = rawType == 'tv' ||
           rawType == 'show' ||
           item['first_air_date'] != null ||
           (item['name'] != null && item['title'] == null);
 
-      // 1. Media Type Filter (Capsule bar)
       if (_selectedFilter == 'shows' && !isTv) return false;
       if (_selectedFilter == 'movies' && isTv) return false;
 
-      // 2. Genre Filter
       if (_selectedGenre != 'All') {
         final List<dynamic> genreIds = item['genre_ids'] ?? [];
         final targetGenreId = FilterDrawer.genreMap[_selectedGenre];
         if (targetGenreId != null && !genreIds.contains(targetGenreId)) return false;
       }
 
-      // 3. Status Filter
       if (_selectedStatus != 'All') {
         final dateStr = item['release_date'] ?? item['first_air_date'] ?? '';
         final isUpcoming = dateStr.isNotEmpty && (DateTime.tryParse(dateStr)?.isAfter(DateTime.now()) ?? false);
@@ -120,12 +151,11 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_selectedStatus == 'Released' && isUpcoming) return false;
       }
 
-      // 4. Decade Filter
       if (_selectedDecade != 'All') {
-        final dateStr = item['release_date'] ?? item['first_air_date'] ?? '';
-        final year = DateTime.tryParse(dateStr)?.year;
+        final dateStr = item['release_year'] ?? item['release_date'] ?? item['first_air_date'] ?? item['year'] ?? '';
+        final year = int.tryParse(dateStr.toString().length >= 4 ? dateStr.toString().substring(0, 4) : '');
         if (year != null) {
-          if (_selectedDecade == 'This Year' && year != 2026) return false;
+          if (_selectedDecade == 'This Year' && year != DateTime.now().year) return false;
           if (_selectedDecade == '2020s' && (year < 2020 || year > 2029)) return false;
           if (_selectedDecade == '2010s' && (year < 2010 || year > 2019)) return false;
           if (_selectedDecade == '2000s' && (year < 2000 || year > 2009)) return false;
@@ -173,7 +203,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── STICKY TOP HEADER (PERSISTENT ON SCROLL) ────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Row(
@@ -187,14 +216,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const Spacer(),
-                  // Sticky Trakt Filter Capsule
                   TraktFilterBar(
                     selectedFilter: _selectedFilter,
                     showPeople: false,
                     onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
                   ),
                   const SizedBox(width: 8),
-                  // Sticky Filter Drawer Trigger Button
                   IconButton(
                     onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
                     icon: Stack(
@@ -227,8 +254,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-
-            // ── SCROLLABLE BODY CONTENT ─────────────────────────────────────
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator(color: Color(0xFFA855F7)))
@@ -239,7 +264,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 1. Continue Watching
                               SectionHeader(
                                 title: 'Continue Watching',
                                 onTap: () => context.go('/progress'),
@@ -253,7 +277,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 28),
 
-                              // 2. Start Watching
                               SectionHeader(
                                 title: 'Start Watching',
                                 onTap: () => context.go('/watchlist'),
@@ -261,12 +284,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 12),
                               _buildMediaList(
                                 items: filteredStart,
-                                emptyMessage: 'No $_selectedFilter available to watch',
+                                emptyMessage: 'No $_selectedFilter in your watchlist',
                                 isLandscape: false,
                               ),
                               const SizedBox(height: 28),
 
-                              // 3. Calendar
                               SectionHeader(
                                 title: 'Calendar',
                                 onTap: () => context.go('/calendar'),
@@ -274,14 +296,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 12),
                               _buildMediaList(
                                 items: filteredUpcoming,
-                                emptyMessage: 'No upcoming $_selectedFilter found',
-                                // 👇 Changed to false so it displays as sliding vertical posters!
+                                emptyMessage: 'No recent $_selectedFilter releases found',
                                 isLandscape: false, 
                                 isCalendar: true,
                               ),
                               const SizedBox(height: 28),
 
-                              // 4. Recommended
                               SectionHeader(
                                 title: 'Recommended',
                                 onTap: () => context.go('/recommended'),
@@ -294,7 +314,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 28),
 
-                              // 5. History
                               SectionHeader(
                                 title: 'History',
                                 onTap: () => context.go('/history'),
@@ -340,7 +359,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final int itemLimit = (isHistory || isCalendar) ? 7 : 20;
+    // 💡 Expanded the limit so the Calendar section explicitly handles 30 items
+    final int itemLimit = isCalendar ? 30 : (isHistory ? 7 : 20);
     final displayItems = items.take(itemLimit).toList();
 
     final double listHeight = isLandscape ? 170 : 230;
@@ -358,22 +378,24 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: displayItems.length,
           itemBuilder: (context, index) {
             final item = displayItems[index];
-            final id = item['id'];
-            final title = item['title'] ?? item['name'] ?? 'Untitled';
             
-            // Normalize mediaType
-            final rawType = (item['media_type'] ?? '').toString().toLowerCase();
-            final mediaType = (rawType == 'tv' || rawType == 'show' || item['name'] != null) ? 'tv' : 'movie';
+            final rawId = item['id'] ?? item['movie_id'] ?? item['media_id'];
+            final int id = rawId != null ? int.tryParse(rawId.toString()) ?? 0 : 0;
+            
+            final String title = item['title'] ?? item['movie_title'] ?? item['name'] ?? 'Untitled';
+            
+            final String rawType = (item['media_type'] ?? item['type'] ?? '').toString().toLowerCase();
+            final String mediaType = (rawType == 'tv' || rawType == 'show' || item['name'] != null) ? 'tv' : 'movie';
 
-            final imagePath = isLandscape
-                ? (item['backdrop_path'] ?? item['poster_path'])
-                : item['poster_path'];
+            final String imagePath = isLandscape
+                ? (item['backdrop_path'] ?? item['poster_path'] ?? item['poster'] ?? '')
+                : (item['poster_path'] ?? item['poster'] ?? '');
 
-            final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
-                ? 'https://image.tmdb.org/t/p/w500$imagePath'
+            final String imageUrl = imagePath.isNotEmpty
+                ? (imagePath.startsWith('http') ? imagePath : 'https://image.tmdb.org/t/p/w500$imagePath')
                 : '';
 
-            final releaseDate = item['release_date'] ?? item['first_air_date'] ?? '';
+            final releaseDate = (item['release_year'] ?? item['release_date'] ?? item['first_air_date'] ?? item['year'] ?? '').toString();
             String? metadataLeftText;
 
             if (isCalendar && releaseDate.isNotEmpty) {
@@ -383,7 +405,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
                 ];
-                // 👇 Shorten the date for narrower vertical cards (e.g., "Oct 24")
                 metadataLeftText = isLandscape 
                     ? '${months[dt.month - 1]} ${dt.day}, ${dt.year}' 
                     : '${months[dt.month - 1]} ${dt.day}';
@@ -394,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
               metadataLeftText = (releaseDate.length >= 4) ? releaseDate.substring(0, 4) : null;
             }
 
-            final voteAverage = (item['vote_average'] ?? 0.0) as num;
+            final num voteAverage = item['vote_average'] ?? item['rating'] ?? 0.0;
 
             String? subtitle;
             String? overlayLeft;
@@ -407,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
               overlayRight = '${(index % 5) + 2} left';
               progress = 0.3 + (index * 0.1).clamp(0.0, 1.0);
             } else if (isHistory) {
-              final watchedDate = item['watched_date'] ?? 'Jul 28, 2026';
+              final String watchedDate = (item['watchedDate'] ?? item['watched_date'] ?? item['watched_at'] ?? 'Recently').toString();
               overlayLeft = watchedDate;
             }
 

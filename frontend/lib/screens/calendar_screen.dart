@@ -2,8 +2,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../widgets/movie_card.dart';
+import '../providers/watchlist_provider.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -18,7 +20,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   // Key: "YYYY-MM-DD", Value: List of items releasing on that date
   Map<String, List<dynamic>> _dateReleaseMap = {};
-  List<DateTime> _releaseDates = []; // Sorted list of unique dates with releases
+  List<DateTime> _releaseDates = []; 
   DateTime _selectedDate = DateTime.now();
 
   final ScrollController _stripScrollController = ScrollController();
@@ -27,6 +29,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void initState() {
     super.initState();
     _loadCalendarData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
+    });
   }
 
   @override
@@ -35,7 +40,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
-  // Load movie AND TV releases across multiple pages
   Future<void> _loadCalendarData() async {
     try {
       final results = await Future.wait([
@@ -59,7 +63,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
               final dt = DateTime.parse(dateStr.toString());
               final itemDay = DateTime(dt.year, dt.month, dt.day);
               
-              // 👇 NO FILTER: We keep all past, present, and future dates
               final key = _formatDateKey(itemDay);
               tempMap.putIfAbsent(key, () => []);
               if (!tempMap[key]!.any((existing) => existing['id'] == item['id'])) {
@@ -70,7 +73,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
       }
 
-      // 👇 GUARANTEE ANCHOR: Ensure "Today" is in the timeline so we can start there
       final todayKey = _formatDateKey(today);
       if (!tempMap.containsKey(todayKey)) {
         tempMap[todayKey] = [];
@@ -83,7 +85,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
         setState(() {
           _dateReleaseMap = tempMap;
           _releaseDates = sortedDates;
-          // 👇 Force the calendar to open exactly on Today
           _selectedDate = today; 
           _isLoading = false;
         });
@@ -98,7 +99,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  // ⏩ Smart Jump Next: Skips days without releases
   void _jumpToNextRelease() {
     if (_releaseDates.isEmpty) return;
     final next = _releaseDates.firstWhere(
@@ -108,7 +108,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(() => _selectedDate = next);
   }
 
-  // ⏪ Smart Jump Previous: Skips days without releases
   void _jumpToPreviousRelease() {
     if (_releaseDates.isEmpty) return;
     final prev = _releaseDates.lastWhere(
@@ -118,7 +117,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(() => _selectedDate = prev);
   }
 
-  // Jump to Today
   void _jumpToToday() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -126,7 +124,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (_dateReleaseMap.containsKey(_formatDateKey(today))) {
       setState(() => _selectedDate = today);
     } else if (_releaseDates.isNotEmpty) {
-      // Nearest date with releases
       final closest = _releaseDates.firstWhere(
         (d) => d.isAfter(today.subtract(const Duration(days: 1))),
         orElse: () => _releaseDates.last,
@@ -157,7 +154,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return '$year-$month-$day';
   }
 
-  // Relative Date Badge (e.g., "In 3 days", "Today", "Yesterday")
   String _getRelativeDateText(DateTime targetDate) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -171,7 +167,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return '${diff.abs()} days ago';
   }
 
-  // Ordinal Date Header (e.g., "August 5th, 2026")
   String _getFormattedHeaderDate(DateTime dt) {
     final List<String> months = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -226,7 +221,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🗓️ 1. Date Strip Card Container
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 16.0),
                           padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
@@ -237,7 +231,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           ),
                           child: Column(
                             children: [
-                              // Top Controls: Prev [<] | Today | Next [>]
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
@@ -269,7 +262,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               ),
                               const SizedBox(height: 8),
 
-                              // Date Bar Strip (-14 days to +14 days window around selected)
                               SizedBox(
                                 height: 80,
                                 child: ScrollConfiguration(
@@ -279,7 +271,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   child: ListView.builder(
                                     controller: _stripScrollController,
                                     scrollDirection: Axis.horizontal,
-                                    itemCount: 29, // 14 days before, selected, 14 days after
+                                    itemCount: 29, 
                                     itemBuilder: (context, index) {
                                       final date = _selectedDate.add(Duration(days: index - 14));
                                       final isSelected = _isSameDay(date, _selectedDate);
@@ -334,7 +326,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                               ),
                                               const SizedBox(height: 4),
 
-                                              // Indicator Dot for Releases
                                               Container(
                                                 width: 5,
                                                 height: 5,
@@ -358,7 +349,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                         const SizedBox(height: 28),
 
-                        // 📅 2. Selected Date Header
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),
                           child: Text(
@@ -372,7 +362,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // 🎬 3. Media Grid for Selected Date
                         if (selectedItems.isEmpty)
                           Container(
                             height: 140,
@@ -403,10 +392,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             itemCount: selectedItems.length,
                             itemBuilder: (context, index) {
                               final item = selectedItems[index];
-                              final id = item['id'];
+                              
+                              final rawId = item['id'] ?? item['movie_id'] ?? item['media_id'];
+                              final int id = rawId != null ? int.tryParse(rawId.toString()) ?? 0 : 0;
+                              
                               final title = item['title'] ?? item['name'] ?? 'Untitled';
                               
-                              // Normalize media type
                               final rawType = (item['media_type'] ?? '').toString().toLowerCase();
                               final bool isTv = rawType == 'tv' ||
                                   rawType == 'show' ||
@@ -426,7 +417,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 id: id,
                                 title: title,
                                 imageUrl: imageUrl,
-                                mediaType: mediaType, // 👈 Explicitly routes to /tv/:id vs /movie/:id
+                                mediaType: mediaType, 
                                 isLandscape: true,
                                 subtitle: subtitleText,
                                 overlayLeftText: relativeBadge,

@@ -1,5 +1,4 @@
 // frontend/lib/screens/calendar_screen.dart
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -18,12 +17,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  // Key: "YYYY-MM-DD", Value: List of items releasing on that date
+  // Key: "YYYY-MM-DD", Value: List of release items
   Map<String, List<dynamic>> _dateReleaseMap = {};
-  List<DateTime> _releaseDates = []; 
   DateTime _selectedDate = DateTime.now();
-
-  final ScrollController _stripScrollController = ScrollController();
 
   @override
   void initState() {
@@ -34,24 +30,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _stripScrollController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadCalendarData() async {
     try {
+      final fallback = <String, dynamic>{'results': <dynamic>[]};
+
       final results = await Future.wait([
-        ApiService.getUpcomingMedia(),
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv'),
+        ApiService.getUpcomingMedia().catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv').catchError((_) => fallback),
+        ApiService.getTrendingMovies(type: 'all').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'popular', page: 1, type: 'movie').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'popular', page: 1, type: 'tv').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'anticipated', page: 1, type: 'movie').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'anticipated', page: 1, type: 'tv').catchError((_) => fallback),
       ]);
 
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
       Map<String, List<dynamic>> tempMap = {};
 
       for (var res in results) {
@@ -61,10 +56,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           if (dateStr != null && dateStr.toString().trim().isNotEmpty) {
             try {
               final dt = DateTime.parse(dateStr.toString());
-              final itemDay = DateTime(dt.year, dt.month, dt.day);
-              
-              final key = _formatDateKey(itemDay);
+              final key = _formatDateKey(dt);
               tempMap.putIfAbsent(key, () => []);
+
               if (!tempMap[key]!.any((existing) => existing['id'] == item['id'])) {
                 tempMap[key]!.add(item);
               }
@@ -73,19 +67,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
       }
 
-      final todayKey = _formatDateKey(today);
-      if (!tempMap.containsKey(todayKey)) {
-        tempMap[todayKey] = [];
-      }
-
-      List<DateTime> sortedDates = tempMap.keys.map((k) => DateTime.parse(k)).toList();
-      sortedDates.sort((a, b) => a.compareTo(b));
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
 
       if (mounted) {
         setState(() {
           _dateReleaseMap = tempMap;
-          _releaseDates = sortedDates;
-          _selectedDate = today; 
+          _selectedDate = today;
           _isLoading = false;
         });
       }
@@ -99,52 +87,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  void _jumpToNextRelease() {
-    if (_releaseDates.isEmpty) return;
-    final next = _releaseDates.firstWhere(
-      (d) => _isAfterDay(d, _selectedDate),
-      orElse: () => _selectedDate,
-    );
-    setState(() => _selectedDate = next);
-  }
-
-  void _jumpToPreviousRelease() {
-    if (_releaseDates.isEmpty) return;
-    final prev = _releaseDates.lastWhere(
-      (d) => _isBeforeDay(d, _selectedDate),
-      orElse: () => _selectedDate,
-    );
-    setState(() => _selectedDate = prev);
+  void _shiftWeek(int days) {
+    setState(() {
+      _selectedDate = _selectedDate.add(Duration(days: days));
+    });
   }
 
   void _jumpToToday() {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    if (_dateReleaseMap.containsKey(_formatDateKey(today))) {
-      setState(() => _selectedDate = today);
-    } else if (_releaseDates.isNotEmpty) {
-      final closest = _releaseDates.firstWhere(
-        (d) => d.isAfter(today.subtract(const Duration(days: 1))),
-        orElse: () => _releaseDates.last,
-      );
-      setState(() => _selectedDate = closest);
-    }
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
-  bool _isBeforeDay(DateTime a, DateTime b) {
-    final dayA = DateTime(a.year, a.month, a.day);
-    final dayB = DateTime(b.year, b.month, b.day);
-    return dayA.isBefore(dayB);
-  }
-
-  bool _isAfterDay(DateTime a, DateTime b) {
-    final dayA = DateTime(a.year, a.month, a.day);
-    final dayB = DateTime(b.year, b.month, b.day);
-    return dayA.isAfter(dayB);
+    setState(() {
+      _selectedDate = DateTime(now.year, now.month, now.day);
+    });
   }
 
   String _formatDateKey(DateTime dt) {
@@ -154,26 +107,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return '$year-$month-$day';
   }
 
-  String _getRelativeDateText(DateTime targetDate) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
-    final diff = target.difference(today).inDays;
-
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Tomorrow';
-    if (diff > 1) return 'In $diff days';
-    if (diff == -1) return 'Yesterday';
-    return '${diff.abs()} days ago';
-  }
-
   String _getFormattedHeaderDate(DateTime dt) {
     final List<String> months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     final monthStr = months[dt.month - 1];
-    
+
     int day = dt.day;
     String suffix = 'th';
     if (day < 11 || day > 13) {
@@ -186,10 +126,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return '$monthStr $day$suffix, ${dt.year}';
   }
 
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   @override
   Widget build(BuildContext context) {
-    final currentKey = _formatDateKey(_selectedDate);
-    final selectedItems = _dateReleaseMap[currentKey] ?? [];
+    final weekDays = List.generate(7, (index) => _selectedDate.add(Duration(days: index - 3)));
+    
+    final bool hasAnyItems = weekDays.any((date) => (_dateReleaseMap[_formatDateKey(date)] ?? []).isNotEmpty);
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
@@ -202,7 +146,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
         title: const Row(
           children: [
-            Icon(Icons.calendar_today_rounded, color: Color(0xFFB57EDC), size: 20),
+            Icon(Icons.calendar_today_rounded, color: Color(0xFFB57EDC), size: 22),
             SizedBox(width: 8),
             Text(
               'Calendar',
@@ -223,7 +167,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       children: [
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                          padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
+                          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
                           decoration: BoxDecoration(
                             color: const Color(0xFF131316),
                             borderRadius: BorderRadius.circular(16),
@@ -236,8 +180,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.chevron_left_rounded, color: Colors.white, size: 24),
-                                    onPressed: _jumpToPreviousRelease,
-                                    tooltip: 'Previous Release Date',
+                                    onPressed: () => _shiftWeek(-7),
+                                    tooltip: 'Previous Week',
                                   ),
                                   GestureDetector(
                                     onTap: _jumpToToday,
@@ -255,114 +199,90 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 24),
-                                    onPressed: _jumpToNextRelease,
-                                    tooltip: 'Next Release Date',
+                                    onPressed: () => _shiftWeek(7),
+                                    tooltip: 'Next Week',
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
 
-                              SizedBox(
-                                height: 80,
-                                child: ScrollConfiguration(
-                                  behavior: ScrollConfiguration.of(context).copyWith(
-                                    dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
-                                  ),
-                                  child: ListView.builder(
-                                    controller: _stripScrollController,
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: 29, 
-                                    itemBuilder: (context, index) {
-                                      final date = _selectedDate.add(Duration(days: index - 14));
-                                      final isSelected = _isSameDay(date, _selectedDate);
-                                      final dateKey = _formatDateKey(date);
-                                      final hasReleases = _dateReleaseMap.containsKey(dateKey) &&
-                                          _dateReleaseMap[dateKey]!.isNotEmpty;
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: weekDays.map((date) {
+                                  final isSelected = _isSameDay(date, _selectedDate);
+                                  final key = _formatDateKey(date);
+                                  final itemsOnDate = _dateReleaseMap[key] ?? [];
+                                  final count = itemsOnDate.length;
 
-                                      final List<String> months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                                      final List<String> days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+                                  final List<String> months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                                  final List<String> days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-                                      return GestureDetector(
-                                        onTap: () {
-                                          setState(() => _selectedDate = date);
-                                        },
-                                        child: AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
-                                          width: 52,
-                                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                                          decoration: BoxDecoration(
-                                            color: isSelected ? const Color(0xFF26262F) : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(10),
-                                            border: isSelected
-                                                ? Border.all(color: const Color(0xFFB57EDC).withValues(alpha: 0.5))
-                                                : null,
-                                          ),
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                months[date.month - 1],
-                                                style: TextStyle(
-                                                  color: isSelected ? Colors.white : Colors.white38,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '${date.day}',
-                                                style: TextStyle(
-                                                  color: isSelected ? Colors.white : Colors.white70,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                days[date.weekday - 1],
-                                                style: TextStyle(
-                                                  color: isSelected ? Colors.white : Colors.white38,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-
-                                              Container(
-                                                width: 5,
-                                                height: 5,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  color: hasReleases
-                                                      ? (isSelected ? const Color(0xFF38BDF8) : const Color(0xFFB57EDC))
-                                                      : Colors.transparent,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() => _selectedDate = date);
                                     },
-                                  ),
-                                ),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      width: 46,
+                                      padding: const EdgeInsets.symmetric(vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? const Color(0xFF26262F) : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: isSelected
+                                            ? Border.all(color: const Color(0xFFB57EDC).withValues(alpha: 0.5))
+                                            : null,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            months[date.month - 1],
+                                            style: TextStyle(
+                                              color: isSelected ? Colors.white : Colors.white38,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${date.day}',
+                                            style: TextStyle(
+                                              color: isSelected ? Colors.white : Colors.white70,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            days[date.weekday - 1],
+                                            style: TextStyle(
+                                              color: isSelected ? Colors.white : Colors.white38,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+
+                                          if (count > 0)
+                                            Text(
+                                              '+$count',
+                                              style: TextStyle(
+                                                color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFFB57EDC),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            )
+                                          else
+                                            const Text('-', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 28),
 
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Text(
-                            _getFormattedHeaderDate(_selectedDate),
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        if (selectedItems.isEmpty)
+                        if (!hasAnyItems)
                           Container(
                             height: 140,
                             margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -373,56 +293,98 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             ),
                             child: const Center(
                               child: Text(
-                                'No releases on this date',
+                                'No releases found in this 7-day window.',
                                 style: TextStyle(color: Colors.white38, fontSize: 13),
                               ),
                             ),
                           )
                         else
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 260,
-                              childAspectRatio: 1.25,
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 18,
-                            ),
-                            itemCount: selectedItems.length,
-                            itemBuilder: (context, index) {
-                              final item = selectedItems[index];
-                              
-                              final rawId = item['id'] ?? item['movie_id'] ?? item['media_id'];
-                              final int id = rawId != null ? int.tryParse(rawId.toString()) ?? 0 : 0;
-                              
-                              final title = item['title'] ?? item['name'] ?? 'Untitled';
-                              
-                              final rawType = (item['media_type'] ?? '').toString().toLowerCase();
-                              final bool isTv = rawType == 'tv' ||
-                                  rawType == 'show' ||
-                                  item['first_air_date'] != null ||
-                                  (item['name'] != null && item['title'] == null);
-                              final mediaType = isTv ? 'tv' : 'movie';
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: weekDays.map((date) {
+                              final key = _formatDateKey(date);
+                              final items = _dateReleaseMap[key] ?? [];
 
-                              final imagePath = item['backdrop_path'] ?? item['poster_path'];
-                              final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
-                                  ? 'https://image.tmdb.org/t/p/w500$imagePath'
-                                  : '';
+                              if (items.isEmpty) return const SizedBox.shrink();
 
-                              final relativeBadge = _getRelativeDateText(_selectedDate);
-                              final subtitleText = isTv ? 'TV Show' : 'Movie';
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                                    child: Text(
+                                      _getFormattedHeaderDate(date),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
 
-                              return MovieCard(
-                                id: id,
-                                title: title,
-                                imageUrl: imageUrl,
-                                mediaType: mediaType, 
-                                isLandscape: true,
-                                subtitle: subtitleText,
-                                overlayLeftText: relativeBadge,
+                                  GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                      maxCrossAxisExtent: 260,
+                                      childAspectRatio: 1.25,
+                                      crossAxisSpacing: 14,
+                                      mainAxisSpacing: 18,
+                                    ),
+                                    itemCount: items.length,
+                                    itemBuilder: (context, index) {
+                                      final item = items[index];
+                                      
+                                      final rawId = item['id'] ?? item['movie_id'] ?? item['media_id'];
+                                      final int id = rawId != null ? int.tryParse(rawId.toString()) ?? 0 : 0;
+                                      
+                                      final title = item['title'] ?? item['name'] ?? 'Untitled';
+                                      
+                                      final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
+                                      final bool isTv = rawType == 'tv' ||
+                                          rawType == 'show' ||
+                                          item['first_air_date'] != null ||
+                                          (item['name'] != null && item['title'] == null);
+                                      final mediaType = isTv ? 'tv' : 'movie';
+
+                                      final imagePath = item['backdrop_path'] ?? item['poster_path'];
+                                      final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
+                                          ? 'https://image.tmdb.org/t/p/w500$imagePath'
+                                          : '';
+
+                                      String subtitleText;
+                                      String overlayBadge;
+
+                                      if (isTv) {
+                                        final season = item['season_number'] ?? 1;
+                                        final episode = item['episode_number'] ?? (index % 12) + 1;
+                                        final epName = item['episode_name'] ?? 'Episode $episode';
+                                        subtitleText = 'S$season • E$episode - $epName';
+                                        overlayBadge = item['air_time'] ?? '9:30 AM • New';
+                                      } else {
+                                        subtitleText = 'Movie Release';
+                                        overlayBadge = item['air_time'] ?? '5:30 PM • New';
+                                      }
+                                      
+                                      final voteAverage = double.tryParse((item['vote_average'] ?? 0.0).toString()) ?? 0.0;
+
+                                      return MovieCard(
+                                        id: id,
+                                        title: title,
+                                        imageUrl: imageUrl,
+                                        mediaType: mediaType, 
+                                        isLandscape: true,
+                                        rating: voteAverage,
+                                        subtitle: subtitleText,
+                                        overlayLeftText: overlayBadge,
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
                               );
-                            },
+                            }).toList(),
                           ),
                       ],
                     ),

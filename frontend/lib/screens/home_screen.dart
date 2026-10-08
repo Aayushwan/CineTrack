@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<dynamic> _continueWatching = [];
   List<dynamic> _startWatching = [];
-  List<dynamic> _upcomingReleases = []; // Re-purposed for Last 30 Days
+  List<dynamic> _upcomingReleases = []; 
   List<dynamic> _recommended = [];
   List<dynamic> _history = [];
 
@@ -41,7 +41,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadHomeData() async {
     try {
-      // Fetch Watchlist and History data safely
       List<dynamic> watchlistData = [];
       try {
         watchlistData = await ApiService.getWatchlist();
@@ -56,18 +55,24 @@ class _HomeScreenState extends State<HomeScreen> {
         } catch (_) {}
       }
 
-      // 💡 Fetching multiple endpoints to guarantee a rich pool of recent releases
+      final fallback = <String, dynamic>{'results': <dynamic>[]};
+
+      // 💡 Expanded endpoints to guarantee a massive pool of recent releases
       final results = await Future.wait([
-        ApiService.getTrendingMovies(type: 'all'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv'),
+        ApiService.getTrendingMovies(type: 'all').catchError((_) => fallback), // 0: Trending
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie').catchError((_) => fallback), // 1: Movie Releases Pg 1
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv').catchError((_) => fallback),    // 2: TV Releases Pg 1
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie').catchError((_) => fallback), // 3: Movie Releases Pg 2
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv').catchError((_) => fallback),    // 4: TV Releases Pg 2
+        ApiService.getDiscoverMedia(category: 'popular', page: 1, type: 'movie').catchError((_) => fallback),  // 5: Popular Movies (Recommended)
+        ApiService.getDiscoverMedia(category: 'popular', page: 1, type: 'tv').catchError((_) => fallback),     // 6: Popular TV (Recommended)
       ]);
 
       final trendingList = (results[0]['results'] as List<dynamic>?) ?? [];
 
+      // ─── Process Calendar (Strictly Past Releases) ───
       List<dynamic> rawReleases = [];
+      rawReleases.addAll(trendingList); // Feed trending in so we never run out of past media
       rawReleases.addAll((results[1]['results'] as List<dynamic>?) ?? []);
       rawReleases.addAll((results[2]['results'] as List<dynamic>?) ?? []);
       rawReleases.addAll((results[3]['results'] as List<dynamic>?) ?? []);
@@ -75,43 +80,65 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final thirtyDaysAgo = today.subtract(const Duration(days: 30));
 
-      // 1. Strict Filter: Only keep releases from the LAST 30 days
-      List<dynamic> last30DaysReleases = rawReleases.where((item) {
+      // 1. Strict Filter: Only keep releases that have ALREADY dropped (No future dates)
+      List<dynamic> lastReleases = rawReleases.where((item) {
         final dateStr = item['calendar_date'] ?? item['release_date'] ?? item['first_air_date'];
         if (dateStr == null || dateStr.toString().trim().isEmpty) return false;
         try {
           final dt = DateTime.parse(dateStr.toString());
           final releaseDay = DateTime(dt.year, dt.month, dt.day);
-          
-          return !releaseDay.isBefore(thirtyDaysAgo) && !releaseDay.isAfter(today); 
+          return !releaseDay.isAfter(today); 
         } catch (_) {
           return false;
         }
       }).toList();
 
-      // 2. Sort Descending (Newest releases closest to today show up first)
-      last30DaysReleases.sort((a, b) {
+      // 2. Sort Descending: Newest releases closest to today show up first!
+      lastReleases.sort((a, b) {
         final dateA = DateTime.tryParse(a['calendar_date'] ?? a['release_date'] ?? a['first_air_date'] ?? '') ?? DateTime(1900);
         final dateB = DateTime.tryParse(b['calendar_date'] ?? b['release_date'] ?? b['first_air_date'] ?? '') ?? DateTime(1900);
         return dateB.compareTo(dateA); 
       });
 
-      // 3. Remove duplicates
-      final seenIds = <int>{};
-      last30DaysReleases = last30DaysReleases.where((item) {
+      // 3. Remove duplicates across the pooled endpoints
+      final seenReleaseIds = <int>{};
+      lastReleases = lastReleases.where((item) {
         final id = item['id'] as int? ?? 0;
-        if (seenIds.contains(id)) return false;
-        seenIds.add(id);
+        if (seenReleaseIds.contains(id)) return false;
+        seenReleaseIds.add(id);
+        return true;
+      }).toList();
+
+      // Fallback just in case everything fails
+      if (lastReleases.isEmpty && trendingList.isNotEmpty) {
+        lastReleases = List.from(trendingList);
+      }
+
+      // ─── Process Recommended (Popular Movies & TV) ───
+      List<dynamic> rawRecommended = [];
+      rawRecommended.addAll((results[5]['results'] as List<dynamic>?) ?? []);
+      rawRecommended.addAll((results[6]['results'] as List<dynamic>?) ?? []);
+
+      rawRecommended.sort((a, b) {
+        final popA = (a['popularity'] ?? 0.0) as num;
+        final popB = (b['popularity'] ?? 0.0) as num;
+        return popB.compareTo(popA);
+      });
+
+      final seenRecIds = <int>{};
+      rawRecommended = rawRecommended.where((item) {
+        final id = item['id'] as int? ?? 0;
+        if (seenRecIds.contains(id)) return false;
+        seenRecIds.add(id);
         return true;
       }).toList();
 
       if (mounted) {
         setState(() {
           _startWatching = watchlistData; 
-          _recommended = trendingList;
-          _upcomingReleases = last30DaysReleases; // Assigned to the Calendar section
+          _upcomingReleases = lastReleases; // Passed to Calendar section
+          _recommended = rawRecommended;    
           _continueWatching = [];
           _history = historyData; 
           _isLoading = false;
@@ -289,6 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 28),
 
+                              // Header name preserved as "Calendar"
                               SectionHeader(
                                 title: 'Calendar',
                                 onTap: () => context.go('/calendar'),
@@ -359,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // 💡 Expanded the limit so the Calendar section explicitly handles 30 items
+    // 💡 Massively increased the Calendar media limit to 30 items
     final int itemLimit = isCalendar ? 30 : (isHistory ? 7 : 20);
     final displayItems = items.take(itemLimit).toList();
 

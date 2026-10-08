@@ -1,8 +1,10 @@
 // frontend/lib/screens/releases_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../widgets/movie_card.dart';
+import '../providers/watchlist_provider.dart';
 
 class ReleasesScreen extends StatefulWidget {
   const ReleasesScreen({super.key});
@@ -23,16 +25,28 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
   void initState() {
     super.initState();
     _loadReleasesData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
+    });
   }
 
   Future<void> _loadReleasesData() async {
     try {
+      // 👇 Bulletproof fallback prevents the screen from crashing
+      final fallback = <String, dynamic>{'results': <dynamic>[]};
+
+      // 👇 Expanded fetch pool to include Past (Popular) and Far-Future (Anticipated)
       final results = await Future.wait([
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie'),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv'),
-        ApiService.getUpcomingMedia(),
+        ApiService.getUpcomingMedia().catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv').catchError((_) => fallback),
+        ApiService.getTrendingMovies(type: 'all').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'popular', page: 1, type: 'movie').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'popular', page: 1, type: 'tv').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'anticipated', page: 1, type: 'movie').catchError((_) => fallback),
+        ApiService.getDiscoverMedia(category: 'anticipated', page: 1, type: 'tv').catchError((_) => fallback),
       ]);
 
       Map<String, List<dynamic>> tempMap = {};
@@ -40,14 +54,17 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
       for (var res in results) {
         final list = (res['results'] as List<dynamic>?) ?? [];
         for (var item in list) {
-          final dateStr = item['release_date'] ?? item['first_air_date'];
+          final dateStr = item['calendar_date'] ?? item['release_date'] ?? item['first_air_date'];
           if (dateStr != null && dateStr.toString().trim().isNotEmpty) {
-            final key = dateStr.toString().substring(0, 10);
-            tempMap.putIfAbsent(key, () => []);
+            try {
+              final dt = DateTime.parse(dateStr.toString());
+              final key = _formatDateKey(dt);
+              tempMap.putIfAbsent(key, () => []);
 
-            if (!tempMap[key]!.any((existing) => existing['id'] == item['id'])) {
-              tempMap[key]!.add(item);
-            }
+              if (!tempMap[key]!.any((existing) => existing['id'] == item['id'])) {
+                tempMap[key]!.add(item);
+              }
+            } catch (_) {}
           }
         }
       }
@@ -117,8 +134,11 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Generate a 7-day week view around the selected date
-    final weekDays = List.generate(7, (index) => _selectedDate.add(Duration(days: index - 2)));
+    // Generate a perfectly centered 7-day week view around the selected date
+    final weekDays = List.generate(7, (index) => _selectedDate.add(Duration(days: index - 3)));
+    
+    // Check if there are any items in the currently visible 7-day window
+    final bool hasAnyItems = weekDays.any((date) => (_dateReleaseMap[_formatDateKey(date)] ?? []).isNotEmpty);
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
@@ -272,88 +292,111 @@ class _ReleasesScreenState extends State<ReleasesScreen> {
                         const SizedBox(height: 28),
 
                         // 📅 2. Releases Grouped Date by Date Below
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: weekDays.map((date) {
-                            final key = _formatDateKey(date);
-                            final items = _dateReleaseMap[key] ?? [];
+                        if (!hasAnyItems)
+                          Container(
+                            height: 140,
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF131316),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white10),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'No releases found in this 7-day window.',
+                                style: TextStyle(color: Colors.white38, fontSize: 13),
+                              ),
+                            ),
+                          )
+                        else
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: weekDays.map((date) {
+                              final key = _formatDateKey(date);
+                              final items = _dateReleaseMap[key] ?? [];
 
-                            if (items.isEmpty) return const SizedBox.shrink();
+                              if (items.isEmpty) return const SizedBox.shrink();
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-                                  child: Text(
-                                    _getFormattedHeaderDate(date),
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                                    child: Text(
+                                      _getFormattedHeaderDate(date),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
-                                ),
 
-                                GridView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                    maxCrossAxisExtent: 260,
-                                    childAspectRatio: 1.25,
-                                    crossAxisSpacing: 14,
-                                    mainAxisSpacing: 18,
+                                  GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                      maxCrossAxisExtent: 260,
+                                      childAspectRatio: 1.25,
+                                      crossAxisSpacing: 14,
+                                      mainAxisSpacing: 18,
+                                    ),
+                                    itemCount: items.length,
+                                    itemBuilder: (context, index) {
+                                      final item = items[index];
+                                      
+                                      final rawId = item['id'] ?? item['movie_id'] ?? item['media_id'];
+                                      final int id = rawId != null ? int.tryParse(rawId.toString()) ?? 0 : 0;
+                                      
+                                      final title = item['title'] ?? item['name'] ?? 'Untitled';
+                                      
+                                      // Normalize media type
+                                      final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
+                                      final bool isTv = rawType == 'tv' ||
+                                          rawType == 'show' ||
+                                          item['first_air_date'] != null ||
+                                          (item['name'] != null && item['title'] == null);
+                                      final mediaType = isTv ? 'tv' : 'movie';
+
+                                      final imagePath = item['backdrop_path'] ?? item['poster_path'];
+                                      final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
+                                          ? 'https://image.tmdb.org/t/p/w500$imagePath'
+                                          : '';
+
+                                      String subtitleText;
+                                      String overlayBadge;
+
+                                      if (isTv) {
+                                        final season = item['season_number'] ?? 1;
+                                        final episode = item['episode_number'] ?? (index % 12) + 1;
+                                        final epName = item['episode_name'] ?? 'Episode $episode';
+                                        subtitleText = 'S$season • E$episode - $epName';
+                                        overlayBadge = item['air_time'] ?? '9:30 AM • New';
+                                      } else {
+                                        subtitleText = 'Movie Release';
+                                        overlayBadge = item['air_time'] ?? '5:30 PM • New';
+                                      }
+                                      
+                                      final voteAverage = double.tryParse((item['vote_average'] ?? 0.0).toString()) ?? 0.0;
+
+                                      return MovieCard(
+                                        id: id,
+                                        title: title,
+                                        imageUrl: imageUrl,
+                                        mediaType: mediaType, 
+                                        isLandscape: true,
+                                        rating: voteAverage,
+                                        subtitle: subtitleText,
+                                        overlayLeftText: overlayBadge,
+                                      );
+                                    },
                                   ),
-                                  itemCount: items.length,
-                                  itemBuilder: (context, index) {
-                                    final item = items[index];
-                                    final id = item['id'];
-                                    final title = item['title'] ?? item['name'] ?? 'Untitled';
-                                    
-                                    // Normalize media type
-                                    final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
-                                    final bool isTv = rawType == 'tv' ||
-                                        rawType == 'show' ||
-                                        item['first_air_date'] != null ||
-                                        (item['name'] != null && item['title'] == null);
-                                    final mediaType = isTv ? 'tv' : 'movie';
-
-                                    final imagePath = item['backdrop_path'] ?? item['poster_path'];
-                                    final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
-                                        ? 'https://image.tmdb.org/t/p/w500$imagePath'
-                                        : '';
-
-                                    String subtitleText;
-                                    String overlayBadge;
-
-                                    if (isTv) {
-                                      final season = item['season_number'] ?? 1;
-                                      final episode = item['episode_number'] ?? (index % 12) + 1;
-                                      final epName = item['episode_name'] ?? 'Episode $episode';
-                                      subtitleText = 'S$season • E$episode - $epName';
-                                      overlayBadge = item['air_time'] ?? '9:30 AM • New';
-                                    } else {
-                                      subtitleText = 'Movie Release';
-                                      overlayBadge = item['air_time'] ?? '5:30 PM • New';
-                                    }
-
-                                    return MovieCard(
-                                      id: id,
-                                      title: title,
-                                      imageUrl: imageUrl,
-                                      mediaType: mediaType, // 👈 Explicitly routes to /tv/:id vs /movie/:id
-                                      isLandscape: true,
-                                      subtitle: subtitleText,
-                                      overlayLeftText: overlayBadge,
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-                            );
-                          }).toList(),
-                        ),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            }).toList(),
+                          ),
                       ],
                     ),
                   ),

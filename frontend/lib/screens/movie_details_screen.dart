@@ -92,7 +92,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                 onPrimary: Colors.white,
                 surface: Color(0xFF131316),
                 onSurface: Colors.white,
-              ), dialogTheme: DialogThemeData(backgroundColor: const Color(0xFF131316)),
+              ),
+              dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF131316)),
             ),
             child: child!,
           );
@@ -273,7 +274,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     );
   }
 
-  // 👇 Updated to bypass TMDB tracking and jump dynamically straight to the requested platform
   Widget _buildProviderTile(dynamic provider, String movieTitle) {
     final logoPath = provider['logo_path'];
     final name = provider['provider_name'] ?? 'Unknown';
@@ -281,7 +281,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
     return InkWell(
       onTap: () async {
-        // Build a targeted search URL to bypass TMDB's native JustWatch link
         final query = Uri.encodeComponent('Watch $movieTitle on $name');
         final url = Uri.parse('https://www.google.com/search?q=$query');
         
@@ -339,43 +338,26 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     return '';
   }
 
-  void _showTrailerPopupDialog() {
+  // 👇 Launch Trailer Directly Instead of Pop-up
+  Future<void> _launchTrailerDirectly() async {
     final videos = _movieData!['videos']?['results'] as List<dynamic>?;
     final trailer = videos?.firstWhere((v) => v['site'] == 'YouTube' && v['type'] == 'Trailer', orElse: () => videos.firstOrNull) ?? videos?.firstOrNull;
 
     if (trailer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No trailer available', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No trailer available', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316)));
+      }
       return;
     }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Trailer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.play_circle_fill_rounded, color: Color(0xFFA855F7), size: 64),
-            const SizedBox(height: 16),
-            Text(trailer['name'] ?? 'Watch Official Trailer', style: const TextStyle(color: Colors.white70, fontSize: 15), textAlign: TextAlign.center),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFA855F7)),
-            onPressed: () {
-              Navigator.pop(context);
-              final url = Uri.parse('https://www.youtube.com/watch?v=${trailer['key']}');
-              launchUrl(url, mode: LaunchMode.externalApplication);
-            },
-            child: const Text('Watch on YouTube', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )
-        ],
-      ),
-    );
+    final url = Uri.parse('https://www.youtube.com/watch?v=${trailer['key']}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch trailer', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316)));
+      }
+    }
   }
 
   void _showAddReviewDialog() {
@@ -652,7 +634,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     List<String> genres, String overview, String? posterPath, int runtime, String releaseDate, 
     bool isWatchlist, bool isFavorite, WatchlistProvider watchlistProvider, ScaffoldMessengerState scaffoldMessenger
   ) {
-    // Get the provider logo
     final providerLogoUrl = _getTopProviderLogoUrl();
 
     return Column(
@@ -664,7 +645,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
           children: [
             Expanded(child: Text(title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1))),
             
-            // 👇 Interactive "Where to Watch" Button
             GestureDetector(
               onTap: () => _showWhereToWatchModal(title),
               child: Column(
@@ -672,7 +652,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                 children: [
                   const Row(children: [Text('Where to Watch', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)), SizedBox(width: 4), Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 10)]),
                   const SizedBox(height: 8),
-                  // Display Logo if available, else show "No services" text
                   providerLogoUrl.isNotEmpty
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(6),
@@ -718,7 +697,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
         Row(
           children: [
-            // 1. Watched Button
             InkWell(
               onTap: () => _showMarkWatchedMenu(title, posterPath, runtime, releaseDate),
               borderRadius: BorderRadius.circular(10),
@@ -732,7 +710,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             ),
             const SizedBox(width: 12),
 
-            // 2. Watchlist
             _buildIconButton(
               icon: isWatchlist ? Icons.bookmark_added_rounded : Icons.bookmark_add_outlined,
               isActive: isWatchlist,
@@ -748,15 +725,14 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             ),
             const SizedBox(width: 12),
 
-            // 3. Trailer Pop-up Button
+            // 👇 Updated Trailer Button Logic
             _buildIconButton(
               icon: Icons.play_circle_outline_rounded,
               isActive: false,
-              onTap: _showTrailerPopupDialog,
+              onTap: _launchTrailerDirectly,
             ),
             const SizedBox(width: 12),
 
-            // 4. Favorite
             _buildIconButton(
               icon: isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
               isActive: isFavorite,
@@ -773,7 +749,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             ),
             const SizedBox(width: 12),
 
-            // 5. 3-Dots wired to open Custom List menu
             _buildIconButton(
               icon: Icons.more_vert_rounded, 
               isActive: false, 

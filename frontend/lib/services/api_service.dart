@@ -421,6 +421,7 @@ class ApiService {
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
+        // Strictly matching your Supabase Database Columns
         'media_id': movieId.toString(),
         'media_type': mediaType,
         'title': title,
@@ -430,9 +431,26 @@ class ApiService {
       }),
     );
 
-    if (response.statusCode != 201) {
+    if (response.statusCode != 201 && response.statusCode != 200) {
       final error = jsonDecode(response.body);
       throw Exception(error['detail'] ?? 'Failed to log watch history');
+    }
+  }
+
+  /// Remove an item from Watch History
+  static Future<void> removeWatchHistory(int historyId) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/user/history/$historyId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete history log');
     }
   }
 

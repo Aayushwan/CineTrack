@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Any, Sequence
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,8 @@ from app.core.security import get_current_user
 
 router = APIRouter(prefix="/user", tags=["User Activity & History"])
 
+# Indian Standard Time configuration
+IST = timezone(timedelta(hours=5, minutes=30))
 
 @router.post("/history", status_code=status.HTTP_201_CREATED)
 async def log_watch_history(
@@ -19,36 +21,22 @@ async def log_watch_history(
     db: AsyncSession = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    media_identifier = str(item.media_id or item.movie_id or "")
-    duration_val = item.duration_watched_seconds or ((item.runtime_minutes or 120) * 60)
-    # Map Flutter's date or fallback to now
     watched_time = item.watched_at if item.watched_at else datetime.now(timezone.utc)
     
-    # We use **kwargs so we don't crash if your SQLAlchemy model uses `movie_id` vs `media_id`
-    kwargs = {
-        "user_id": current_user.id,
-        "media_type": item.media_type,
-        "title": item.title,
-        "poster_path": item.poster_path,
-        "watched_at": watched_time
-    }
-    
-    # Safely assign dynamic DB columns
-    if hasattr(WatchHistory, "duration_watched_seconds"):
-        kwargs["duration_watched_seconds"] = duration_val
-    if hasattr(WatchHistory, "media_id"):
-        kwargs["media_id"] = media_identifier
-    if hasattr(WatchHistory, "movie_id"):
-        try:
-            kwargs["movie_id"] = int(media_identifier)
-        except (ValueError, TypeError):
-            kwargs["movie_id"] = media_identifier
-
-    new_entry = WatchHistory(**kwargs)
+    new_entry = WatchHistory(
+        user_id=current_user.id,
+        media_id=item.media_id,
+        media_type=item.media_type,
+        title=item.title,
+        poster_path=item.poster_path,
+        duration_watched_seconds=item.duration_watched_seconds,
+        watched_at=watched_time
+    )
     
     db.add(new_entry)
     await db.commit()
     await db.refresh(new_entry)
+    
     return {"message": "Logged successfully", "id": getattr(new_entry, "id", None)}
 
 
@@ -68,19 +56,58 @@ async def get_watch_history(
     result = await db.scalars(stmt)
     history = result.all()
     
+    # 👇 Fixed the type hint here to accept Optional[datetime]
+    def format_ist_date(dt: Optional[datetime], fmt_str: str) -> str:
+        if not dt:
+            return ""
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(IST).strftime(fmt_str)
+    
     return [
         {
-            "id": getattr(h, "media_id", getattr(h, "movie_id", None)),
+            "id": h.media_id,
+            "history_id": h.id, 
             "title": h.title,
-            "subtitle": getattr(h, "subtitle", None),
+            "subtitle": None, 
             "type": "Movie" if str(h.media_type or "").lower() == "movie" else "Show",
             "poster": f"https://image.tmdb.org/t/p/w500{h.poster_path}" if h.poster_path and not h.poster_path.startswith("http") else (h.poster_path or ""),
-            "watchedDate": h.watched_at.strftime("%b %d, %Y") if h.watched_at else "",
-            "watchedTime": h.watched_at.strftime("%I:%M %p") if h.watched_at else "",
-            "userRating": getattr(h, "user_rating", 0.0) or 0.0,
+            "watchedDate": format_ist_date(h.watched_at, "%b %d, %Y"),
+            "watchedTime": format_ist_date(h.watched_at, "%I:%M %p"),
+            "userRating": 0.0, 
         }
         for h in history
     ]
+
+
+@router.delete("/history/{history_id}", status_code=status.HTTP_200_OK)
+async def remove_watch_history(
+    history_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(WatchHistory).where(
+        WatchHistory.id == history_id,
+        WatchHistory.user_id == current_user.id
+    )
+    result = await db.scalars(stmt)
+    history_item = result.first()
+
+    if not history_item:
+        fallback_stmt = select(WatchHistory).where(WatchHistory.user_id == current_user.id)
+        all_user_history = await db.scalars(fallback_stmt)
+        for item in all_user_history.all():
+            if str(item.media_id) == str(history_id):
+                history_item = item
+                break
+        
+        if not history_item:
+            raise HTTPException(status_code=404, detail="History log not found")
+
+    await db.delete(history_item)
+    await db.commit()
+    
+    return {"detail": "History log removed successfully"}
 
 
 @router.post("/progress/episode")
@@ -129,14 +156,19 @@ async def get_profile_analytics(
     result = await db.scalars(stmt)
     all_history = result.all()
     
-    now = datetime.now(timezone.utc)
-    month_history = [
-        h for h in all_history 
-        if h.watched_at and h.watched_at.year == now.year and h.watched_at.month == now.month
-    ]
+    now = datetime.now(IST)
+    month_history = []
+    
+    for h in all_history:
+        if h.watched_at:
+            dt = h.watched_at
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            local_dt = dt.astimezone(IST)
+            if local_dt.year == now.year and local_dt.month == now.month:
+                month_history.append(h)
 
     def calculate_stats(entries: Sequence[Any]):
-        # Safely fetch precise duration from the database if available, otherwise default to 120 mins per item
         total_seconds = sum(getattr(e, "duration_watched_seconds", None) or 7200 for e in entries)
         total_minutes = total_seconds // 60
         

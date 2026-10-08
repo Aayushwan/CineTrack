@@ -5,26 +5,26 @@ from datetime import datetime
 # --- Request Schemas ---
 
 class HistoryCreate(BaseModel):
-    # Support both media_id and movie_id to ensure strict compatibility with the DB and UI
-    media_id: Optional[Union[str, int]] = None
-    movie_id: Optional[Union[int, str]] = Field(None, description="Media or TMDB ID")
-    media_type: str = Field(..., description="'movie' or 'tv'")
+    # Strictly matching the Supabase Database Columns
+    media_id: str
+    media_type: str
     title: str
-    subtitle: Optional[str] = None
     poster_path: Optional[str] = None
-    user_rating: Optional[float] = Field(None, ge=0.0, le=10.0)
-    runtime_minutes: Optional[int] = 120
-    # 👇 Added to support exact Trakt logging
     duration_watched_seconds: Optional[int] = None
     watched_at: Optional[datetime] = None
 
+    # This prevents crashes if Flutter accidentally sends extra data 
+    model_config = ConfigDict(extra="ignore")
+
 
 class EpisodeProgressUpdate(BaseModel):
-    show_id: int
+    show_id: int = Field(..., alias="showId")
     title: str
     season: str
-    total_episodes: int = Field(..., ge=1)
+    total_episodes: int = Field(..., alias="totalEpisodes", ge=1)
     increment: int = Field(1, ge=1)
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
 
 # --- Response Schemas ---

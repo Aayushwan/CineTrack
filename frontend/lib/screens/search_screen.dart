@@ -594,8 +594,8 @@ class _SearchScreenState extends State<SearchScreen> {
                                                             await watchlistProvider.removeFromWatchlist(id, mediaType: mediaTypeStr);
                                                             scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Removed from Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
                                                           } else {
-                                                            final releaseYear = (item['release_date'] ?? item['first_air_date'] ?? '').toString();
-                                                            final yearStr = releaseYear.length >= 4 ? releaseYear.substring(0, 4) : '';
+                                                            // SAVING FULL EXACT DATE TO THE DATABASE NOW
+                                                            final fullDateStr = (item['release_date'] ?? item['first_air_date'] ?? '').toString();
                                                             final voteAverage = double.tryParse((item['vote_average'] ?? 0.0).toString()) ?? 0.0;
                                                             await watchlistProvider.addToWatchlist(
                                                               movieId: id, 
@@ -603,7 +603,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                                               posterPath: imagePath, 
                                                               status: 'watchlist', 
                                                               mediaType: mediaTypeStr, 
-                                                              releaseYear: yearStr, 
+                                                              releaseYear: fullDateStr, 
                                                               runtime: 120, 
                                                               voteAverage: voteAverage
                                                             );

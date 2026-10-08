@@ -1,9 +1,10 @@
 // frontend/lib/screens/watchlist_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
-import '../widgets/filter_drawer.dart';
 import '../widgets/trakt_filter_bar.dart';
+import '../providers/watchlist_provider.dart';
 
 class WatchlistScreen extends StatefulWidget {
   const WatchlistScreen({super.key});
@@ -13,24 +14,20 @@ class WatchlistScreen extends StatefulWidget {
 }
 
 class _WatchlistScreenState extends State<WatchlistScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   bool _isLoading = true;
+  bool _isLogging = false;
   List<dynamic> _allWatchlistItems = [];
   List<dynamic> _filteredItems = [];
 
-  // Active Trakt Capsule Filter: 'media', 'shows', 'movies'
   String _selectedFilter = 'media';
-
-  // Active Sidebar Filters
-  String _selectedGenre = 'All';
-  String _selectedStatus = 'All';
-  String _selectedDecade = 'All';
 
   @override
   void initState() {
     super.initState();
     _fetchWatchlist();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
+    });
   }
 
   Future<void> _fetchWatchlist() async {
@@ -56,41 +53,8 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
       final mediaType = (item['media_type'] ?? item['type'] ?? 'movie').toString().toLowerCase();
       final bool isTv = mediaType == 'tv' || mediaType == 'show';
 
-      // 1. Trakt Media Type Filter
       if (_selectedFilter == 'shows' && !isTv) return false;
       if (_selectedFilter == 'movies' && isTv) return false;
-
-      // 2. Sidebar Genre Filter
-      if (_selectedGenre != 'All') {
-        final List<dynamic> genreIds = item['genre_ids'] ?? [];
-        final targetGenreId = FilterDrawer.genreMap[_selectedGenre];
-        if (targetGenreId != null && !genreIds.contains(targetGenreId)) return false;
-      }
-
-      // 3. Sidebar Status Filter
-      if (_selectedStatus != 'All') {
-        final dateStr = item['release_date'] ?? item['first_air_date'] ?? '';
-        final isUpcoming = dateStr.isNotEmpty && (DateTime.tryParse(dateStr)?.isAfter(DateTime.now()) ?? false);
-        if (_selectedStatus == 'Upcoming' && !isUpcoming) return false;
-        if (_selectedStatus == 'Released' && isUpcoming) return false;
-      }
-
-      // 4. Sidebar Decade Filter
-      if (_selectedDecade != 'All') {
-        final dateStr = item['release_date'] ?? item['first_air_date'] ?? item['year'] ?? '';
-        final year = DateTime.tryParse(dateStr)?.year ?? int.tryParse(dateStr.length >= 4 ? dateStr.substring(0, 4) : '');
-        if (year != null) {
-          if (_selectedDecade == 'This Year' && year != 2026) return false;
-          if (_selectedDecade == '2020s' && (year < 2020 || year > 2029)) return false;
-          if (_selectedDecade == '2010s' && (year < 2010 || year > 2019)) return false;
-          if (_selectedDecade == '2000s' && (year < 2000 || year > 2009)) return false;
-          if (_selectedDecade == '1990s' && (year < 1990 || year > 1999)) return false;
-          if (_selectedDecade == '1980s' && (year < 1980 || year > 1989)) return false;
-          if (_selectedDecade == '1970s' && (year < 1970 || year > 1979)) return false;
-          if (_selectedDecade == '1960s' && (year < 1960 || year > 1969)) return false;
-          if (_selectedDecade == 'Before 1960' && year >= 1960) return false;
-        }
-      }
 
       return true;
     }).toList();
@@ -111,59 +75,209 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
           _allWatchlistItems.removeWhere((item) => (item['movie_id'] ?? item['id']) == movieId);
           _applyFilter();
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Removed "$title" from Watchlist'),
-            backgroundColor: const Color(0xFF131316),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Provider.of<WatchlistProvider>(context, listen: false).fetchWatchlist();
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to remove item from watchlist'),
-            backgroundColor: Colors.redAccent,
-          ),
+          const SnackBar(content: Text('Failed to remove item', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent),
         );
       }
     }
   }
 
-  bool get _hasActiveSidebarFilters =>
-      _selectedGenre != 'All' || _selectedStatus != 'All' || _selectedDecade != 'All';
+  Future<void> _markAsWatched(dynamic item, String mediaType, String option) async {
+    Navigator.pop(context); 
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    if (_isLogging) return;
+    setState(() => _isLogging = true);
+
+    final title = item['title'] ?? item['movie_title'] ?? item['name'] ?? 'Untitled';
+    final poster = item['poster_path'];
+    final releaseDateStr = (item['release_year'] ?? item['release_date'] ?? item['first_air_date'] ?? '').toString();
+
+    DateTime? watchedAtDate;
+    final now = DateTime.now();
+
+    if (option == 'Just now') {
+      watchedAtDate = now.toUtc();
+    } else if (option == 'Release date') {
+      if (releaseDateStr.isNotEmpty && releaseDateStr != 'null') {
+        try { 
+          if (releaseDateStr.length == 4) {
+             watchedAtDate = DateTime(int.parse(releaseDateStr), 1, 1).toUtc();
+          } else {
+             watchedAtDate = DateTime.parse(releaseDateStr).toUtc(); 
+          }
+        } catch (_) { 
+          watchedAtDate = now.toUtc(); 
+        }
+      } else {
+        watchedAtDate = now.toUtc();
+      }
+    } else if (option == 'Other date') {
+      final DateTime? pickedDate = await showDatePicker(
+        context: context,
+        initialDate: now,
+        firstDate: DateTime(1900), 
+        lastDate: now, 
+        builder: (context, child) {
+          return Theme(
+            data: ThemeData.dark().copyWith(
+              colorScheme: const ColorScheme.dark(
+                primary: Color(0xFFA855F7), 
+                onPrimary: Colors.white,
+                surface: Color(0xFF131316),
+                onSurface: Colors.white,
+              ),
+              dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF131316)),
+            ),
+            child: child!,
+          );
+        },
+      );
+
+      if (pickedDate == null) {
+        if (mounted) setState(() => _isLogging = false);
+        return;
+      }
+      
+      watchedAtDate = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        now.hour,
+        now.minute,
+        now.second,
+      ).toUtc();
+    }
+
+    try {
+      await ApiService.logWatchHistory(
+        movieId: item['movie_id'] ?? item['id'],
+        mediaType: mediaType,
+        title: title,
+        posterPath: poster,
+        runtimeMinutes: 120, 
+        userRating: 0.0,
+        watchedAt: watchedAtDate?.toIso8601String(),
+      );
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Marked "$title" as Watched!', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF131316), behavior: SnackBarBehavior.floating));
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Failed to log watch history: $e', style: const TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+    } finally {
+      if (mounted) setState(() => _isLogging = false);
+    }
+  }
+
+  void _showMarkWatchedMenu(dynamic item, String mediaType) {
+    final title = item['title'] ?? item['movie_title'] ?? item['name'] ?? 'Untitled';
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF131316),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24.0, top: 8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                    IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+              _buildMenuOption(Icons.check_rounded, 'Just now', () => _markAsWatched(item, mediaType, 'Just now')),
+              _buildMenuOption(Icons.calendar_today_rounded, 'Release date', () => _markAsWatched(item, mediaType, 'Release date')),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0), child: Divider(color: Colors.white.withValues(alpha: 0.1), height: 1)),
+              _buildMenuOption(Icons.edit_calendar_rounded, 'Other date', () => _markAsWatched(item, mediaType, 'Other date')),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMoreOptions(WatchlistProvider provider, dynamic item, String mediaType) {
+    final title = item['title'] ?? item['movie_title'] ?? item['name'] ?? 'Untitled';
+    final posterPath = item['poster_path'];
+    final id = item['movie_id'] ?? item['id'];
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF131316),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24.0, top: 8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Add to Custom List', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+              if (provider.customLists.isEmpty)
+                const Padding(padding: EdgeInsets.all(24.0), child: Text('No custom lists found. Create one in the Lists tab!', style: TextStyle(color: Colors.white54)))
+              else
+                ...provider.customLists.map((listData) {
+                  int listId = listData['id'];
+                  String listTitle = listData['title'] ?? listData['name'];
+                  return _buildMenuOption(Icons.playlist_add_rounded, listTitle, () {
+                    provider.addMediaToList(listId, id, posterPath);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added "$title" to "$listTitle"', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                  });
+                }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMenuOption(IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 22),
+            const SizedBox(width: 16),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final watchlistProvider = Provider.of<WatchlistProvider>(context);
+
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: const Color(0xFF09090B),
-      endDrawer: FilterDrawer(
-        selectedGenre: _selectedGenre,
-        selectedStatus: _selectedStatus,
-        selectedDecade: _selectedDecade,
-        onApply: (genre, status, decade) {
-          setState(() {
-            _selectedGenre = genre;
-            _selectedStatus = status;
-            _selectedDecade = decade;
-            _applyFilter();
-          });
-        },
-        onReset: () {
-          setState(() {
-            _selectedGenre = 'All';
-            _selectedStatus = 'All';
-            _selectedDecade = 'All';
-            _applyFilter();
-          });
-        },
-      ),
       body: SafeArea(
         child: Column(
           children: [
-            // ── STICKY TOP HEADER (PERSISTENT ON SCROLL) ────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Row(
@@ -181,52 +295,16 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
                     ),
                   ),
                   const Spacer(),
-
-                  // Sticky Trakt Filter Capsule
                   TraktFilterBar(
                     selectedFilter: _selectedFilter,
                     showPeople: false,
                     onFilterChanged: _onFilterChanged,
                   ),
-                  const SizedBox(width: 8),
-
-                  // Sticky Filter Drawer Trigger Button
-                  IconButton(
-                    onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-                    icon: Stack(
-                      children: [
-                        const Icon(Icons.tune_rounded, color: Colors.white, size: 22),
-                        if (_hasActiveSidebarFilters)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFA855F7),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFF131316),
-                      padding: const EdgeInsets.all(10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: Colors.white10),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
-
             const SizedBox(height: 8),
 
-            // ── SCROLLABLE VERTICAL GRID SECTION ─────────────────────────────
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -249,9 +327,15 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
                             itemCount: _filteredItems.length,
                             itemBuilder: (context, index) {
                               final item = _filteredItems[index];
+                              final String mediaTypeStr = (item['media_type'] ?? item['type'] ?? 'movie').toString().toLowerCase();
+                              
                               return _WatchlistGridCard(
                                 item: item,
+                                provider: watchlistProvider,
+                                mediaTypeStr: mediaTypeStr,
                                 onRemove: (id, title) => _removeFromWatchlist(id, title),
+                                onTrack: () => _showMarkWatchedMenu(item, mediaTypeStr),
+                                onManage: () => _showMoreOptions(watchlistProvider, item, mediaTypeStr),
                               );
                             },
                           ),
@@ -282,7 +366,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _selectedFilter == 'media' && !_hasActiveSidebarFilters
+              _selectedFilter == 'media'
                   ? 'Items you bookmark from Home or Discover will show up here.'
                   : 'No $filterText found matching your active criteria.',
               style: const TextStyle(color: Colors.white54, fontSize: 13),
@@ -295,43 +379,43 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VERTICAL GRID POSTER CARD
-// ─────────────────────────────────────────────────────────────────────────────
 class _WatchlistGridCard extends StatelessWidget {
   final Map<String, dynamic> item;
+  final WatchlistProvider provider;
+  final String mediaTypeStr;
   final Function(int id, String title) onRemove;
+  final VoidCallback onTrack;
+  final VoidCallback onManage;
 
   const _WatchlistGridCard({
     required this.item,
+    required this.provider,
+    required this.mediaTypeStr,
     required this.onRemove,
+    required this.onTrack,
+    required this.onManage,
   });
 
   @override
   Widget build(BuildContext context) {
-    final int movieId = item['movie_id'] ?? item['id'] ?? 0;
+    final int id = item['movie_id'] ?? item['id'] ?? 0;
     final String title = item['movie_title'] ?? item['title'] ?? item['name'] ?? 'Untitled';
-    final String rawMediaType = (item['media_type'] ?? item['type'] ?? 'movie').toString().toLowerCase();
-    final bool isTv = rawMediaType == 'tv' || rawMediaType == 'show';
-    final String mediaTypeLabel = isTv ? 'tv' : 'movie';
+    final bool isTv = mediaTypeStr == 'tv' || mediaTypeStr == 'show';
 
-    final String posterPath = item['poster_path'] ?? '';
-    final String imageUrl = posterPath.isNotEmpty
-        ? (posterPath.startsWith('http') ? posterPath : 'https://image.tmdb.org/t/p/w500$posterPath')
+    final String imagePath = item['poster_path'] ?? '';
+    final String imageUrl = imagePath.isNotEmpty
+        ? (imagePath.startsWith('http') ? imagePath : 'https://image.tmdb.org/t/p/w500$imagePath')
         : '';
 
-    final String dateStr = item['release_date'] ?? item['first_air_date'] ?? item['year'] ?? '';
-    final String year = dateStr.length >= 4 ? dateStr.substring(0, 4) : '2026';
-
-    final double ratingVal = (item['vote_average'] ?? item['rating'] ?? 0.0).toDouble();
-    final String ratingStr = ratingVal > 0 ? ratingVal.toStringAsFixed(1) : '7.5';
+    final double ratingVal = double.tryParse((item['vote_average'] ?? item['rating'] ?? 0.0).toString()) ?? 0.0;
+    final String ratingStr = ratingVal > 0 ? ratingVal.toStringAsFixed(1) : '0.0';
 
     return GestureDetector(
       onTap: () {
         if (isTv) {
-          context.go('/tv/$movieId');
+          context.go('/tv/$id');
         } else {
-          context.go('/movie/$movieId');
+          context.go('/movie/$id');
         }
       },
       child: Column(
@@ -359,8 +443,6 @@ class _WatchlistGridCard extends StatelessWidget {
                           ),
                   ),
                 ),
-
-                // Top Left Media Type Tag (Movie / TV)
                 Positioned(
                   top: 6,
                   left: 6,
@@ -371,7 +453,7 @@ class _WatchlistGridCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      mediaTypeLabel.toUpperCase(),
+                      isTv ? 'TV' : 'MOVIE',
                       style: const TextStyle(
                         color: Color(0xFFA855F7),
                         fontSize: 9,
@@ -380,59 +462,86 @@ class _WatchlistGridCard extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Top Right Options Popup Menu (Remove Action)
                 Positioned(
                   top: 4,
                   right: 4,
-                  child: PopupMenuButton<String>(
-                    icon: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 16),
-                    ),
-                    color: const Color(0xFF131316),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: const BorderSide(color: Colors.white12),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'remove') {
-                        onRemove(movieId, title);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem<String>(
-                        value: 'remove',
-                        child: Row(
-                          children: [
-                            Icon(Icons.bookmark_remove_rounded, color: Colors.redAccent, size: 18),
-                            SizedBox(width: 8),
-                            Text('Remove from Watchlist', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Bottom Bookmark Badge
-                Positioned(
-                  bottom: 6,
-                  right: 6,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(8),
+                      shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.bookmark_rounded,
-                      color: Color(0xFFA855F7),
-                      size: 14,
+                    child: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 20),
+                      color: const Color(0xFF131316),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: const BorderSide(color: Colors.white10),
+                      ),
+                      onSelected: (value) async {
+                        if (value == 'watchlist') {
+                          final isWatchlist = provider.getMediaStatus(id, mediaType: mediaTypeStr) == 'watchlist';
+                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          
+                          if (isWatchlist) {
+                            await provider.removeFromWatchlist(id, mediaType: mediaTypeStr);
+                            onRemove(id, title);
+                            scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Removed from Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                          } else {
+                            final fullDateStr = (item['release_year'] ?? item['release_date'] ?? item['first_air_date'] ?? '').toString();
+                            final voteAverage = double.tryParse((item['vote_average'] ?? 0.0).toString()) ?? 0.0;
+                            await provider.addToWatchlist(
+                              movieId: id, 
+                              movieTitle: title, 
+                              posterPath: imagePath, 
+                              status: 'watchlist', 
+                              mediaType: mediaTypeStr, 
+                              releaseYear: fullDateStr, 
+                              runtime: 120, 
+                              voteAverage: voteAverage
+                            );
+                            scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Added to Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                          }
+                        } else if (value == 'track') {
+                          onTrack();
+                        } else if (value == 'manage') {
+                          onManage();
+                        }
+                      },
+                      itemBuilder: (context) {
+                        final isWatchlist = provider.getMediaStatus(id, mediaType: mediaTypeStr) == 'watchlist';
+                        return [
+                          PopupMenuItem(
+                            value: 'watchlist',
+                            child: Row(
+                              children: [
+                                Icon(isWatchlist ? Icons.bookmark_added_rounded : Icons.bookmark_add_outlined, color: Colors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Text(isWatchlist ? 'Remove from Watchlist' : 'Watchlist', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'track',
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                                SizedBox(width: 8),
+                                Text('Track', style: TextStyle(color: Colors.white, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'manage',
+                            child: Row(
+                              children: [
+                                Icon(Icons.list_alt_rounded, color: Colors.white, size: 18),
+                                SizedBox(width: 8),
+                                Text('Manage List', style: TextStyle(color: Colors.white, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                        ];
+                      },
                     ),
                   ),
                 ),
@@ -440,8 +549,6 @@ class _WatchlistGridCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Title
           Text(
             title,
             style: const TextStyle(
@@ -453,41 +560,22 @@ class _WatchlistGridCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
-
-          // Metadata Row (Year & Rating)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.public_rounded, color: Colors.white38, size: 11),
-                  const SizedBox(width: 4),
-                  Text(
-                    year,
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
+          
+          if (ratingVal > 0)
+            Row(
+              children: [
+                const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 12),
+                const SizedBox(width: 4),
+                Text(
+                  ratingStr,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-              ),
-              Row(
-                children: [
-                  const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 12),
-                  const SizedBox(width: 2),
-                  Text(
-                    ratingStr,
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
         ],
       ),
     );

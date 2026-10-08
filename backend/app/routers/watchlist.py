@@ -33,6 +33,17 @@ async def add_or_update_watchlist(
         existing_item.movie_title = item.movie_title
         if item.poster_path:
             existing_item.poster_path = item.poster_path
+            
+        # 👇 Update the exact date and new stats if they exist
+        if item.release_year is not None:
+            existing_item.release_year = item.release_year
+        if item.runtime is not None:
+            existing_item.runtime = item.runtime
+        if item.total_episodes is not None:
+            existing_item.total_episodes = item.total_episodes
+        if item.vote_average is not None:
+            existing_item.vote_average = item.vote_average
+            
         await db.commit()
         await db.refresh(existing_item)
         return existing_item
@@ -42,8 +53,13 @@ async def add_or_update_watchlist(
         movie_id=item.movie_id,
         movie_title=item.movie_title,
         poster_path=item.poster_path,
-        media_type=item.media_type,  # 👈 Pass media_type ('movie' or 'tv')
-        status=item.status
+        media_type=item.media_type,  
+        status=item.status,
+        # 👇 Save the exact date and new stats to the database!
+        release_year=item.release_year,
+        runtime=item.runtime,
+        total_episodes=item.total_episodes,
+        vote_average=item.vote_average
     )
     db.add(new_item)
     await db.commit()

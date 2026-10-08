@@ -67,22 +67,13 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
     });
   }
 
-  Future<void> _removeFromWatchlist(int movieId, String title) async {
-    try {
-      await ApiService.removeFromWatchlist(movieId);
-      if (mounted) {
-        setState(() {
-          _allWatchlistItems.removeWhere((item) => (item['movie_id'] ?? item['id']) == movieId);
-          _applyFilter();
-        });
-        Provider.of<WatchlistProvider>(context, listen: false).fetchWatchlist();
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to remove item', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent),
-        );
-      }
+  // 👇 FIXED: This now simply removes the item from the UI instantly without duplicating the API call
+  void _removeLocalItem(int movieId) {
+    if (mounted) {
+      setState(() {
+        _allWatchlistItems.removeWhere((item) => (item['movie_id'] ?? item['id']) == movieId);
+        _applyFilter();
+      });
     }
   }
 
@@ -241,7 +232,13 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
                   int listId = listData['id'];
                   String listTitle = listData['title'] ?? listData['name'];
                   return _buildMenuOption(Icons.playlist_add_rounded, listTitle, () {
-                    provider.addMediaToList(listId, id, posterPath);
+                    provider.addMediaToList(
+                      listId, 
+                      id, 
+                      posterPath,
+                      title: title,
+                      mediaType: mediaType,
+                    );
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added "$title" to "$listTitle"', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF131316), behavior: SnackBarBehavior.floating));
                   });
@@ -333,7 +330,8 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
                                 item: item,
                                 provider: watchlistProvider,
                                 mediaTypeStr: mediaTypeStr,
-                                onRemove: (id, title) => _removeFromWatchlist(id, title),
+                                // 👇 Updated to match the new local removal method
+                                onRemove: (id) => _removeLocalItem(id),
                                 onTrack: () => _showMarkWatchedMenu(item, mediaTypeStr),
                                 onManage: () => _showMoreOptions(watchlistProvider, item, mediaTypeStr),
                               );
@@ -383,7 +381,7 @@ class _WatchlistGridCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final WatchlistProvider provider;
   final String mediaTypeStr;
-  final Function(int id, String title) onRemove;
+  final Function(int id) onRemove;
   final VoidCallback onTrack;
   final VoidCallback onManage;
 
@@ -483,13 +481,18 @@ class _WatchlistGridCard extends StatelessWidget {
                           final scaffoldMessenger = ScaffoldMessenger.of(context);
                           
                           if (isWatchlist) {
-                            await provider.removeFromWatchlist(id, mediaType: mediaTypeStr);
-                            onRemove(id, title);
-                            scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Removed from Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                            // 👇 FIXED: Correctly tracking success from the Provider and instantly removing from UI
+                            final success = await provider.removeFromWatchlist(id, mediaType: mediaTypeStr);
+                            if (success) {
+                              onRemove(id);
+                              scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Removed from Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                            } else {
+                              scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Failed to remove item', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating));
+                            }
                           } else {
                             final fullDateStr = (item['release_year'] ?? item['release_date'] ?? item['first_air_date'] ?? '').toString();
                             final voteAverage = double.tryParse((item['vote_average'] ?? 0.0).toString()) ?? 0.0;
-                            await provider.addToWatchlist(
+                            final success = await provider.addToWatchlist(
                               movieId: id, 
                               movieTitle: title, 
                               posterPath: imagePath, 
@@ -499,7 +502,9 @@ class _WatchlistGridCard extends StatelessWidget {
                               runtime: 120, 
                               voteAverage: voteAverage
                             );
-                            scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Added to Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                            if (success) {
+                              scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Added to Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                            }
                           }
                         } else if (value == 'track') {
                           onTrack();

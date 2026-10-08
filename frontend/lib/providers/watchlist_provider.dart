@@ -126,6 +126,7 @@ class WatchlistProvider extends ChangeNotifier {
         await fetchCustomLists();
       } catch (e) {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
+        notifyListeners();
       }
     }
   }
@@ -136,15 +137,54 @@ class WatchlistProvider extends ChangeNotifier {
       await fetchCustomLists();
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
     }
   }
 
-  Future<void> addMediaToList(int listId, int movieId, String? posterUrl) async {
+  // 👇 Updated to pass optional title and mediaType to the API
+  Future<void> addMediaToList(
+    int listId, 
+    int movieId, 
+    String? posterUrl, {
+    String title = 'Unknown',
+    String mediaType = 'movie',
+  }) async {
     try {
-      await ApiService.addMediaToCustomList(listId, movieId, posterUrl);
-      await fetchCustomLists(); // Refresh to get the updated poster array
+      await ApiService.addMediaToCustomList(
+        listId, 
+        movieId, 
+        posterUrl,
+        title: title,
+        mediaType: mediaType,
+      );
+      await fetchCustomLists(); // Refresh to get the updated item array
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+    }
+  }
+
+  // 👇 New function to rename a list
+  Future<void> renameList(int listId, String newName) async {
+    try {
+      await ApiService.renameCustomList(listId, newName);
+      await fetchCustomLists(); // Immediately refresh the lists
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // 👇 New function to remove an item from a list
+  Future<void> removeItemFromList(int listId, dynamic mediaId) async {
+    try {
+      await ApiService.removeMediaFromCustomList(listId, mediaId);
+      await fetchCustomLists(); // Immediately refresh to remove the poster
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
     }
   }
 }

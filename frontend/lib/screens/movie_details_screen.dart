@@ -159,7 +159,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     );
   }
 
-  void _showMoreOptions(WatchlistProvider provider, String? posterPath) {
+  // 👇 UPDATED to accept `title`
+  void _showMoreOptions(WatchlistProvider provider, String? posterPath, String title) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF131316),
@@ -189,7 +190,14 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                   int listId = listData['id'];
                   String listTitle = listData['title'] ?? listData['name'];
                   return _buildMenuOption(Icons.playlist_add_rounded, listTitle, () {
-                    provider.addMediaToList(listId, widget.movieId, posterPath);
+                    // 👇 UPDATED: Passing explicit Movie details
+                    provider.addMediaToList(
+                      listId, 
+                      widget.movieId, 
+                      posterPath,
+                      title: title,
+                      mediaType: 'movie',
+                    );
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added to "$listTitle"', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF131316), behavior: SnackBarBehavior.floating));
                   });
@@ -281,7 +289,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
     return InkWell(
       onTap: () async {
-        final query = Uri.encodeComponent('Watch $movieTitle on $name');
+        final query = Uri.encodeComponent('Watch $movieTitle on$name');
         final url = Uri.parse('https://www.google.com/search?q=$query');
         
         if (await canLaunchUrl(url)) {
@@ -338,7 +346,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     return '';
   }
 
-  // 👇 Launch Trailer Directly Instead of Pop-up
   Future<void> _launchTrailerDirectly() async {
     final videos = _movieData!['videos']?['results'] as List<dynamic>?;
     final trailer = videos?.firstWhere((v) => v['site'] == 'YouTube' && v['type'] == 'Trailer', orElse: () => videos.firstOrNull) ?? videos?.firstOrNull;
@@ -427,7 +434,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     if (totalMinutes <= 0) return '';
     final int hours = totalMinutes ~/ 60;
     final int minutes = totalMinutes % 60;
-    if (hours > 0 && minutes > 0) return '${hours}h ${minutes}m';
+    if (hours > 0 && minutes > 0) return '${hours}h${minutes}m';
     if (hours > 0) return '${hours}h';
     return '${minutes}m';
   }
@@ -711,7 +718,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             const SizedBox(width: 12),
 
             _buildIconButton(
-              icon: isWatchlist ? Icons.bookmark_added_rounded : Icons.bookmark_add_outlined,
+              icon: Icons.bookmark_add_outlined,
               isActive: isWatchlist,
               onTap: () async {
                 if (isWatchlist) {
@@ -725,7 +732,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             ),
             const SizedBox(width: 12),
 
-            // 👇 Updated Trailer Button Logic
             _buildIconButton(
               icon: Icons.play_circle_outline_rounded,
               isActive: false,
@@ -752,7 +758,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             _buildIconButton(
               icon: Icons.more_vert_rounded, 
               isActive: false, 
-              onTap: () => _showMoreOptions(watchlistProvider, posterPath),
+              // 👇 UPDATED: Passing Title
+              onTap: () => _showMoreOptions(watchlistProvider, posterPath, title),
             ),
           ],
         ),

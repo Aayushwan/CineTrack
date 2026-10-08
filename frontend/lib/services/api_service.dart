@@ -10,31 +10,26 @@ class ApiService {
 
   // --- Token & User Persistence Helpers ---
 
-  /// Retrieve the stored JWT token from local storage
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
   }
 
-  /// Save JWT token to local storage after successful login
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('access_token', token);
   }
 
-  /// Save username to local storage
   static Future<void> saveUsername(String username) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('username', username);
   }
 
-  /// Retrieve stored username from local storage
   static Future<String?> getStoredUsername() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('username');
   }
 
-  /// Clear the stored token and user info on logout
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
@@ -43,7 +38,6 @@ class ApiService {
 
   // --- Authentication Endpoints ---
 
-  /// Register a new user
   static Future<Map<String, dynamic>> register(
       String username, String email, String password) async {
     final response = await http.post(
@@ -66,7 +60,6 @@ class ApiService {
     }
   }
 
-  /// Login existing user & store returned JWT token
   static Future<Map<String, dynamic>> login(
       String email, String password) async {
     final response = await http.post(
@@ -95,7 +88,6 @@ class ApiService {
 
   // --- Movies & Media Endpoints (TMDB via FastAPI) ---
 
-  /// Fetch daily trending media ('movie', 'tv', or 'all')
   static Future<Map<String, dynamic>> getTrendingMovies({
     int page = 1,
     String type = 'movie',
@@ -111,7 +103,6 @@ class ApiService {
     }
   }
 
-  /// Search movies, TV shows, and persons across TMDB multi-search
   static Future<Map<String, dynamic>> searchMovies(String query,
       {int page = 1}) async {
     final response = await http.get(
@@ -131,7 +122,6 @@ class ApiService {
     }
   }
 
-  /// Fetch details, cast, and video trailers for a single movie
   static Future<Map<String, dynamic>> getMovieDetails(int movieId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/movies/$movieId'),
@@ -144,7 +134,6 @@ class ApiService {
     }
   }
 
-  // Fetch TV Show Details
   static Future<Map<String, dynamic>> getTvDetails(int tvId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/movies/tv/$tvId'),
@@ -158,7 +147,6 @@ class ApiService {
     }
   }
 
-  // Fetch Person Details
   static Future<Map<String, dynamic>> getPersonDetails(int personId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/movies/person/$personId'),
@@ -172,11 +160,9 @@ class ApiService {
     }
   }
 
-  // Fetch TV Show Season Details (Added for real episodes)
   static Future<List<dynamic>> getTvSeasonDetails(int tvId, int seasonNumber) async {
     try {
       final response = await http.get(
-        // Matches the /movies prefix in media.py
         Uri.parse('$baseUrl/movies/tv/$tvId/season/$seasonNumber'),
         headers: {'Content-Type': 'application/json'},
       );
@@ -190,7 +176,6 @@ class ApiService {
     }
   }
 
-  // Fetch Upcoming Movies/Shows from FastAPI
   static Future<Map<String, dynamic>> getUpcomingMedia({int page = 1}) async {
     final response = await http.get(
       Uri.parse('$baseUrl/movies/upcoming?page=$page'),
@@ -204,8 +189,6 @@ class ApiService {
     }
   }
 
-  /// Fetch Discover Media by Category (Trending, Releases, Anticipated, Popular)
-  /// Pass [type] = 'tv' or 'movie' to load target media type
   static Future<Map<String, dynamic>> getDiscoverMedia({
     String category = 'trending',
     int page = 1,
@@ -225,7 +208,6 @@ class ApiService {
 
   // --- Watchlist Endpoints (JWT Protected) ---
 
-  /// Retrieve user's saved watchlist items with optional status and mediaType filters
   static Future<List<dynamic>> getWatchlist({
     String? status,
     String? mediaType,
@@ -260,7 +242,6 @@ class ApiService {
     }
   }
 
-  /// Add a movie/show to watchlist or update its status (JWT Protected)
   static Future<void> addToWatchlist({
     required int movieId,
     required String movieTitle,
@@ -300,7 +281,6 @@ class ApiService {
     }
   }
 
-  /// Remove an item from user's watchlist with optional mediaType
   static Future<void> removeFromWatchlist(
     int movieId, {
     String? mediaType,
@@ -331,7 +311,6 @@ class ApiService {
 
   // --- Reviews Endpoints ---
 
-  /// Fetch all user reviews for a specific movie/show
   static Future<List<Review>> getMovieReviews(int movieId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/reviews/movie/$movieId'),
@@ -347,7 +326,6 @@ class ApiService {
     }
   }
 
-  /// Submit a review for a movie/show (JWT protected)
   static Future<bool> postReview({
     required int movieId,
     required double rating,
@@ -374,7 +352,6 @@ class ApiService {
 
   // --- User Activity & Watch History Endpoints (JWT Protected) ---
 
-  /// Retrieve full watch history log with optional filter (e.g., 'movie' or 'tv')
   static Future<List<dynamic>> getWatchHistory([String? mediaType]) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -400,7 +377,6 @@ class ApiService {
     }
   }
 
-  /// Log a newly watched movie or show episode
   static Future<void> logWatchHistory({
     required int movieId,
     required String mediaType,
@@ -421,7 +397,6 @@ class ApiService {
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
-        // Strictly matching your Supabase Database Columns
         'media_id': movieId.toString(),
         'media_type': mediaType,
         'title': title,
@@ -437,7 +412,6 @@ class ApiService {
     }
   }
 
-  /// Remove an item from Watch History
   static Future<void> removeWatchHistory(int historyId) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -454,7 +428,6 @@ class ApiService {
     }
   }
 
-  /// Update show episode progress
   static Future<Map<String, dynamic>> updateShowProgress({
     required int showId,
     required String title,
@@ -487,7 +460,6 @@ class ApiService {
     }
   }
 
-  /// Retrieve profile screen time and analytics
   static Future<Map<String, dynamic>> getProfileStats() async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -509,7 +481,6 @@ class ApiService {
 
   // --- Custom Lists Endpoints ---
 
-  /// Retrieve user's custom lists
   static Future<List<dynamic>> getCustomLists() async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -529,7 +500,6 @@ class ApiService {
     }
   }
 
-  /// Create a new custom list
   static Future<Map<String, dynamic>> createCustomList(String name) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -550,7 +520,6 @@ class ApiService {
     }
   }
 
-  /// Delete a custom list
   static Future<void> deleteCustomList(int listId) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
@@ -565,8 +534,14 @@ class ApiService {
     }
   }
 
-  /// Add a movie to a custom list
-  static Future<void> addMediaToCustomList(int listId, int movieId, String? posterPath) async {
+  // 👇 Updated to support title and mediaType for the list_items table
+  static Future<void> addMediaToCustomList(
+    int listId, 
+    int movieId, 
+    String? posterPath, {
+    String title = 'Unknown',
+    String mediaType = 'movie',
+  }) async {
     final token = await getToken();
     if (token == null) throw Exception('Not authenticated');
 
@@ -577,13 +552,52 @@ class ApiService {
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
-        'movie_id': movieId,
+        'media_id': movieId.toString(),
+        'movie_id': movieId, // Maintained for backward compatibility
+        'media_type': mediaType,
+        'title': title,
         'poster_path': posterPath,
       }),
     );
 
     if (response.statusCode != 201 && response.statusCode != 200) {
       throw Exception('Failed to add media to list');
+    }
+  }
+
+  // 👇 New endpoint to rename a list
+  static Future<void> renameCustomList(int listId, String newName) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/lists/$listId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'name': newName}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to rename list');
+    }
+  }
+
+  // 👇 New endpoint to remove an item from a list
+  static Future<void> removeMediaFromCustomList(int listId, dynamic mediaId) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Not authenticated');
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/lists/$listId/items/$mediaId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception('Failed to remove item from list');
     }
   }
 }

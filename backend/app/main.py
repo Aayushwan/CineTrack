@@ -19,6 +19,7 @@ import app.models.user
 import app.models.watchlist
 import app.models.review
 import app.models.history
+import app.models.custom_list
 
 
 @asynccontextmanager

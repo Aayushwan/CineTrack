@@ -181,7 +181,8 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   }
 
   // ─── Custom Lists Menu ───────────────────────────────────────────────────
-  void _showMoreOptions(WatchlistProvider provider, String? posterPath) {
+  // 👇 UPDATED to accept `title`
+  void _showMoreOptions(WatchlistProvider provider, String? posterPath, String title) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF131316),
@@ -214,7 +215,14 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   int listId = listData['id'];
                   String listTitle = listData['name'] ?? listData['title'] ?? 'Untitled';
                   return _buildMenuOption(Icons.playlist_add_rounded, listTitle, () {
-                    provider.addMediaToList(listId, widget.showId, posterPath);
+                    // 👇 UPDATED: Passing explicit TV details
+                    provider.addMediaToList(
+                      listId, 
+                      widget.showId, 
+                      posterPath,
+                      title: title,
+                      mediaType: 'tv',
+                    );
                     Navigator.pop(context);
                     _showSnackBar('Added to "$listTitle"');
                   });
@@ -1005,7 +1013,8 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             _buildIconButton(
               icon: Icons.list_alt_rounded,
               isActive: false,
-              onTap: () => _showMoreOptions(watchlistProvider, posterPath),
+              // 👇 UPDATED: Passing Title
+              onTap: () => _showMoreOptions(watchlistProvider, posterPath, title),
             ),
             const SizedBox(width: 12),
             _buildIconButton(

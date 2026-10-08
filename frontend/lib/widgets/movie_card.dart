@@ -17,6 +17,7 @@ class MovieCard extends StatefulWidget {
   final String? overlayLeftText; 
   final String? overlayRightText; 
   final double? progress; 
+  final bool hideActionMenu; // 👇 Added property to allow hiding the 3-dot menu
 
   const MovieCard({
     super.key,
@@ -31,6 +32,7 @@ class MovieCard extends StatefulWidget {
     this.overlayLeftText,
     this.overlayRightText,
     this.progress,
+    this.hideActionMenu = false, // Defaults to false so it doesn't break other screens
   });
 
   @override
@@ -209,7 +211,13 @@ class _MovieCardState extends State<MovieCard> {
                   int listId = listData['id'];
                   String listTitle = listData['title'] ?? listData['name'];
                   return _buildMenuOption(Icons.playlist_add_rounded, listTitle, () {
-                    provider.addMediaToList(listId, widget.id, widget.imageUrl);
+                    provider.addMediaToList(
+                      listId, 
+                      widget.id, 
+                      widget.imageUrl,
+                      title: widget.title,
+                      mediaType: targetType,
+                    );
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added "${widget.title}" to "$listTitle"', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF131316), behavior: SnackBarBehavior.floating));
                   });
@@ -340,109 +348,111 @@ class _MovieCardState extends State<MovieCard> {
                     ),
                   ),
 
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: Container(
-                    height: 26,
-                    width: 26,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: PopupMenuButton<String>(
-                      padding: EdgeInsets.zero,
-                      icon: const Icon(
-                        Icons.more_vert_rounded,
-                        color: Colors.white,
-                        size: 16,
+                // 👇 Wrapped in an if block to allow hiding in Custom Lists
+                if (!widget.hideActionMenu)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Container(
+                      height: 26,
+                      width: 26,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
                       ),
-                      color: const Color(0xFF131316),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: const BorderSide(color: Colors.white12),
-                      ),
-                      onSelected: (value) async {
-                        if (value == 'watchlist') {
-                          final isWatchlist = watchlistProvider.getMediaStatus(widget.id, mediaType: targetType) == 'watchlist';
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
-                          
-                          if (isWatchlist) {
-                            await watchlistProvider.removeFromWatchlist(widget.id, mediaType: targetType);
-                            scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Removed from Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
-                          } else {
-                            String exactDate = '';
-                            int runtime = 120;
-                            try {
-                              if (targetType == 'movie') {
-                                final details = await ApiService.getMovieDetails(widget.id);
-                                exactDate = details['release_date'] ?? '';
-                                runtime = details['runtime'] ?? 120;
-                              } else {
-                                final details = await ApiService.getTvDetails(widget.id);
-                                exactDate = details['first_air_date'] ?? '';
-                                if (details['episode_run_time'] != null && (details['episode_run_time'] as List).isNotEmpty) {
-                                  runtime = details['episode_run_time'][0];
+                      child: PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(
+                          Icons.more_vert_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        color: const Color(0xFF131316),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: const BorderSide(color: Colors.white12),
+                        ),
+                        onSelected: (value) async {
+                          if (value == 'watchlist') {
+                            final isWatchlist = watchlistProvider.getMediaStatus(widget.id, mediaType: targetType) == 'watchlist';
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
+                            
+                            if (isWatchlist) {
+                              await watchlistProvider.removeFromWatchlist(widget.id, mediaType: targetType);
+                              scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Removed from Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                            } else {
+                              String exactDate = '';
+                              int runtime = 120;
+                              try {
+                                if (targetType == 'movie') {
+                                  final details = await ApiService.getMovieDetails(widget.id);
+                                  exactDate = details['release_date'] ?? '';
+                                  runtime = details['runtime'] ?? 120;
+                                } else {
+                                  final details = await ApiService.getTvDetails(widget.id);
+                                  exactDate = details['first_air_date'] ?? '';
+                                  if (details['episode_run_time'] != null && (details['episode_run_time'] as List).isNotEmpty) {
+                                    runtime = details['episode_run_time'][0];
+                                  }
                                 }
-                              }
-                            } catch (_) {}
+                              } catch (_) {}
 
-                            await watchlistProvider.addToWatchlist(
-                              movieId: widget.id, 
-                              movieTitle: widget.title, 
-                              posterPath: widget.imageUrl, 
-                              status: 'watchlist', 
-                              mediaType: targetType, 
-                              releaseYear: exactDate, 
-                              runtime: runtime, 
-                              voteAverage: widget.rating ?? 0.0
-                            );
-                            scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Added to Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                              await watchlistProvider.addToWatchlist(
+                                movieId: widget.id, 
+                                movieTitle: widget.title, 
+                                posterPath: widget.imageUrl, 
+                                status: 'watchlist', 
+                                mediaType: targetType, 
+                                releaseYear: exactDate, 
+                                runtime: runtime, 
+                                voteAverage: widget.rating ?? 0.0
+                              );
+                              scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Added to Watchlist', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating));
+                            }
+                          } else if (value == 'track') {
+                            _showMarkWatchedMenu(targetType);
+                          } else if (value == 'manage') {
+                            _showMoreOptions(watchlistProvider, targetType);
                           }
-                        } else if (value == 'track') {
-                          _showMarkWatchedMenu(targetType);
-                        } else if (value == 'manage') {
-                          _showMoreOptions(watchlistProvider, targetType);
-                        }
-                      },
-                      itemBuilder: (context) {
-                        final isWatchlist = watchlistProvider.getMediaStatus(widget.id, mediaType: targetType) == 'watchlist';
-                        return [
-                          PopupMenuItem(
-                            value: 'watchlist',
-                            child: Row(
-                              children: [
-                                Icon(isWatchlist ? Icons.bookmark_added_rounded : Icons.bookmark_add_outlined, color: Colors.white, size: 18),
-                                const SizedBox(width: 8),
-                                Text(isWatchlist ? 'Remove from Watchlist' : 'Watchlist', style: const TextStyle(color: Colors.white, fontSize: 13)),
-                              ],
+                        },
+                        itemBuilder: (context) {
+                          final isWatchlist = watchlistProvider.getMediaStatus(widget.id, mediaType: targetType) == 'watchlist';
+                          return [
+                            PopupMenuItem(
+                              value: 'watchlist',
+                              child: Row(
+                                children: [
+                                  Icon(isWatchlist ? Icons.bookmark_added_rounded : Icons.bookmark_add_outlined, color: Colors.white, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(isWatchlist ? 'Remove from Watchlist' : 'Watchlist', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                                ],
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'track',
-                            child: Row(
-                              children: [
-                                Icon(Icons.check_rounded, color: Colors.white, size: 18),
-                                SizedBox(width: 8),
-                                Text('Track', style: TextStyle(color: Colors.white, fontSize: 13)),
-                              ],
+                            const PopupMenuItem(
+                              value: 'track',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Track', style: TextStyle(color: Colors.white, fontSize: 13)),
+                                ],
+                              ),
                             ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'manage',
-                            child: Row(
-                              children: [
-                                Icon(Icons.list_alt_rounded, color: Colors.white, size: 18),
-                                SizedBox(width: 8),
-                                Text('Manage List', style: TextStyle(color: Colors.white, fontSize: 13)),
-                              ],
+                            const PopupMenuItem(
+                              value: 'manage',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.list_alt_rounded, color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Manage List', style: TextStyle(color: Colors.white, fontSize: 13)),
+                                ],
+                              ),
                             ),
-                          ),
-                        ];
-                      },
+                          ];
+                        },
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

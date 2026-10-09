@@ -52,9 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final prefs = await SharedPreferences.getInstance();
       final storedName = prefs.getString('username');
 
-      if (storedName != null &&
-          storedName.isNotEmpty &&
-          mounted) {
+      if (storedName != null && storedName.isNotEmpty && mounted) {
         setState(() {
           _username = storedName;
         });
@@ -64,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final results = await Future.wait([
         ApiService.getProfileStats(),
         ApiService.getWatchHistory(),
-        ApiService.getContinueWatching(), 
+        ApiService.getContinueWatching(),
       ]);
 
       if (mounted) {
@@ -75,7 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final historyData = results[1] as List<dynamic>;
           _historyItems = historyData.take(10).toList();
           _isLoadingHistory = false;
-          
+
           // 👇 Assign the live data to the UI
           _continueWatching = results[2] as List<dynamic>;
         });
@@ -91,9 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String _formatDate(String? isoString) {
-    if (isoString == null ||
-        isoString.isEmpty ||
-        isoString == 'null') {
+    if (isoString == null || isoString.isEmpty || isoString == 'null') {
       return '';
     }
 
@@ -135,10 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 gradient: RadialGradient(
                   center: Alignment(0.9, -0.9),
                   radius: 1.15,
-                  colors: [
-                    Color(0x292A0A42),
-                    Color(0xFF08080B),
-                  ],
+                  colors: [Color(0x292A0A42), Color(0xFF08080B)],
                 ),
               ),
             ),
@@ -166,17 +159,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onRefresh: _loadProfileData,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  24,
-                  24,
-                  24,
-                  40,
-                ),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: 1400,
-                    ),
+                    constraints: const BoxConstraints(maxWidth: 1400),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -186,7 +172,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 16),
                         _buildAnalyticsCard(),
                         const SizedBox(height: 32),
-                        _buildNavigableSectionHeader( // 👇 Made this navigable to the ProgressScreen!
+                        _buildNavigableSectionHeader(
+                          // 👇 Made this navigable to the ProgressScreen!
                           context: context,
                           icon: Icons.play_circle_outline_rounded,
                           title: 'Continue Watching',
@@ -218,9 +205,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xD915151B),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF2D2933),
-        ),
+        border: Border.all(color: const Color(0xFF2D2933)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x33000000),
@@ -239,20 +224,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: isCompact ? 64 : 74,
                 height: isCompact ? 64 : 74,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(
-                    isCompact ? 19 : 22,
-                  ),
+                  borderRadius: BorderRadius.circular(isCompact ? 19 : 22),
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFCA53FF),
-                      Color(0xFF7C2BE8),
-                    ],
+                    colors: [Color(0xFFCA53FF), Color(0xFF7C2BE8)],
                   ),
-                  border: Border.all(
-                    color: const Color(0x55D9A8FF),
-                  ),
+                  border: Border.all(color: const Color(0x55D9A8FF)),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x557C2BE8),
@@ -290,10 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ],
                           ),
-                          child: SizedBox(
-                            width: 7,
-                            height: 7,
-                          ),
+                          child: SizedBox(width: 7, height: 7),
                         ),
                         SizedBox(width: 9),
                         Flexible(
@@ -328,10 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Your personal movie and television journal',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Color(0xFF817C87),
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: Color(0xFF817C87), fontSize: 11),
                     ),
                   ],
                 ),
@@ -356,9 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF24151B),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF57303D),
-                        ),
+                        border: Border.all(color: const Color(0xFF57303D)),
                       ),
                       child: const Icon(
                         Icons.logout_rounded,
@@ -420,9 +390,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF131318),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF2D2933),
-        ),
+        border: Border.all(color: const Color(0xFF2D2933)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -449,18 +417,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 9,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(9),
             gradient: isSelected
                 ? const LinearGradient(
-                    colors: [
-                      Color(0xFFB143EB),
-                      Color(0xFF8431D9),
-                    ],
+                    colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
                   )
                 : null,
             boxShadow: isSelected
@@ -476,9 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Text(
             title,
             style: TextStyle(
-              color: isSelected
-                  ? Colors.white
-                  : const Color(0xFF817C87),
+              color: isSelected ? Colors.white : const Color(0xFF817C87),
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -496,9 +456,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         decoration: BoxDecoration(
           color: const Color(0xD915151B),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(0xFF2D2933),
-          ),
+          border: Border.all(color: const Color(0xFF2D2933)),
         ),
         child: const Center(
           child: Column(
@@ -515,10 +473,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(height: 14),
               Text(
                 'Loading your analytics...',
-                style: TextStyle(
-                  color: Color(0xFF817C87),
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: Color(0xFF817C87), fontSize: 11),
               ),
             ],
           ),
@@ -526,37 +481,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    final periodKey =
-        _selectedAnalyticsPeriod == 0 ? 'thisMonth' : 'allTime';
+    final periodKey = _selectedAnalyticsPeriod == 0 ? 'thisMonth' : 'allTime';
 
     final currentStats = _statsData?[periodKey] ?? {};
 
-    final totalTime = currentStats['totalScreenTime'] ??
+    final totalTime =
+        currentStats['totalScreenTime'] ??
         currentStats['total_screen_time'] ??
         currentStats['screenTime'] ??
         '0h 0m';
 
-    final moviesCount = currentStats['moviesCount'] ??
-        currentStats['movies_count'] ??
-        '0';
+    final moviesCount =
+        currentStats['moviesCount'] ?? currentStats['movies_count'] ?? '0';
 
-    final seriesCount = currentStats['seriesCount'] ??
+    final seriesCount =
+        currentStats['seriesCount'] ??
         currentStats['series_count'] ??
         currentStats['episodesCount'] ??
         '0';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        vertical: 25,
-        horizontal: 10,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 10),
       decoration: BoxDecoration(
         color: const Color(0xD915151B),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF2D2933),
-        ),
+        border: Border.all(color: const Color(0xFF2D2933)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x29000000),
@@ -596,11 +546,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildMetricDivider() {
-    return Container(
-      width: 1,
-      height: 54,
-      color: const Color(0xFF2D2933),
-    );
+    return Container(width: 1, height: 54, color: const Color(0xFF2D2933));
   }
 
   Widget _buildStatMetric({
@@ -616,15 +562,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF281732),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: const Color(0xFF4B2A59),
-            ),
+            border: Border.all(color: const Color(0xFF4B2A59)),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFFCA66FF),
-            size: 17,
-          ),
+          child: Icon(icon, color: const Color(0xFFCA66FF), size: 17),
         ),
         const SizedBox(height: 10),
         Text(
@@ -655,25 +595,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // 👇 Updated to safely parse the live data mapping
   Widget _buildContinueWatchingList() {
-    final activeItems = _continueWatching.where((show) {
-      final watched = int.tryParse(
-            (show['watchedEpisodes'] ?? 0).toString(),
-          ) ??
-          0;
-      final total = int.tryParse(
-            (show['totalEpisodes'] ?? 0).toString(),
-          ) ??
-          0;
+    final activeItems = _continueWatching
+        .where((show) {
+          final watched =
+              int.tryParse((show['watchedEpisodes'] ?? 0).toString()) ?? 0;
+          final total =
+              int.tryParse((show['totalEpisodes'] ?? 0).toString()) ?? 0;
 
-      return total > 0 && watched < total;
-    }).take(5).toList();
+          return total > 0 && watched < total;
+        })
+        .take(5)
+        .toList();
 
     if (activeItems.isEmpty) {
       return _buildEmptyState(
         icon: Icons.play_arrow_rounded,
         title: 'Nothing in progress',
-        message:
-            'Start watching something and it will appear here.',
+        message: 'Start watching something and it will appear here.',
       );
     }
 
@@ -681,10 +619,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       height: 184,
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(
-          dragDevices: {
-            PointerDeviceKind.touch,
-            PointerDeviceKind.mouse,
-          },
+          dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
         ),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
@@ -692,42 +627,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
           itemBuilder: (context, index) {
             final show = activeItems[index];
 
-            final watched = int.tryParse(
-                  (show['watchedEpisodes'] ?? 0).toString(),
-                ) ??
-                0;
+            final watched =
+                int.tryParse((show['watchedEpisodes'] ?? 0).toString()) ?? 0;
 
-            final total = int.tryParse(
-                  (show['totalEpisodes'] ?? 1).toString(),
-                ) ??
-                1;
+            final total =
+                int.tryParse((show['totalEpisodes'] ?? 1).toString()) ?? 1;
 
-            final factor =
-                total > 0 ? (watched / total).clamp(0.0, 1.0) : 0.0;
+            final factor = total > 0 ? (watched / total).clamp(0.0, 1.0) : 0.0;
 
-            final mediaId =
-                (show['show_id'] ?? '').toString();
+            final mediaId = (show['show_id'] ?? '').toString();
 
-            final nextSeason = int.tryParse(
-                  (show['nextSeasonNumber'] ?? 1).toString(),
-                ) ??
-                1;
+            final nextSeason =
+                int.tryParse((show['nextSeasonNumber'] ?? 1).toString()) ?? 1;
 
-            final nextEpisode = int.tryParse(
-                  (show['nextEpisodeNumber'] ?? watched + 1)
-                      .toString(),
+            final nextEpisode =
+                int.tryParse(
+                  (show['nextEpisodeNumber'] ?? watched + 1).toString(),
                 ) ??
                 watched + 1;
 
-            final rawBackdrop =
-                (show['backdrop_path'] ?? '').toString();
+            final rawBackdrop = (show['backdrop_path'] ?? '').toString();
 
-            final imageUrl = rawBackdrop.isNotEmpty &&
-                    rawBackdrop != 'null'
+            final imageUrl = rawBackdrop.isNotEmpty && rawBackdrop != 'null'
                 ? rawBackdrop.startsWith('http')
-                    ? rawBackdrop
-                    : 'https://image.tmdb.org/t/p/w500'
-                        '$rawBackdrop'
+                      ? rawBackdrop
+                      : 'https://image.tmdb.org/t/p/w500'
+                            '$rawBackdrop'
                 : '';
 
             return GestureDetector(
@@ -738,9 +663,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF15151B),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF2D2933),
-                  ),
+                  border: Border.all(color: const Color(0xFF2D2933)),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x33000000),
@@ -758,8 +681,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              _buildPosterPlaceholder(),
+                          errorBuilder: (_, _, _) => _buildPosterPlaceholder(),
                         )
                       else
                         _buildPosterPlaceholder(),
@@ -782,8 +704,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         right: 14,
                         bottom: 12,
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               show['title'] ?? 'Unknown Show',
@@ -821,15 +742,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 9),
                             ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(8),
                               child: LinearProgressIndicator(
                                 value: factor,
                                 minHeight: 6,
-                                backgroundColor:
-                                    const Color(0xFF343039),
-                                valueColor:
-                                    const AlwaysStoppedAnimation(
+                                backgroundColor: const Color(0xFF343039),
+                                valueColor: const AlwaysStoppedAnimation(
                                   Color(0xFFCA66FF),
                                 ),
                               ),
@@ -848,9 +766,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildDynamicFavoritesSection(
-    BuildContext context,
-  ) {
+  Widget _buildDynamicFavoritesSection(BuildContext context) {
     return Consumer<WatchlistProvider>(
       builder: (context, watchlistProvider, child) {
         final favorites = watchlistProvider.favoriteItems;
@@ -870,8 +786,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildEmptyState(
                 icon: Icons.favorite_border_rounded,
                 title: 'No favorites yet',
-                message:
-                    'Add movies and shows to build your favorites.',
+                message: 'Add movies and shows to build your favorites.',
               )
             else
               SizedBox(
@@ -885,20 +800,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount:
-                        favorites.length > 10 ? 10 : favorites.length,
+                    itemCount: favorites.length > 10 ? 10 : favorites.length,
                     itemBuilder: (context, index) {
                       final item = favorites[index];
 
-                      final rawPoster =
-                          (item.posterPath ?? '').toString();
+                      final rawPoster = (item.posterPath ?? '').toString();
 
-                      final posterUrl = rawPoster.isNotEmpty &&
-                              rawPoster != 'null'
+                      final posterUrl =
+                          rawPoster.isNotEmpty && rawPoster != 'null'
                           ? rawPoster.startsWith('http')
-                              ? rawPoster
-                              : 'https://image.tmdb.org/t/p/w300'
-                                  '$rawPoster'
+                                ? rawPoster
+                                : 'https://image.tmdb.org/t/p/w300'
+                                      '$rawPoster'
                           : '';
 
                       final mediaType = item.mediaType.isNotEmpty
@@ -917,9 +830,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF15151B),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFF2D2933),
-                            ),
+                            border: Border.all(color: const Color(0xFF2D2933)),
                             boxShadow: const [
                               BoxShadow(
                                 color: Color(0x33000000),
@@ -937,11 +848,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Image.network(
                                     posterUrl,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (
-                                      context,
-                                      error,
-                                      stackTrace,
-                                    ) {
+                                    errorBuilder: (context, error, stackTrace) {
                                       return _buildPosterPlaceholder();
                                     },
                                   )
@@ -985,8 +892,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   right: 6,
                                   child: _buildFavoritesMenu(
                                     context: context,
-                                    watchlistProvider:
-                                        watchlistProvider,
+                                    watchlistProvider: watchlistProvider,
                                     id: id,
                                     mediaType: mediaType,
                                   ),
@@ -1018,9 +924,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xD90C0B0F),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFF39343F),
-        ),
+        border: Border.all(color: const Color(0xFF39343F)),
       ),
       child: PopupMenuButton<String>(
         tooltip: 'Favorite options',
@@ -1034,14 +938,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         surfaceTintColor: const Color(0xFF17151B),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(
-            color: Color(0xFF38333F),
-          ),
+          side: const BorderSide(color: Color(0xFF38333F)),
         ),
         onSelected: (value) async {
           if (value == 'remove') {
-            final success =
-                await watchlistProvider.removeFromWatchlist(
+            final success = await watchlistProvider.removeFromWatchlist(
               id,
               mediaType: mediaType,
             );
@@ -1049,9 +950,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (!context.mounted) return;
 
             if (success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                _buildSnackBar('Removed from Favorites'),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(_buildSnackBar('Removed from Favorites'));
             }
           }
         },
@@ -1090,9 +991,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             decoration: BoxDecoration(
               color: const Color(0x9915151B),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: const Color(0xFF28242E),
-              ),
+              border: Border.all(color: const Color(0xFF28242E)),
             ),
             child: const Center(
               child: SizedBox(
@@ -1109,18 +1008,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildEmptyState(
             icon: Icons.history_rounded,
             title: 'Your history is empty',
-            message:
-                'Titles you watch will automatically appear here.',
+            message: 'Titles you watch will automatically appear here.',
           )
         else
           SizedBox(
             height: 224,
             child: ScrollConfiguration(
               behavior: ScrollConfiguration.of(context).copyWith(
-                dragDevices: {
-                  PointerDeviceKind.touch,
-                  PointerDeviceKind.mouse,
-                },
+                dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
               ),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
@@ -1128,62 +1023,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 itemBuilder: (context, index) {
                   final item = _historyItems[index];
 
-                  final int historyId = int.tryParse(
-                        (
-                          item['id'] ??
-                              item['history_id'] ??
-                              item['historyId'] ??
-                              '0'
-                        ).toString(),
+                  final int historyId =
+                      int.tryParse(
+                        (item['id'] ??
+                                item['history_id'] ??
+                                item['historyId'] ??
+                                '0')
+                            .toString(),
                       ) ??
                       0;
 
-                  final String mediaId = (
-                    item['media_id'] ??
-                        item['mediaId'] ??
-                        item['movie_id'] ??
-                        item['movieId'] ??
-                        '0'
-                  ).toString();
+                  final String mediaId =
+                      (item['media_id'] ??
+                              item['mediaId'] ??
+                              item['movie_id'] ??
+                              item['movieId'] ??
+                              '0')
+                          .toString();
 
-                  final String mediaType = (
-                    item['media_type'] ??
-                        item['mediaType'] ??
-                        item['type'] ??
-                        'movie'
-                  ).toString().toLowerCase();
+                  final String mediaType =
+                      (item['media_type'] ??
+                              item['mediaType'] ??
+                              item['type'] ??
+                              'movie')
+                          .toString()
+                          .toLowerCase();
 
-                  final String title = (
-                    item['title'] ??
-                        item['movie_title'] ??
-                        item['movieTitle'] ??
-                        item['name'] ??
-                        'Unknown'
-                  ).toString();
+                  final String title =
+                      (item['title'] ??
+                              item['movie_title'] ??
+                              item['movieTitle'] ??
+                              item['name'] ??
+                              'Unknown')
+                          .toString();
 
-                  final String rawDate = (
-                    item['watched_at'] ??
-                        item['watchedAt'] ??
-                        ''
-                  ).toString();
+                  final String rawDate =
+                      (item['watched_at'] ?? item['watchedAt'] ?? '')
+                          .toString();
 
-                  final String displayDate =
-                      _formatDate(rawDate);
+                  final String displayDate = _formatDate(rawDate);
 
-                  final String rawPoster = (
-                    item['poster_path'] ??
-                        item['posterPath'] ??
-                        item['poster'] ??
-                        item['image_url'] ??
-                        ''
-                  ).toString();
+                  final String rawPoster =
+                      (item['poster_path'] ??
+                              item['posterPath'] ??
+                              item['poster'] ??
+                              item['image_url'] ??
+                              '')
+                          .toString();
 
-                  final String posterUrl = rawPoster.isNotEmpty &&
-                          rawPoster != 'null'
+                  final String posterUrl =
+                      rawPoster.isNotEmpty && rawPoster != 'null'
                       ? rawPoster.startsWith('http')
-                          ? rawPoster
-                          : 'https://image.tmdb.org/t/p/w300'
-                              '$rawPoster'
+                            ? rawPoster
+                            : 'https://image.tmdb.org/t/p/w300'
+                                  '$rawPoster'
                       : '';
 
                   return GestureDetector(
@@ -1194,19 +1087,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: 128,
                       margin: const EdgeInsets.only(right: 16),
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
                                 color: const Color(0xFF15151B),
-                                borderRadius:
-                                    BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color:
-                                      const Color(0xFF2D2933),
+                                  color: const Color(0xFF2D2933),
                                 ),
                                 boxShadow: const [
                                   BoxShadow(
@@ -1217,8 +1107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                               child: ClipRRect(
-                                borderRadius:
-                                    BorderRadius.circular(15),
+                                borderRadius: BorderRadius.circular(15),
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
@@ -1227,25 +1116,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         posterUrl,
                                         fit: BoxFit.cover,
                                         alignment: Alignment.center,
-                                        errorBuilder: (
-                                          context,
-                                          error,
-                                          stackTrace,
-                                        ) {
-                                          return _buildPosterPlaceholder();
-                                        },
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return _buildPosterPlaceholder();
+                                            },
                                       )
                                     else
                                       _buildPosterPlaceholder(),
                                     const Positioned.fill(
                                       child: DecoratedBox(
                                         decoration: BoxDecoration(
-                                          gradient:
-                                              LinearGradient(
-                                            begin:
-                                                Alignment.topCenter,
-                                            end: Alignment
-                                                .bottomCenter,
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
                                             colors: [
                                               Color(0x00000000),
                                               Color(0x10000000),
@@ -1264,13 +1147,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         child: Text(
                                           displayDate,
                                           maxLines: 1,
-                                          overflow:
-                                              TextOverflow.ellipsis,
+                                          overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 9,
-                                            fontWeight:
-                                                FontWeight.w700,
+                                            fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                       ),
@@ -1322,9 +1203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xD90C0B0F),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFF39343F),
-        ),
+        border: Border.all(color: const Color(0xFF39343F)),
       ),
       child: PopupMenuButton<String>(
         tooltip: 'History options',
@@ -1338,9 +1217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         surfaceTintColor: const Color(0xFF17151B),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(
-            color: Color(0xFF38333F),
-          ),
+          side: const BorderSide(color: Color(0xFF38333F)),
         ),
         onSelected: (value) async {
           if (value == 'remove') {
@@ -1355,9 +1232,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               });
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                _buildSnackBar('Removed from history'),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(_buildSnackBar('Removed from history'));
             } catch (e) {
               if (!context.mounted) return;
 
@@ -1365,9 +1242,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SnackBar(
                   content: Text(
                     'Failed to remove: $e',
-                    style: const TextStyle(
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(color: Colors.white),
                   ),
                   backgroundColor: const Color(0xFFE34D67),
                   behavior: SnackBarBehavior.floating,
@@ -1409,15 +1284,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF281732),
             borderRadius: BorderRadius.circular(11),
-            border: Border.all(
-              color: const Color(0xFF4B2A59),
-            ),
+            border: Border.all(color: const Color(0xFF4B2A59)),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFFCA66FF),
-            size: 19,
-          ),
+          child: Icon(icon, color: const Color(0xFFCA66FF), size: 19),
         ),
         const SizedBox(width: 12),
         Flexible(
@@ -1436,10 +1305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: Color(0xFF77717D),
-                  fontSize: 10,
-                ),
+                style: const TextStyle(color: Color(0xFF77717D), fontSize: 10),
               ),
             ],
           ),
@@ -1477,9 +1343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF18181D),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: const Color(0xFF2D2933),
-                  ),
+                  border: Border.all(color: const Color(0xFF2D2933)),
                 ),
                 child: const Icon(
                   Icons.arrow_forward_rounded,
@@ -1501,16 +1365,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 28,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
       decoration: BoxDecoration(
         color: const Color(0x9915151B),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFF28242E),
-        ),
+        border: Border.all(color: const Color(0xFF28242E)),
       ),
       child: Column(
         children: [
@@ -1520,15 +1379,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF211528),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF4B2A59),
-              ),
+              border: Border.all(color: const Color(0xFF4B2A59)),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFFBD4DFF),
-              size: 25,
-            ),
+            child: Icon(icon, color: const Color(0xFFBD4DFF), size: 25),
           ),
           const SizedBox(height: 15),
           Text(
@@ -1595,11 +1448,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : const Color(0xFF281732),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 17,
-          ),
+          child: Icon(icon, color: color, size: 17),
         ),
         const SizedBox(width: 11),
         Flexible(
@@ -1642,17 +1491,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(
-          color: Color(0xFF39333F),
-        ),
+        side: const BorderSide(color: Color(0xFF39333F)),
       ),
     );
   }
 
-  Widget _buildBackgroundGlow({
-    required double size,
-    required Color color,
-  }) {
+  Widget _buildBackgroundGlow({required double size, required Color color}) {
     return IgnorePointer(
       child: Container(
         width: size,
@@ -1660,10 +1504,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: 0.16),
-              color.withValues(alpha: 0),
-            ],
+            colors: [color.withValues(alpha: 0.16), color.withValues(alpha: 0)],
           ),
         ),
       ),

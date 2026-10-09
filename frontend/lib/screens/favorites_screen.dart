@@ -18,14 +18,22 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   Widget build(BuildContext context) {
     final watchlistProvider = Provider.of<WatchlistProvider>(context);
-    
+
     List<WatchlistItem> favorites = watchlistProvider.favoriteItems;
 
     // Apply Filter
     if (_activeFilter == 'movies') {
-      favorites = favorites.where((item) => item.mediaType.toLowerCase() == 'movie').toList();
+      favorites = favorites
+          .where((item) => item.mediaType.toLowerCase() == 'movie')
+          .toList();
     } else if (_activeFilter == 'shows') {
-      favorites = favorites.where((item) => item.mediaType.toLowerCase() == 'tv' || item.mediaType.toLowerCase() == 'show').toList();
+      favorites = favorites
+          .where(
+            (item) =>
+                item.mediaType.toLowerCase() == 'tv' ||
+                item.mediaType.toLowerCase() == 'show',
+          )
+          .toList();
     }
 
     // Group items by Year Added to Favorites
@@ -34,18 +42,18 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       String year = 'Unknown Year';
       try {
         final dynamic dItem = item;
-        
+
         // Priority 1: Check when it was added to favorites
         final addedDate = dItem.addedAt ?? dItem.created_at;
         if (addedDate != null) {
-            final DateTime parsedDate = DateTime.parse(addedDate.toString());
-            year = parsedDate.year.toString();
+          final DateTime parsedDate = DateTime.parse(addedDate.toString());
+          year = parsedDate.year.toString();
         } else {
-            // Priority 2: Fallback to current year if parsing fails or data is missing
-             year = DateTime.now().year.toString();
+          // Priority 2: Fallback to current year if parsing fails or data is missing
+          year = DateTime.now().year.toString();
         }
       } catch (_) {
-          year = DateTime.now().year.toString();
+        year = DateTime.now().year.toString();
       }
 
       if (!groupedFavorites.containsKey(year)) {
@@ -80,9 +88,20 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Favorites', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+            const Text(
+              'Favorites',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
             Text(
-              _activeFilter == 'movies' ? 'Movies' : _activeFilter == 'shows' ? 'Shows' : 'Media',
+              _activeFilter == 'movies'
+                  ? 'Movies'
+                  : _activeFilter == 'shows'
+                  ? 'Shows'
+                  : 'Media',
               style: const TextStyle(color: Colors.white60, fontSize: 13),
             ),
           ],
@@ -101,10 +120,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               children: [
                 _buildFilterPill('media', 'Media', Icons.dashboard_rounded),
                 _buildFilterPill('shows', 'Shows', Icons.tv_rounded),
-                _buildFilterPill('movies', 'Movies', Icons.movie_creation_rounded),
+                _buildFilterPill(
+                  'movies',
+                  'Movies',
+                  Icons.movie_creation_rounded,
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
       body: favorites.isEmpty
@@ -162,7 +185,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 14, color: isActive ? Colors.white : Colors.white60),
+            Icon(
+              icon,
+              size: 14,
+              color: isActive ? Colors.white : Colors.white60,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
@@ -179,59 +206,65 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Widget _buildFavoriteCard(BuildContext context, WatchlistItem item) {
-    final posterUrl = item.posterPath != null ? 'https://image.tmdb.org/t/p/w300${item.posterPath}' : '';
+    final posterUrl = item.posterPath != null
+        ? 'https://image.tmdb.org/t/p/w300${item.posterPath}'
+        : '';
     final title = item.movieTitle;
-    final mediaType = item.mediaType.isNotEmpty ? item.mediaType.toLowerCase() : 'movie';
+    final mediaType = item.mediaType.isNotEmpty
+        ? item.mediaType.toLowerCase()
+        : 'movie';
     final id = item.movieId;
 
     final dynamic dItem = item;
-    
+
     // 1. Fetch Release Year
     String releaseYearStr = '';
-    try { 
-      final date = dItem.releaseDate ?? dItem.release_date ?? dItem.first_air_date;
+    try {
+      final date =
+          dItem.releaseDate ?? dItem.release_date ?? dItem.first_air_date;
       if (date != null && date.toString().length >= 4) {
         releaseYearStr = date.toString().substring(0, 4);
       }
     } catch (_) {}
-    
+
     // 2. Fetch Runtime (for Movies) OR Episodes (for Shows)
     String detailStr = '';
     try {
       if (mediaType == 'movie' || mediaType == 'media') {
-         if (dItem.runtime != null && dItem.runtime > 0) {
-            final int totalMins = dItem.runtime as int;
-            final int hours = totalMins ~/ 60;
-            final int mins = totalMins % 60;
-            detailStr = hours > 0 ? '${hours}h ${mins}m' : '${mins}m';
-          }
+        if (dItem.runtime != null && dItem.runtime > 0) {
+          final int totalMins = dItem.runtime as int;
+          final int hours = totalMins ~/ 60;
+          final int mins = totalMins % 60;
+          detailStr = hours > 0 ? '${hours}h ${mins}m' : '${mins}m';
+        }
       } else {
-          // It's a TV Show
-          final eps = dItem.totalEpisodes ?? dItem.number_of_episodes ?? dItem.episodes;
-          if (eps != null && eps > 0) {
-              detailStr = '$eps eps.';
-          }
+        // It's a TV Show
+        final eps =
+            dItem.totalEpisodes ?? dItem.number_of_episodes ?? dItem.episodes;
+        if (eps != null && eps > 0) {
+          detailStr = '$eps eps.';
+        }
       }
     } catch (_) {}
 
     // 3. Fetch Rating
     String ratingStr = '';
-    try { 
+    try {
       final vote = dItem.voteAverage ?? dItem.vote_average;
       if (vote != null && vote > 0) {
-        ratingStr = '${(vote * 10).toInt()}%'; 
+        ratingStr = '${(vote * 10).toInt()}%';
       }
     } catch (_) {}
-    
+
     // 4. Fetch Genre & Certification (Only show if real data exists)
     String genre = '';
     try {
-        if (dItem.genre != null) genre = dItem.genre;
-    } catch(_) {}
-    
+      if (dItem.genre != null) genre = dItem.genre;
+    } catch (_) {}
+
     String certification = '';
     try {
-        if (dItem.certification != null) certification = dItem.certification;
+      if (dItem.certification != null) certification = dItem.certification;
     } catch (_) {}
 
     return MouseRegion(
@@ -244,7 +277,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF131316),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFA855F7), width: 1.5), // Purple border
+            border: Border.all(
+              color: const Color(0xFFA855F7),
+              width: 1.5,
+            ), // Purple border
           ),
           child: Stack(
             clipBehavior: Clip.none,
@@ -263,7 +299,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             bottomLeft: Radius.circular(10),
                           ),
                           child: posterUrl.isNotEmpty
-                              ? Image.network(posterUrl, width: 110, height: 160, fit: BoxFit.cover)
+                              ? Image.network(
+                                  posterUrl,
+                                  width: 110,
+                                  height: 160,
+                                  fit: BoxFit.cover,
+                                )
                               : Container(color: Colors.grey[900]),
                         ),
                         // Trakt-style Checkmark
@@ -277,13 +318,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                                 boxShadow: [
-                                  BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 4, offset: const Offset(0, 2))
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
                                 ],
                               ),
-                              child: const Icon(Icons.check_rounded, size: 12, color: Colors.black),
+                              child: const Icon(
+                                Icons.check_rounded,
+                                size: 12,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -307,25 +356,53 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          
+
                           // Display actual genre if available, otherwise fallback to Media Type
                           if (genre.isNotEmpty)
-                            Text(genre, style: const TextStyle(color: Colors.white54, fontSize: 12))
+                            Text(
+                              genre,
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            )
                           else
-                            Text(mediaType.toUpperCase(), style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                          
+                            Text(
+                              mediaType.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            ),
+
                           const Spacer(),
 
                           // Release Year & Runtime/Episodes Row
-                          if (releaseYearStr.isNotEmpty || detailStr.isNotEmpty) ...[
+                          if (releaseYearStr.isNotEmpty ||
+                              detailStr.isNotEmpty) ...[
                             Row(
                               children: [
                                 if (releaseYearStr.isNotEmpty)
-                                  Text(releaseYearStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                                if (releaseYearStr.isNotEmpty && detailStr.isNotEmpty)
+                                  Text(
+                                    releaseYearStr,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                if (releaseYearStr.isNotEmpty &&
+                                    detailStr.isNotEmpty)
                                   const SizedBox(width: 24),
                                 if (detailStr.isNotEmpty)
-                                  Text(detailStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                  Text(
+                                    detailStr,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -336,38 +413,64 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             Row(
                               children: [
                                 if (certification.isNotEmpty)
-                                  Text(certification, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                                if (ratingStr.isNotEmpty) ...[
-                                    const Spacer(),
-                                    const Icon(Icons.star_rounded, color: Color(0xFFA855F7), size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      ratingStr,
-                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                  Text(
+                                    certification,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                ]
+                                  ),
+                                if (ratingStr.isNotEmpty) ...[
+                                  const Spacer(),
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    color: Color(0xFFA855F7),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    ratingStr,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ],
-                            )
+                            ),
                         ],
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
-              
+
               // 3-Dot Options Menu
               Positioned(
                 top: 4,
                 right: 4,
                 child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, color: Colors.white70, size: 20),
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
                   color: const Color(0xFF1E293B),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   tooltip: 'Options',
                   onSelected: (value) {
                     if (value == 'remove') {
-                      Provider.of<WatchlistProvider>(context, listen: false)
-                          .removeFromWatchlist(item.movieId, mediaType: item.mediaType);
+                      Provider.of<WatchlistProvider>(
+                        context,
+                        listen: false,
+                      ).removeFromWatchlist(
+                        item.movieId,
+                        mediaType: item.mediaType,
+                      );
                     }
                   },
                   itemBuilder: (context) => [
@@ -375,9 +478,19 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       value: 'remove',
                       child: Row(
                         children: [
-                          Icon(Icons.heart_broken_rounded, color: Colors.redAccent, size: 18),
+                          Icon(
+                            Icons.heart_broken_rounded,
+                            color: Colors.redAccent,
+                            size: 18,
+                          ),
                           SizedBox(width: 8),
-                          Text('Remove Favorite', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                          Text(
+                            'Remove Favorite',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ),

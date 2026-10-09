@@ -46,11 +46,7 @@ class _SearchScreenState extends State<SearchScreen> {
     'Thriller': 53,
   };
 
-  final List<String> _statuses = [
-    'All',
-    'Released',
-    'Upcoming',
-  ];
+  final List<String> _statuses = ['All', 'Released', 'Upcoming'];
 
   final List<String> _decades = [
     'All',
@@ -86,10 +82,7 @@ class _SearchScreenState extends State<SearchScreen> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<WatchlistProvider>(
-        context,
-        listen: false,
-      ).fetchCustomLists();
+      Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
     });
   }
 
@@ -144,8 +137,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     final title = item['title'] ?? item['name'] ?? 'Untitled';
     final poster = item['poster_path'];
-    final releaseDateStr =
-        item['release_date'] ?? item['first_air_date'];
+    final releaseDateStr = item['release_date'] ?? item['first_air_date'];
 
     DateTime? watchedAtDate;
     final now = DateTime.now();
@@ -252,9 +244,7 @@ class _SearchScreenState extends State<SearchScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
@@ -283,10 +273,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFB143EB),
-                              Color(0xFF8431D9),
-                            ],
+                            colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
                           ),
                         ),
                         child: const Icon(
@@ -336,37 +323,22 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Divider(
-                  color: Color(0xFF2D2933),
-                  height: 1,
-                ),
+                const Divider(color: Color(0xFF2D2933), height: 1),
                 const SizedBox(height: 8),
                 _buildMenuOption(
                   Icons.bolt_rounded,
                   'Just now',
-                  () => _markAsWatched(
-                    item,
-                    mediaType,
-                    'Just now',
-                  ),
+                  () => _markAsWatched(item, mediaType, 'Just now'),
                 ),
                 _buildMenuOption(
                   Icons.calendar_today_rounded,
                   'Release date',
-                  () => _markAsWatched(
-                    item,
-                    mediaType,
-                    'Release date',
-                  ),
+                  () => _markAsWatched(item, mediaType, 'Release date'),
                 ),
                 _buildMenuOption(
                   Icons.edit_calendar_rounded,
                   'Other date',
-                  () => _markAsWatched(
-                    item,
-                    mediaType,
-                    'Other date',
-                  ),
+                  () => _markAsWatched(item, mediaType, 'Other date'),
                 ),
               ],
             ),
@@ -391,9 +363,7 @@ class _SearchScreenState extends State<SearchScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
@@ -422,10 +392,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFB143EB),
-                              Color(0xFF8431D9),
-                            ],
+                            colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
                           ),
                         ),
                         child: const Icon(
@@ -460,10 +427,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Divider(
-                  color: Color(0xFF2D2933),
-                  height: 1,
-                ),
+                const Divider(color: Color(0xFF2D2933), height: 1),
                 const SizedBox(height: 8),
                 if (provider.customLists.isEmpty)
                   const Padding(
@@ -498,18 +462,12 @@ class _SearchScreenState extends State<SearchScreen> {
                       Icons.playlist_add_rounded,
                       listTitle,
                       () {
-                        provider.addMediaToList(
-                          listId,
-                          id,
-                          posterPath,
-                        );
+                        provider.addMediaToList(listId, id, posterPath);
 
                         Navigator.pop(context);
 
                         ScaffoldMessenger.of(context).showSnackBar(
-                          _buildSnackBar(
-                            'Added "$title" to "$listTitle"',
-                          ),
+                          _buildSnackBar('Added "$title" to "$listTitle"'),
                         );
                       },
                     );
@@ -522,11 +480,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildMenuOption(
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
+  Widget _buildMenuOption(IconData icon, String label, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Material(
@@ -535,10 +489,7 @@ class _SearchScreenState extends State<SearchScreen> {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
                 Container(
@@ -547,15 +498,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF271630),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFF4B2A59),
-                    ),
+                    border: Border.all(color: const Color(0xFF4B2A59)),
                   ),
-                  child: Icon(
-                    icon,
-                    color: const Color(0xFFCA66FF),
-                    size: 19,
-                  ),
+                  child: Icon(icon, color: const Color(0xFFCA66FF), size: 19),
                 ),
                 const SizedBox(width: 13),
                 Expanded(
@@ -583,16 +528,19 @@ class _SearchScreenState extends State<SearchScreen> {
 
   List<dynamic> get _filteredResults {
     return _searchResults.where((item) {
-      final String rawMediaType =
-          (item['media_type'] ?? '').toString().toLowerCase();
+      final String rawMediaType = (item['media_type'] ?? '')
+          .toString()
+          .toLowerCase();
 
-      final bool isPerson = rawMediaType == 'person' ||
+      final bool isPerson =
+          rawMediaType == 'person' ||
           item['known_for'] != null ||
           (item['profile_path'] != null &&
               item['title'] == null &&
               item['name'] != null);
 
-      final bool isTv = !isPerson &&
+      final bool isTv =
+          !isPerson &&
           (rawMediaType == 'tv' ||
               rawMediaType == 'show' ||
               item['first_air_date'] != null ||
@@ -622,8 +570,7 @@ class _SearchScreenState extends State<SearchScreen> {
         final List<dynamic> genreIds = item['genre_ids'] ?? [];
         final targetGenreId = _genreMap[_selectedGenre];
 
-        if (targetGenreId != null &&
-            !genreIds.contains(targetGenreId)) {
+        if (targetGenreId != null && !genreIds.contains(targetGenreId)) {
           return false;
         }
       }
@@ -632,13 +579,9 @@ class _SearchScreenState extends State<SearchScreen> {
         final releaseDateStr =
             item['release_date'] ?? item['first_air_date'] ?? '';
 
-        final derivedStatus = _deriveStatus(
-          releaseDateStr,
-          item['status'],
-        );
+        final derivedStatus = _deriveStatus(releaseDateStr, item['status']);
 
-        if (derivedStatus.toLowerCase() !=
-            _selectedStatus.toLowerCase()) {
+        if (derivedStatus.toLowerCase() != _selectedStatus.toLowerCase()) {
           return false;
         }
       }
@@ -647,10 +590,7 @@ class _SearchScreenState extends State<SearchScreen> {
         final releaseDateStr =
             item['release_date'] ?? item['first_air_date'] ?? '';
 
-        if (!_matchesDecade(
-          releaseDateStr,
-          _selectedDecade,
-        )) {
+        if (!_matchesDecade(releaseDateStr, _selectedDecade)) {
           return false;
         }
       }
@@ -659,10 +599,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }).toList();
   }
 
-  String _deriveStatus(
-    String dateStr,
-    String? explicitStatus,
-  ) {
+  String _deriveStatus(String dateStr, String? explicitStatus) {
     if (explicitStatus != null && explicitStatus.isNotEmpty) {
       if (explicitStatus.toLowerCase().contains('upcom') ||
           explicitStatus.toLowerCase().contains('in prod')) {
@@ -680,9 +617,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     final now = DateTime.now();
 
-    return releaseDate.isAfter(now)
-        ? 'Upcoming'
-        : 'Released';
+    return releaseDate.isAfter(now) ? 'Upcoming' : 'Released';
   }
 
   bool _matchesDecade(String dateStr, String decade) {
@@ -726,8 +661,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final watchlistProvider =
-        Provider.of<WatchlistProvider>(context);
+    final watchlistProvider = Provider.of<WatchlistProvider>(context);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -741,10 +675,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 gradient: RadialGradient(
                   center: Alignment(0.9, -0.9),
                   radius: 1.15,
-                  colors: [
-                    Color(0x292A0A42),
-                    Color(0xFF08080B),
-                  ],
+                  colors: [Color(0x292A0A42), Color(0xFF08080B)],
                 ),
               ),
             ),
@@ -760,8 +691,9 @@ class _SearchScreenState extends State<SearchScreen> {
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final horizontalPadding =
-                    constraints.maxWidth < 700 ? 16.0 : 28.0;
+                final horizontalPadding = constraints.maxWidth < 700
+                    ? 16.0
+                    : 28.0;
 
                 return Padding(
                   padding: EdgeInsets.fromLTRB(
@@ -785,11 +717,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         },
                       ),
                       const SizedBox(height: 24),
-                      Expanded(
-                        child: _buildResultsContent(
-                          watchlistProvider,
-                        ),
-                      ),
+                      Expanded(child: _buildResultsContent(watchlistProvider)),
                     ],
                   ),
                 );
@@ -810,9 +738,7 @@ class _SearchScreenState extends State<SearchScreen> {
             decoration: BoxDecoration(
               color: const Color(0xE615151B),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFF2D2933),
-              ),
+              border: Border.all(color: const Color(0xFF2D2933)),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x33000000),
@@ -833,15 +759,9 @@ class _SearchScreenState extends State<SearchScreen> {
               onSubmitted: _performSearch,
               decoration: const InputDecoration(
                 hintText: 'Search movies, TV shows, actors...',
-                hintStyle: TextStyle(
-                  color: Color(0xFF68626E),
-                  fontSize: 14,
-                ),
+                hintStyle: TextStyle(color: Color(0xFF68626E), fontSize: 14),
                 prefixIcon: Padding(
-                  padding: EdgeInsets.only(
-                    left: 6,
-                    right: 2,
-                  ),
+                  padding: EdgeInsets.only(left: 6, right: 2),
                   child: Icon(
                     Icons.search_rounded,
                     color: Color(0xFF77717D),
@@ -868,15 +788,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     ? const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFB143EB),
-                          Color(0xFF8431D9),
-                        ],
+                        colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
                       )
                     : null,
-                color: _hasActiveFilters
-                    ? null
-                    : const Color(0xE615151B),
+                color: _hasActiveFilters ? null : const Color(0xE615151B),
                 border: Border.all(
                   color: _hasActiveFilters
                       ? const Color(0xFFCA66FF)
@@ -937,9 +852,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildResultsContent(
-    WatchlistProvider watchlistProvider,
-  ) {
+  Widget _buildResultsContent(WatchlistProvider watchlistProvider) {
     final filteredList = _filteredResults;
 
     if (_isLoading) {
@@ -983,8 +896,7 @@ class _SearchScreenState extends State<SearchScreen> {
         return _buildMessageState(
           icon: Icons.search_rounded,
           title: 'Find your next favorite',
-          message:
-              'Search for movies, TV shows, or people to start exploring.',
+          message: 'Search for movies, TV shows, or people to start exploring.',
           iconColor: const Color(0xFFBD4DFF),
         );
       }
@@ -1015,16 +927,11 @@ class _SearchScreenState extends State<SearchScreen> {
             if (_hasActiveFilters) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF271632),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0xFF553067),
-                  ),
+                  border: Border.all(color: const Color(0xFF553067)),
                 ),
                 child: Text(
                   '$_activeFilterCount active',
@@ -1042,8 +949,7 @@ class _SearchScreenState extends State<SearchScreen> {
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.only(bottom: 28),
-            gridDelegate:
-                const SliverGridDelegateWithMaxCrossAxisExtent(
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 205,
               childAspectRatio: 0.61,
               crossAxisSpacing: 18,
@@ -1068,24 +974,23 @@ class _SearchScreenState extends State<SearchScreen> {
   }) {
     final id = item['id'];
     final title = item['title'] ?? item['name'] ?? 'Untitled';
-    final imagePath =
-        item['poster_path'] ?? item['profile_path'];
+    final imagePath = item['poster_path'] ?? item['profile_path'];
 
-    final imageUrl = imagePath != null &&
-            imagePath.toString().trim().isNotEmpty
+    final imageUrl = imagePath != null && imagePath.toString().trim().isNotEmpty
         ? 'https://image.tmdb.org/t/p/w500$imagePath'
         : '';
 
-    final rawMediaType =
-        (item['media_type'] ?? '').toString().toLowerCase();
+    final rawMediaType = (item['media_type'] ?? '').toString().toLowerCase();
 
-    final bool isPerson = rawMediaType == 'person' ||
+    final bool isPerson =
+        rawMediaType == 'person' ||
         item['known_for'] != null ||
         (item['profile_path'] != null &&
             item['title'] == null &&
             item['name'] != null);
 
-    final bool isTv = !isPerson &&
+    final bool isTv =
+        !isPerson &&
         (rawMediaType == 'tv' ||
             rawMediaType == 'show' ||
             item['first_air_date'] != null ||
@@ -1097,25 +1002,21 @@ class _SearchScreenState extends State<SearchScreen> {
     final String badgeText = isPerson
         ? 'PERSON'
         : isTv
-            ? 'TV'
-            : 'MOVIE';
+        ? 'TV'
+        : 'MOVIE';
 
-    final date =
-        item['release_date'] ?? item['first_air_date'] ?? '';
+    final date = item['release_date'] ?? item['first_air_date'] ?? '';
 
     final year = date.toString().length >= 4
         ? date.toString().substring(0, 4)
         : '';
 
     final voteAverage =
-        double.tryParse((item['vote_average'] ?? 0).toString()) ??
-            0;
+        double.tryParse((item['vote_average'] ?? 0).toString()) ?? 0;
 
-    final isWatchlist = !isPerson &&
-        watchlistProvider.getMediaStatus(
-              id,
-              mediaType: mediaTypeStr,
-            ) ==
+    final isWatchlist =
+        !isPerson &&
+        watchlistProvider.getMediaStatus(id, mediaType: mediaTypeStr) ==
             'watchlist';
 
     return GestureDetector(
@@ -1136,9 +1037,7 @@ class _SearchScreenState extends State<SearchScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF15151B),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF292630),
-                ),
+                border: Border.all(color: const Color(0xFF292630)),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x3D000000),
@@ -1156,14 +1055,8 @@ class _SearchScreenState extends State<SearchScreen> {
                       Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (
-                          context,
-                          error,
-                          stackTrace,
-                        ) {
-                          return _buildPosterPlaceholder(
-                            isPerson,
-                          );
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildPosterPlaceholder(isPerson);
                         },
                       )
                     else
@@ -1195,9 +1088,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xD90C0B0F),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: const Color(0xFF4B2A59),
-                          ),
+                          border: Border.all(color: const Color(0xFF4B2A59)),
                         ),
                         child: Text(
                           badgeText,
@@ -1236,9 +1127,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xCC0C0B0F),
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF39343F),
-                            ),
+                            border: Border.all(color: const Color(0xFF39343F)),
                           ),
                           child: PopupMenuButton<String>(
                             tooltip: 'More options',
@@ -1248,39 +1137,35 @@ class _SearchScreenState extends State<SearchScreen> {
                               size: 19,
                             ),
                             color: const Color(0xFF17151B),
-                            surfaceTintColor:
-                                const Color(0xFF17151B),
+                            surfaceTintColor: const Color(0xFF17151B),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(
-                                color: Color(0xFF38333F),
-                              ),
+                              side: const BorderSide(color: Color(0xFF38333F)),
                             ),
                             onSelected: (value) async {
                               if (value == 'watchlist') {
-                                final scaffoldMessenger =
-                                    ScaffoldMessenger.of(context);
+                                final scaffoldMessenger = ScaffoldMessenger.of(
+                                  context,
+                                );
 
                                 if (isWatchlist) {
-                                  await watchlistProvider
-                                      .removeFromWatchlist(
+                                  await watchlistProvider.removeFromWatchlist(
                                     id,
                                     mediaType: mediaTypeStr,
                                   );
 
                                   scaffoldMessenger.showSnackBar(
-                                    _buildSnackBar(
-                                      'Removed from Watchlist',
-                                    ),
+                                    _buildSnackBar('Removed from Watchlist'),
                                   );
                                 } else {
-                                  final fullDateStr = (
-                                    item['release_date'] ??
-                                        item['first_air_date'] ??
-                                        ''
-                                  ).toString();
+                                  final fullDateStr =
+                                      (item['release_date'] ??
+                                              item['first_air_date'] ??
+                                              '')
+                                          .toString();
 
-                                  final rating = double.tryParse(
+                                  final rating =
+                                      double.tryParse(
                                         (item['vote_average'] ?? 0.0)
                                             .toString(),
                                       ) ??
@@ -1298,16 +1183,11 @@ class _SearchScreenState extends State<SearchScreen> {
                                   );
 
                                   scaffoldMessenger.showSnackBar(
-                                    _buildSnackBar(
-                                      'Added to Watchlist',
-                                    ),
+                                    _buildSnackBar('Added to Watchlist'),
                                   );
                                 }
                               } else if (value == 'track') {
-                                _showMarkWatchedMenu(
-                                  item,
-                                  mediaTypeStr,
-                                );
+                                _showMarkWatchedMenu(item, mediaTypeStr);
                               } else if (value == 'manage') {
                                 _showMoreOptions(
                                   watchlistProvider,
@@ -1322,10 +1202,8 @@ class _SearchScreenState extends State<SearchScreen> {
                                   value: 'watchlist',
                                   child: _buildPopupItem(
                                     icon: isWatchlist
-                                        ? Icons
-                                            .bookmark_added_rounded
-                                        : Icons
-                                            .bookmark_add_outlined,
+                                        ? Icons.bookmark_added_rounded
+                                        : Icons.bookmark_add_outlined,
                                     label: isWatchlist
                                         ? 'Remove from Watchlist'
                                         : 'Watchlist',
@@ -1395,9 +1273,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   Container(
                     width: 3,
                     height: 3,
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                    ),
+                    margin: const EdgeInsets.symmetric(horizontal: 7),
                     decoration: const BoxDecoration(
                       color: Color(0xFF4B4650),
                       shape: BoxShape.circle,
@@ -1438,9 +1314,7 @@ class _SearchScreenState extends State<SearchScreen> {
           shape: BoxShape.circle,
         ),
         child: Icon(
-          isPerson
-              ? Icons.person_rounded
-              : Icons.movie_outlined,
+          isPerson ? Icons.person_rounded : Icons.movie_outlined,
           color: const Color(0xFF694078),
           size: 30,
         ),
@@ -1448,10 +1322,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildPopupItem({
-    required IconData icon,
-    required String label,
-  }) {
+  Widget _buildPopupItem({required IconData icon, required String label}) {
     return Row(
       children: [
         Container(
@@ -1461,11 +1332,7 @@ class _SearchScreenState extends State<SearchScreen> {
             color: const Color(0xFF281732),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFFCA66FF),
-            size: 17,
-          ),
+          child: Icon(icon, color: const Color(0xFFCA66FF), size: 17),
         ),
         const SizedBox(width: 11),
         Flexible(
@@ -1508,9 +1375,7 @@ class _SearchScreenState extends State<SearchScreen> {
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(
-          color: Color(0xFF39333F),
-        ),
+        side: const BorderSide(color: Color(0xFF39333F)),
       ),
     );
   }
@@ -1525,16 +1390,11 @@ class _SearchScreenState extends State<SearchScreen> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 390),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 32,
-            vertical: 36,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
           decoration: BoxDecoration(
             color: const Color(0x9915151B),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFF28242E),
-            ),
+            border: Border.all(color: const Color(0xFF28242E)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1545,15 +1405,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF211528),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF4B2A59),
-                  ),
+                  border: Border.all(color: const Color(0xFF4B2A59)),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 29,
-                ),
+                child: Icon(icon, color: iconColor, size: 29),
               ),
               const SizedBox(height: 20),
               Text(
@@ -1580,10 +1434,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 const SizedBox(height: 20),
                 TextButton.icon(
                   onPressed: _resetFilters,
-                  icon: const Icon(
-                    Icons.refresh_rounded,
-                    size: 17,
-                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 17),
                   label: const Text('Reset filters'),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFCA66FF),
@@ -1603,21 +1454,12 @@ class _SearchScreenState extends State<SearchScreen> {
       backgroundColor: const Color(0xFF101014),
       surfaceTintColor: const Color(0xFF101014),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.horizontal(
-          left: Radius.circular(24),
-        ),
-        side: BorderSide(
-          color: Color(0xFF2D2933),
-        ),
+        borderRadius: BorderRadius.horizontal(left: Radius.circular(24)),
+        side: BorderSide(color: Color(0xFF2D2933)),
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            22,
-            22,
-            22,
-            24,
-          ),
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1631,10 +1473,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFCA53FF),
-                          Color(0xFF7C2BE8),
-                        ],
+                        colors: [Color(0xFFCA53FF), Color(0xFF7C2BE8)],
                       ),
                     ),
                     child: const Icon(
@@ -1685,10 +1524,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ],
               ),
               const SizedBox(height: 22),
-              const Divider(
-                color: Color(0xFF2D2933),
-                height: 1,
-              ),
+              const Divider(color: Color(0xFF2D2933), height: 1),
               const SizedBox(height: 24),
               Expanded(
                 child: ListView(
@@ -1700,10 +1536,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     const SizedBox(height: 9),
                     _buildDropdown(
                       value: _selectedGenre,
-                      items: [
-                        'All',
-                        ..._genreMap.keys,
-                      ],
+                      items: ['All', ..._genreMap.keys],
                       onChanged: (value) {
                         setState(() {
                           _selectedGenre = value!;
@@ -1751,12 +1584,8 @@ class _SearchScreenState extends State<SearchScreen> {
                       onPressed: _resetFilters,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFD2CDD6),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                        ),
-                        side: const BorderSide(
-                          color: Color(0xFF3A3540),
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Color(0xFF3A3540)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1776,10 +1605,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFB143EB),
-                            Color(0xFF8431D9),
-                          ],
+                          colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
                         ),
                         boxShadow: const [
                           BoxShadow(
@@ -1797,9 +1623,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           foregroundColor: Colors.white,
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1823,17 +1647,10 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildDropdownLabel({
-    required String label,
-    required IconData icon,
-  }) {
+  Widget _buildDropdownLabel({required String label, required IconData icon}) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: const Color(0xFF9B5ABB),
-          size: 17,
-        ),
+        Icon(icon, color: const Color(0xFF9B5ABB), size: 17),
         const SizedBox(width: 8),
         Text(
           label,
@@ -1864,12 +1681,7 @@ class _SearchScreenState extends State<SearchScreen> {
               : const Color(0xFF35303B),
         ),
         boxShadow: value != 'All'
-            ? const [
-                BoxShadow(
-                  color: Color(0x227C2BE8),
-                  blurRadius: 12,
-                ),
-              ]
+            ? const [BoxShadow(color: Color(0x227C2BE8), blurRadius: 12)]
             : null,
       ),
       child: DropdownButtonHideUnderline(
@@ -1888,10 +1700,7 @@ class _SearchScreenState extends State<SearchScreen> {
             color: Color(0xFF918B99),
           ),
           items: items.map((item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            );
+            return DropdownMenuItem<String>(value: item, child: Text(item));
           }).toList(),
           onChanged: onChanged,
         ),
@@ -1899,10 +1708,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildBackgroundGlow({
-    required double size,
-    required Color color,
-  }) {
+  Widget _buildBackgroundGlow({required double size, required Color color}) {
     return IgnorePointer(
       child: Container(
         width: size,
@@ -1910,10 +1716,7 @@ class _SearchScreenState extends State<SearchScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: 0.16),
-              color.withValues(alpha: 0),
-            ],
+            colors: [color.withValues(alpha: 0.16), color.withValues(alpha: 0)],
           ),
         ),
       ),

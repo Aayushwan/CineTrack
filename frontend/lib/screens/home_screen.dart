@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<dynamic> _continueWatching = [];
   List<dynamic> _startWatching = [];
-  List<dynamic> _upcomingReleases = []; 
+  List<dynamic> _upcomingReleases = [];
   List<dynamic> _recommended = [];
   List<dynamic> _history = [];
 
@@ -40,12 +40,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadHomeData() async {
-      List<dynamic> continueWatchingData = [];
+    List<dynamic> continueWatchingData = [];
 
-      try {
-        continueWatchingData =
-            await ApiService.getContinueWatching();
-      } catch (_) {}
+    try {
+      continueWatchingData = await ApiService.getContinueWatching();
+    } catch (_) {}
     try {
       List<dynamic> watchlistData = [];
       try {
@@ -57,7 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
         historyData = await ApiService.getWatchHistory();
       } catch (_) {
         try {
-          historyData = (await (ApiService as dynamic).getHistory()) as List<dynamic>;
+          historyData =
+              (await (ApiService as dynamic).getHistory()) as List<dynamic>;
         } catch (_) {}
       }
 
@@ -65,20 +65,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // 💡 Expanded endpoints to guarantee a massive pool of recent releases
       final results = await Future.wait([
-        ApiService.getTrendingMovies(type: 'all').catchError((_) => fallback), // 0: Trending
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'movie').catchError((_) => fallback), // 1: Movie Releases Pg 1
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: 'tv').catchError((_) => fallback),    // 2: TV Releases Pg 1
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'movie').catchError((_) => fallback), // 3: Movie Releases Pg 2
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: 'tv').catchError((_) => fallback),    // 4: TV Releases Pg 2
-        ApiService.getDiscoverMedia(category: 'popular', page: 1, type: 'movie').catchError((_) => fallback),  // 5: Popular Movies (Recommended)
-        ApiService.getDiscoverMedia(category: 'popular', page: 1, type: 'tv').catchError((_) => fallback),     // 6: Popular TV (Recommended)
+        ApiService.getTrendingMovies(
+          type: 'all',
+        ).catchError((_) => fallback), // 0: Trending
+        ApiService.getDiscoverMedia(
+          category: 'releases',
+          page: 1,
+          type: 'movie',
+        ).catchError((_) => fallback), // 1: Movie Releases Pg 1
+        ApiService.getDiscoverMedia(
+          category: 'releases',
+          page: 1,
+          type: 'tv',
+        ).catchError((_) => fallback), // 2: TV Releases Pg 1
+        ApiService.getDiscoverMedia(
+          category: 'releases',
+          page: 2,
+          type: 'movie',
+        ).catchError((_) => fallback), // 3: Movie Releases Pg 2
+        ApiService.getDiscoverMedia(
+          category: 'releases',
+          page: 2,
+          type: 'tv',
+        ).catchError((_) => fallback), // 4: TV Releases Pg 2
+        ApiService.getDiscoverMedia(
+          category: 'popular',
+          page: 1,
+          type: 'movie',
+        ).catchError((_) => fallback), // 5: Popular Movies (Recommended)
+        ApiService.getDiscoverMedia(
+          category: 'popular',
+          page: 1,
+          type: 'tv',
+        ).catchError((_) => fallback), // 6: Popular TV (Recommended)
       ]);
 
       final trendingList = (results[0]['results'] as List<dynamic>?) ?? [];
 
       // ─── Process Calendar (Strictly Past Releases) ───
       List<dynamic> rawReleases = [];
-      rawReleases.addAll(trendingList); // Feed trending in so we never run out of past media
+      rawReleases.addAll(
+        trendingList,
+      ); // Feed trending in so we never run out of past media
       rawReleases.addAll((results[1]['results'] as List<dynamic>?) ?? []);
       rawReleases.addAll((results[2]['results'] as List<dynamic>?) ?? []);
       rawReleases.addAll((results[3]['results'] as List<dynamic>?) ?? []);
@@ -89,12 +117,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // 1. Strict Filter: Only keep releases that have ALREADY dropped (No future dates)
       List<dynamic> lastReleases = rawReleases.where((item) {
-        final dateStr = item['calendar_date'] ?? item['release_date'] ?? item['first_air_date'];
+        final dateStr =
+            item['calendar_date'] ??
+            item['release_date'] ??
+            item['first_air_date'];
         if (dateStr == null || dateStr.toString().trim().isEmpty) return false;
         try {
           final dt = DateTime.parse(dateStr.toString());
           final releaseDay = DateTime(dt.year, dt.month, dt.day);
-          return !releaseDay.isAfter(today); 
+          return !releaseDay.isAfter(today);
         } catch (_) {
           return false;
         }
@@ -102,9 +133,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // 2. Sort Descending: Newest releases closest to today show up first!
       lastReleases.sort((a, b) {
-        final dateA = DateTime.tryParse(a['calendar_date'] ?? a['release_date'] ?? a['first_air_date'] ?? '') ?? DateTime(1900);
-        final dateB = DateTime.tryParse(b['calendar_date'] ?? b['release_date'] ?? b['first_air_date'] ?? '') ?? DateTime(1900);
-        return dateB.compareTo(dateA); 
+        final dateA =
+            DateTime.tryParse(
+              a['calendar_date'] ??
+                  a['release_date'] ??
+                  a['first_air_date'] ??
+                  '',
+            ) ??
+            DateTime(1900);
+        final dateB =
+            DateTime.tryParse(
+              b['calendar_date'] ??
+                  b['release_date'] ??
+                  b['first_air_date'] ??
+                  '',
+            ) ??
+            DateTime(1900);
+        return dateB.compareTo(dateA);
       });
 
       // 3. Remove duplicates across the pooled endpoints
@@ -142,22 +187,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          _startWatching = watchlistData; 
+          _startWatching = watchlistData;
           _upcomingReleases = lastReleases; // Passed to Calendar section
-          _recommended = rawRecommended;    
+          _recommended = rawRecommended;
           _continueWatching = continueWatchingData.where((item) {
-            final watched = int.tryParse(
-                  (item['watchedEpisodes'] ?? 0).toString(),
-                ) ??
-                0;
-            final total = int.tryParse(
-                  (item['totalEpisodes'] ?? 0).toString(),
-                ) ??
-                0;
+            final watched =
+                int.tryParse((item['watchedEpisodes'] ?? 0).toString()) ?? 0;
+            final total =
+                int.tryParse((item['totalEpisodes'] ?? 0).toString()) ?? 0;
 
             return total > 0 && watched < total;
           }).toList();
-          _history = historyData; 
+          _history = historyData;
           _isLoading = false;
         });
       }
@@ -173,8 +214,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<dynamic> _filterList(List<dynamic> list) {
     return list.where((item) {
-      final String rawType = (item['media_type'] ?? item['type'] ?? '').toString().toLowerCase();
-      final bool isTv = rawType == 'tv' ||
+      final String rawType = (item['media_type'] ?? item['type'] ?? '')
+          .toString()
+          .toLowerCase();
+      final bool isTv =
+          rawType == 'tv' ||
           rawType == 'show' ||
           item['first_air_date'] != null ||
           (item['name'] != null && item['title'] == null);
@@ -185,24 +229,40 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedGenre != 'All') {
         final List<dynamic> genreIds = item['genre_ids'] ?? [];
         final targetGenreId = FilterDrawer.genreMap[_selectedGenre];
-        if (targetGenreId != null && !genreIds.contains(targetGenreId)) return false;
+        if (targetGenreId != null && !genreIds.contains(targetGenreId))
+          return false;
       }
 
       if (_selectedStatus != 'All') {
         final dateStr = item['release_date'] ?? item['first_air_date'] ?? '';
-        final isUpcoming = dateStr.isNotEmpty && (DateTime.tryParse(dateStr)?.isAfter(DateTime.now()) ?? false);
+        final isUpcoming =
+            dateStr.isNotEmpty &&
+            (DateTime.tryParse(dateStr)?.isAfter(DateTime.now()) ?? false);
         if (_selectedStatus == 'Upcoming' && !isUpcoming) return false;
         if (_selectedStatus == 'Released' && isUpcoming) return false;
       }
 
       if (_selectedDecade != 'All') {
-        final dateStr = item['release_year'] ?? item['release_date'] ?? item['first_air_date'] ?? item['year'] ?? '';
-        final year = int.tryParse(dateStr.toString().length >= 4 ? dateStr.toString().substring(0, 4) : '');
+        final dateStr =
+            item['release_year'] ??
+            item['release_date'] ??
+            item['first_air_date'] ??
+            item['year'] ??
+            '';
+        final year = int.tryParse(
+          dateStr.toString().length >= 4
+              ? dateStr.toString().substring(0, 4)
+              : '',
+        );
         if (year != null) {
-          if (_selectedDecade == 'This Year' && year != DateTime.now().year) return false;
-          if (_selectedDecade == '2020s' && (year < 2020 || year > 2029)) return false;
-          if (_selectedDecade == '2010s' && (year < 2010 || year > 2019)) return false;
-          if (_selectedDecade == '2000s' && (year < 2000 || year > 2009)) return false;
+          if (_selectedDecade == 'This Year' && year != DateTime.now().year)
+            return false;
+          if (_selectedDecade == '2020s' && (year < 2020 || year > 2029))
+            return false;
+          if (_selectedDecade == '2010s' && (year < 2010 || year > 2019))
+            return false;
+          if (_selectedDecade == '2000s' && (year < 2000 || year > 2009))
+            return false;
           if (_selectedDecade == 'Before 1960' && year >= 1960) return false;
         }
       }
@@ -212,7 +272,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool get _hasActiveSidebarFilters =>
-      _selectedGenre != 'All' || _selectedStatus != 'All' || _selectedDecade != 'All';
+      _selectedGenre != 'All' ||
+      _selectedStatus != 'All' ||
+      _selectedDecade != 'All';
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +310,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 10.0,
+              ),
               child: Row(
                 children: [
                   const Text(
@@ -263,14 +328,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   TraktFilterBar(
                     selectedFilter: _selectedFilter,
                     showPeople: false,
-                    onFilterChanged: (filter) => setState(() => _selectedFilter = filter),
+                    onFilterChanged: (filter) =>
+                        setState(() => _selectedFilter = filter),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
                     onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
                     icon: Stack(
                       children: [
-                        const Icon(Icons.tune_rounded, color: Colors.white, size: 22),
+                        const Icon(
+                          Icons.tune_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                         if (_hasActiveSidebarFilters)
                           Positioned(
                             right: 0,
@@ -300,80 +370,93 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFA855F7)))
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFA855F7),
+                      ),
+                    )
                   : _errorMessage.isNotEmpty
-                      ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.redAccent)))
-                      : SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(vertical: 12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SectionHeader(
-                                title: 'Continue Watching',
-                                onTap: () => context.go('/progress'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildMediaList(
-                                items: filteredContinue,
-                                emptyMessage: 'Start watching $_selectedFilter',
-                                isLandscape: true,
-                                isContinueWatching: true,
-                              ),
-                              const SizedBox(height: 28),
-
-                              SectionHeader(
-                                title: 'Start Watching',
-                                onTap: () => context.go('/watchlist'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildMediaList(
-                                items: filteredStart,
-                                emptyMessage: 'No $_selectedFilter in your watchlist',
-                                isLandscape: false,
-                              ),
-                              const SizedBox(height: 28),
-
-                              // Header name preserved as "Calendar"
-                              SectionHeader(
-                                title: 'Calendar',
-                                onTap: () => context.go('/calendar'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildMediaList(
-                                items: filteredUpcoming,
-                                emptyMessage: 'No recent $_selectedFilter releases found',
-                                isLandscape: false, 
-                                isCalendar: true,
-                              ),
-                              const SizedBox(height: 28),
-
-                              SectionHeader(
-                                title: 'Recommended',
-                                onTap: () => context.go('/recommended'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildMediaList(
-                                items: filteredRecommended,
-                                emptyMessage: 'No recommended $_selectedFilter found',
-                                isLandscape: false,
-                              ),
-                              const SizedBox(height: 28),
-
-                              SectionHeader(
-                                title: 'History',
-                                onTap: () => context.go('/history'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildMediaList(
-                                items: filteredHistory,
-                                emptyMessage: 'Watch $_selectedFilter to view history',
-                                isLandscape: true,
-                                isHistory: true,
-                              ),
-                              const SizedBox(height: 20),
-                            ],
+                  ? Center(
+                      child: Text(
+                        _errorMessage,
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SectionHeader(
+                            title: 'Continue Watching',
+                            onTap: () => context.go('/progress'),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          _buildMediaList(
+                            items: filteredContinue,
+                            emptyMessage: 'Start watching $_selectedFilter',
+                            isLandscape: true,
+                            isContinueWatching: true,
+                          ),
+                          const SizedBox(height: 28),
+
+                          SectionHeader(
+                            title: 'Start Watching',
+                            onTap: () => context.go('/watchlist'),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMediaList(
+                            items: filteredStart,
+                            emptyMessage:
+                                'No $_selectedFilter in your watchlist',
+                            isLandscape: false,
+                          ),
+                          const SizedBox(height: 28),
+
+                          // Header name preserved as "Calendar"
+                          SectionHeader(
+                            title: 'Calendar',
+                            onTap: () => context.go('/calendar'),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMediaList(
+                            items: filteredUpcoming,
+                            emptyMessage:
+                                'No recent $_selectedFilter releases found',
+                            isLandscape: false,
+                            isCalendar: true,
+                          ),
+                          const SizedBox(height: 28),
+
+                          SectionHeader(
+                            title: 'Recommended',
+                            onTap: () => context.go('/recommended'),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMediaList(
+                            items: filteredRecommended,
+                            emptyMessage:
+                                'No recommended $_selectedFilter found',
+                            isLandscape: false,
+                          ),
+                          const SizedBox(height: 28),
+
+                          SectionHeader(
+                            title: 'History',
+                            onTap: () => context.go('/history'),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildMediaList(
+                            items: filteredHistory,
+                            emptyMessage:
+                                'Watch $_selectedFilter to view history',
+                            isLandscape: true,
+                            isHistory: true,
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
             ),
           ],
         ),
@@ -399,7 +482,10 @@ class _HomeScreenState extends State<HomeScreen> {
           border: Border.all(color: Colors.white10),
         ),
         child: Center(
-          child: Text(emptyMessage, style: const TextStyle(color: Colors.white38, fontSize: 13)),
+          child: Text(
+            emptyMessage,
+            style: const TextStyle(color: Colors.white38, fontSize: 13),
+          ),
         ),
       );
     }
@@ -423,54 +509,82 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: displayItems.length,
           itemBuilder: (context, index) {
             final item = displayItems[index];
-            
+
             final rawId = isContinueWatching
                 ? item['show_id']
-                : item['id'] ??
-                    item['movie_id'] ??
-                    item['media_id'];
-            final int id = rawId != null ? int.tryParse(rawId.toString()) ?? 0 : 0;
-            
-            final String title = item['title'] ?? item['movie_title'] ?? item['name'] ?? 'Untitled';
-            
-            final String rawType = (item['media_type'] ?? item['type'] ?? '').toString().toLowerCase();
+                : item['id'] ?? item['movie_id'] ?? item['media_id'];
+            final int id = rawId != null
+                ? int.tryParse(rawId.toString()) ?? 0
+                : 0;
+
+            final String title =
+                item['title'] ??
+                item['movie_title'] ??
+                item['name'] ??
+                'Untitled';
+
+            final String rawType = (item['media_type'] ?? item['type'] ?? '')
+                .toString()
+                .toLowerCase();
             final String mediaType = isContinueWatching
                 ? 'tv'
-                : (rawType == 'tv' ||
-                        rawType == 'show' ||
-                        item['name'] != null)
-                    ? 'tv'
-                    : 'movie';
+                : (rawType == 'tv' || rawType == 'show' || item['name'] != null)
+                ? 'tv'
+                : 'movie';
 
             final String imagePath = isLandscape
-                ? (item['backdrop_path'] ?? item['poster_path'] ?? item['poster'] ?? '')
+                ? (item['backdrop_path'] ??
+                      item['poster_path'] ??
+                      item['poster'] ??
+                      '')
                 : (item['poster_path'] ?? item['poster'] ?? '');
 
             final String imageUrl = imagePath.isNotEmpty
-                ? (imagePath.startsWith('http') ? imagePath : 'https://image.tmdb.org/t/p/w500$imagePath')
+                ? (imagePath.startsWith('http')
+                      ? imagePath
+                      : 'https://image.tmdb.org/t/p/w500$imagePath')
                 : '';
 
-            final releaseDate = (item['release_year'] ?? item['release_date'] ?? item['first_air_date'] ?? item['year'] ?? '').toString();
+            final releaseDate =
+                (item['release_year'] ??
+                        item['release_date'] ??
+                        item['first_air_date'] ??
+                        item['year'] ??
+                        '')
+                    .toString();
             String? metadataLeftText;
 
             if (isCalendar && releaseDate.isNotEmpty) {
               try {
                 final DateTime dt = DateTime.parse(releaseDate);
                 final List<String> months = [
-                  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr',
+                  'May',
+                  'Jun',
+                  'Jul',
+                  'Aug',
+                  'Sep',
+                  'Oct',
+                  'Nov',
+                  'Dec',
                 ];
-                metadataLeftText = isLandscape 
-                    ? '${months[dt.month - 1]} ${dt.day}, ${dt.year}' 
+                metadataLeftText = isLandscape
+                    ? '${months[dt.month - 1]} ${dt.day}, ${dt.year}'
                     : '${months[dt.month - 1]} ${dt.day}';
               } catch (_) {
                 metadataLeftText = releaseDate;
               }
             } else {
-              metadataLeftText = (releaseDate.length >= 4) ? releaseDate.substring(0, 4) : null;
+              metadataLeftText = (releaseDate.length >= 4)
+                  ? releaseDate.substring(0, 4)
+                  : null;
             }
 
-            final num voteAverage = item['vote_average'] ?? item['rating'] ?? 0.0;
+            final num voteAverage =
+                item['vote_average'] ?? item['rating'] ?? 0.0;
 
             String? subtitle;
             String? overlayLeft;
@@ -478,36 +592,32 @@ class _HomeScreenState extends State<HomeScreen> {
             double? progress;
 
             if (isContinueWatching) {
-              final watched = int.tryParse(
-                    (item['watchedEpisodes'] ?? 0).toString(),
-                  ) ??
-                  0;
+              final watched =
+                  int.tryParse((item['watchedEpisodes'] ?? 0).toString()) ?? 0;
 
-              final total = int.tryParse(
-                    (item['totalEpisodes'] ?? 1).toString(),
-                  ) ??
-                  1;
+              final total =
+                  int.tryParse((item['totalEpisodes'] ?? 1).toString()) ?? 1;
 
-              final nextSeason = int.tryParse(
-                    (item['nextSeasonNumber'] ?? 1).toString(),
-                  ) ??
-                  1;
+              final nextSeason =
+                  int.tryParse((item['nextSeasonNumber'] ?? 1).toString()) ?? 1;
 
-              final nextEpisode = int.tryParse(
-                    (item['nextEpisodeNumber'] ?? watched + 1)
-                        .toString(),
+              final nextEpisode =
+                  int.tryParse(
+                    (item['nextEpisodeNumber'] ?? watched + 1).toString(),
                   ) ??
                   watched + 1;
 
-              subtitle =
-                  'Next: S$nextSeason • E$nextEpisode';
-              overlayLeft =
-                  '${item['nextEpisodeRuntime'] ?? 45}m';
+              subtitle = 'Next: S$nextSeason • E$nextEpisode';
+              overlayLeft = '${item['nextEpisodeRuntime'] ?? 45}m';
               overlayRight = '${total - watched} left';
-              progress =
-                  total > 0 ? (watched / total).clamp(0.0, 1.0) : 0;
+              progress = total > 0 ? (watched / total).clamp(0.0, 1.0) : 0;
             } else if (isHistory) {
-              final String watchedDate = (item['watchedDate'] ?? item['watched_date'] ?? item['watched_at'] ?? 'Recently').toString();
+              final String watchedDate =
+                  (item['watchedDate'] ??
+                          item['watched_date'] ??
+                          item['watched_at'] ??
+                          'Recently')
+                      .toString();
               overlayLeft = watchedDate;
             }
 
@@ -518,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 id: id,
                 title: title,
                 imageUrl: imageUrl,
-                mediaType: mediaType, 
+                mediaType: mediaType,
                 isLandscape: isLandscape,
                 year: metadataLeftText,
                 rating: voteAverage.toDouble(),

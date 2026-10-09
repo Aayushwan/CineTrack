@@ -61,18 +61,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _removeFromHistory(dynamic item) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final int index = _historyLog.indexOf(item);
-    
+
     setState(() => _historyLog.remove(item));
-    
+
     try {
       final historyId = item['history_id'] ?? item['id'] ?? 0;
       await ApiService.removeWatchHistory(historyId);
-      
+
       scaffoldMessenger.showSnackBar(
         const SnackBar(
-          content: Text('Removed from history', style: TextStyle(color: Colors.white)), 
-          backgroundColor: Color(0xFF131316), 
-          behavior: SnackBarBehavior.floating
+          content: Text(
+            'Removed from history',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Color(0xFF131316),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
@@ -81,9 +84,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text('Failed to remove: $e', style: const TextStyle(color: Colors.white)), 
-          backgroundColor: Colors.redAccent, 
-          behavior: SnackBarBehavior.floating
+          content: Text(
+            'Failed to remove: $e',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -91,8 +97,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   List<dynamic> get _filteredHistory {
     return _historyLog.where((item) {
-      final String rawType = (item['type'] ?? item['media_type'] ?? '').toString().toLowerCase();
-      final bool isTv = rawType == 'show' || rawType == 'tv' || item['subtitle'] != null;
+      final String rawType = (item['type'] ?? item['media_type'] ?? '')
+          .toString()
+          .toLowerCase();
+      final bool isTv =
+          rawType == 'show' || rawType == 'tv' || item['subtitle'] != null;
 
       if (_selectedFilter == 'shows' && !isTv) return false;
       if (_selectedFilter == 'movies' && isTv) return false;
@@ -103,15 +112,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Map<String, List<dynamic>> get _groupedHistory {
     final Map<String, List<dynamic>> grouped = {};
-    
+
     for (var item in _filteredHistory) {
-      final String rawDate = (
-        item['watched_at'] ??
-            item['watchedAt'] ??
-            item['watchedDate'] ??
-            item['watched_date'] ??
-            ''
-      ).toString();
+      final String rawDate =
+          (item['watched_at'] ??
+                  item['watchedAt'] ??
+                  item['watchedDate'] ??
+                  item['watched_date'] ??
+                  '')
+              .toString();
 
       String dateLabel = 'Unknown Date';
 
@@ -123,13 +132,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
           dateLabel = rawDate;
         }
       }
-      
+
       if (!grouped.containsKey(dateLabel)) {
         grouped[dateLabel] = [];
       }
       grouped[dateLabel]!.add(item);
     }
-    
+
     return grouped;
   }
 
@@ -144,7 +153,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Row(
                 children: [
                   Column(
@@ -161,7 +173,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       Text(
                         '${_filteredHistory.length} Items',
-                        style: const TextStyle(color: Colors.white54, fontSize: 11),
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
@@ -185,58 +200,74 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: Color(0xFFA855F7)),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFA855F7),
+                      ),
                     )
                   : _errorMessage.isNotEmpty
-                      ? Center(
-                          child: Text(
-                            _errorMessage,
-                            style: const TextStyle(color: Colors.redAccent),
-                          ),
-                        )
-                      : _filteredHistory.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No $_selectedFilter recorded in history.',
-                                style: const TextStyle(color: Colors.white54, fontSize: 14),
-                              ),
-                            )
-                          : RefreshIndicator(
-                              onRefresh: _fetchHistory,
-                              color: const Color(0xFFA855F7),
-                              backgroundColor: const Color(0xFF131316),
-                              child: ListView.builder(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                itemCount: groupKeys.length,
-                                itemBuilder: (context, index) {
-                                  final dateLabel = groupKeys[index];
-                                  final items = groupedData[dateLabel]!;
+                  ? Center(
+                      child: Text(
+                        _errorMessage,
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+                    )
+                  : _filteredHistory.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No $_selectedFilter recorded in history.',
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 14,
+                        ),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _fetchHistory,
+                      color: const Color(0xFFA855F7),
+                      backgroundColor: const Color(0xFF131316),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        itemCount: groupKeys.length,
+                        itemBuilder: (context, index) {
+                          final dateLabel = groupKeys[index];
+                          final items = groupedData[dateLabel]!;
 
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
-                                        child: Text(
-                                          dateLabel,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      Wrap(
-                                        spacing: 16,
-                                        runSpacing: 16,
-                                        children: items.map((item) => _buildHistoryCard(item, dateLabel)).toList(),
-                                      ),
-                                      const SizedBox(height: 16),
-                                    ],
-                                  );
-                                },
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 16.0,
+                                  bottom: 12.0,
+                                ),
+                                child: Text(
+                                  dateLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                            ),
+                              Wrap(
+                                spacing: 16,
+                                runSpacing: 16,
+                                children: items
+                                    .map(
+                                      (item) =>
+                                          _buildHistoryCard(item, dateLabel),
+                                    )
+                                    .toList(),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
             ),
           ],
         ),
@@ -251,20 +282,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final int id = int.tryParse(rawId.toString()) ?? 0;
         final String title = item['movie_title'] ?? item['title'] ?? 'Untitled';
         final String subtitle = (item['subtitle'] ?? '').toString();
-        
-        final String rawType = (item['type'] ?? item['media_type'] ?? '').toString().toLowerCase();
-        final bool isShow = rawType == 'show' || rawType == 'tv' || item['subtitle'] != null;
+
+        final String rawType = (item['type'] ?? item['media_type'] ?? '')
+            .toString()
+            .toLowerCase();
+        final bool isShow =
+            rawType == 'show' || rawType == 'tv' || item['subtitle'] != null;
         final String parsedMediaType = isShow ? 'tv' : 'movie';
 
-        final String imagePath = (item['poster'] ?? item['poster_path'] ?? item['backdrop'] ?? item['backdrop_path'] ?? '').toString();
+        final String imagePath =
+            (item['poster'] ??
+                    item['poster_path'] ??
+                    item['backdrop'] ??
+                    item['backdrop_path'] ??
+                    '')
+                .toString();
         final String imageUrl = imagePath.isNotEmpty
-            ? (imagePath.startsWith('http') ? imagePath : 'https://image.tmdb.org/t/p/w500$imagePath')
+            ? (imagePath.startsWith('http')
+                  ? imagePath
+                  : 'https://image.tmdb.org/t/p/w500$imagePath')
             : '';
 
-        final String watchedTime = (item['watchedTime'] ?? '12:00 AM').toString();
+        final String watchedTime = (item['watchedTime'] ?? '12:00 AM')
+            .toString();
 
         // 👇 FIX 1: Allowed currentStatus to accept null, fixing the type error
-        final String? currentStatus = watchlistProvider.getMediaStatus(id, mediaType: parsedMediaType);
+        final String? currentStatus = watchlistProvider.getMediaStatus(
+          id,
+          mediaType: parsedMediaType,
+        );
         final bool isFavorite = currentStatus == 'favorite';
 
         return GestureDetector(
@@ -276,10 +322,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             }
           },
           child: Container(
-            width: 280, 
-            height: 160, 
+            width: 280,
+            height: 160,
             decoration: BoxDecoration(
-              color: const Color(0xFF1C1C22), 
+              color: const Color(0xFF1C1C22),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white10),
             ),
@@ -292,11 +338,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(color: const Color(0xFF131316)),
+                            errorBuilder: (_, _, _) =>
+                                Container(color: const Color(0xFF131316)),
                           )
                         : Container(color: const Color(0xFF131316)),
                   ),
-                  
+
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
@@ -307,7 +354,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             const Color(0xFF131316),
                             const Color(0xFF131316),
                           ],
-                          stops: const [0.0, 0.4, 0.5, 1.0], 
+                          stops: const [0.0, 0.4, 0.5, 1.0],
                           begin: Alignment.centerLeft,
                           end: Alignment.centerRight,
                         ),
@@ -319,21 +366,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     left: 0,
                     top: 0,
                     bottom: 0,
-                    width: 105, 
+                    width: 105,
                     child: imageUrl.isNotEmpty
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_rounded, color: Colors.white24, size: 40),
+                            errorBuilder: (_, _, _) => const Icon(
+                              Icons.image_not_supported_rounded,
+                              color: Colors.white24,
+                              size: 40,
+                            ),
                           )
-                        : const Icon(Icons.image_not_supported_rounded, color: Colors.white24, size: 40),
+                        : const Icon(
+                            Icons.image_not_supported_rounded,
+                            color: Colors.white24,
+                            size: 40,
+                          ),
                   ),
 
                   Positioned(
-                    left: 116, 
+                    left: 116,
                     top: 12,
                     bottom: 12,
-                    right: 32, 
+                    right: 32,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -395,7 +450,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     right: 0,
                     top: 4,
                     child: PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 20),
+                      icon: const Icon(
+                        Icons.more_vert_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       color: const Color(0xFF131316),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -411,9 +470,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           value: 'remove',
                           child: Row(
                             children: [
-                              Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                              Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.redAccent,
+                                size: 18,
+                              ),
                               SizedBox(width: 8),
-                              Text('Remove from history', style: TextStyle(color: Colors.white, fontSize: 13)),
+                              Text(
+                                'Remove from history',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -429,23 +498,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       child: InkWell(
                         onTap: () async {
                           // 👇 FIX 2: Safely captured scaffoldMessenger before async gaps
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
-                          
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
+
                           if (isFavorite) {
-                            await watchlistProvider.removeFromWatchlist(id, mediaType: parsedMediaType);
+                            await watchlistProvider.removeFromWatchlist(
+                              id,
+                              mediaType: parsedMediaType,
+                            );
                             scaffoldMessenger.showSnackBar(
-                              const SnackBar(content: Text('Removed from Favorites', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating),
+                              const SnackBar(
+                                content: Text(
+                                  'Removed from Favorites',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: Color(0xFF131316),
+                                behavior: SnackBarBehavior.floating,
+                              ),
                             );
                           } else {
                             await watchlistProvider.addToWatchlist(
                               movieId: id,
                               movieTitle: title,
-                              posterPath: imagePath.isNotEmpty ? imagePath : null,
+                              posterPath: imagePath.isNotEmpty
+                                  ? imagePath
+                                  : null,
                               status: 'favorite',
                               mediaType: parsedMediaType,
                             );
                             scaffoldMessenger.showSnackBar(
-                              const SnackBar(content: Text('Added to Favorites', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF131316), behavior: SnackBarBehavior.floating),
+                              const SnackBar(
+                                content: Text(
+                                  'Added to Favorites',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: Color(0xFF131316),
+                                behavior: SnackBarBehavior.floating,
+                              ),
                             );
                           }
                         },
@@ -453,19 +543,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: isFavorite ? const Color(0xFFFF647C).withValues(alpha: 0.15) : Colors.transparent,
+                            color: isFavorite
+                                ? const Color(
+                                    0xFFFF647C,
+                                  ).withValues(alpha: 0.15)
+                                : Colors.transparent,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
-                            isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                            color: isFavorite ? const Color(0xFFFF647C) : Colors.white54,
+                            isFavorite
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: isFavorite
+                                ? const Color(0xFFFF647C)
+                                : Colors.white54,
                             size: 20,
                           ),
                         ),
                       ),
                     ),
                   ),
-                  
                 ],
               ),
             ),

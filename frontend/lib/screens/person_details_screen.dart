@@ -9,18 +9,13 @@ import '../widgets/movie_card.dart';
 class PersonDetailsScreen extends StatefulWidget {
   final int personId;
 
-  const PersonDetailsScreen({
-    super.key,
-    required this.personId,
-  });
+  const PersonDetailsScreen({super.key, required this.personId});
 
   @override
-  State<PersonDetailsScreen> createState() =>
-      _PersonDetailsScreenState();
+  State<PersonDetailsScreen> createState() => _PersonDetailsScreenState();
 }
 
-class _PersonDetailsScreenState
-    extends State<PersonDetailsScreen> {
+class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
   Map<String, dynamic>? _personDetails;
@@ -36,18 +31,13 @@ class _PersonDetailsScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      Provider.of<WatchlistProvider>(
-        context,
-        listen: false,
-      ).fetchWatchlist();
+      Provider.of<WatchlistProvider>(context, listen: false).fetchWatchlist();
     });
   }
 
   Future<void> _fetchPersonDetails() async {
     try {
-      final details = await ApiService.getPersonDetails(
-        widget.personId,
-      );
+      final details = await ApiService.getPersonDetails(widget.personId);
 
       if (!mounted) return;
 
@@ -59,9 +49,7 @@ class _PersonDetailsScreenState
       if (!mounted) return;
 
       setState(() {
-        _errorMessage = e
-            .toString()
-            .replaceAll('Exception: ', '');
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
         _isLoading = false;
       });
     }
@@ -73,93 +61,60 @@ class _PersonDetailsScreenState
       return const Scaffold(
         backgroundColor: Color(0xFF09090B),
         body: Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFFA855F7),
-          ),
+          child: CircularProgressIndicator(color: Color(0xFFA855F7)),
         ),
       );
     }
 
-    if (_errorMessage.isNotEmpty ||
-        _personDetails == null) {
+    if (_errorMessage.isNotEmpty || _personDetails == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF09090B),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           leading: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
             onPressed: () => context.pop(),
           ),
         ),
         body: Center(
           child: Text(
-            _errorMessage.isNotEmpty
-                ? _errorMessage
-                : 'Failed to load profile',
-            style: const TextStyle(
-              color: Colors.redAccent,
-            ),
+            _errorMessage.isNotEmpty ? _errorMessage : 'Failed to load profile',
+            style: const TextStyle(color: Colors.redAccent),
           ),
         ),
       );
     }
 
-    final name =
-        (_personDetails!['name'] ?? 'Unknown')
-            .toString();
+    final name = (_personDetails!['name'] ?? 'Unknown').toString();
 
-    final biography = (
-      _personDetails!['biography'] ??
-          'No biography available.'
-    ).toString();
+    final biography =
+        (_personDetails!['biography'] ?? 'No biography available.').toString();
 
-    final knownFor = (
-      _personDetails!['known_for_department'] ?? ''
-    ).toString();
+    final knownFor = (_personDetails!['known_for_department'] ?? '').toString();
 
-    final placeOfBirth = (
-      _personDetails!['place_of_birth'] ?? ''
-    ).toString();
+    final placeOfBirth = (_personDetails!['place_of_birth'] ?? '').toString();
 
-    final birthday =
-        (_personDetails!['birthday'] ?? '')
-            .toString();
+    final birthday = (_personDetails!['birthday'] ?? '').toString();
 
-    final profilePath =
-        _personDetails!['profile_path'];
+    final profilePath = _personDetails!['profile_path'];
 
-    final profileUrl = profilePath != null &&
-            profilePath.toString().isNotEmpty
+    final profileUrl = profilePath != null && profilePath.toString().isNotEmpty
         ? 'https://image.tmdb.org/t/p/w500'
-            '${profilePath.toString()}'
+              '${profilePath.toString()}'
         : '';
 
-    final combinedCredits =
-        _personDetails!['combined_credits'];
+    final combinedCredits = _personDetails!['combined_credits'];
 
     final castCredits = List<Map<String, dynamic>>.from(
       combinedCredits is Map<String, dynamic>
-          ? (combinedCredits['cast']
-                  as List<dynamic>? ??
-              [])
+          ? (combinedCredits['cast'] as List<dynamic>? ?? [])
           : [],
     );
 
     castCredits.sort((a, b) {
-      final dateA = (
-        a['release_date'] ??
-            a['first_air_date'] ??
-            ''
-      ).toString();
+      final dateA = (a['release_date'] ?? a['first_air_date'] ?? '').toString();
 
-      final dateB = (
-        b['release_date'] ??
-            b['first_air_date'] ??
-            ''
-      ).toString();
+      final dateB = (b['release_date'] ?? b['first_air_date'] ?? '').toString();
 
       return dateB.compareTo(dateA);
     });
@@ -170,10 +125,7 @@ class _PersonDetailsScreenState
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: Colors.white,
-          ),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -187,35 +139,26 @@ class _PersonDetailsScreenState
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius:
-                      BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
                     width: 110,
                     height: 150,
-                    color:
-                        const Color(0xFF131316),
+                    color: const Color(0xFF131316),
                     child: profileUrl.isNotEmpty
                         ? Image.network(
                             profileUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (
-                              context,
-                              error,
-                              stackTrace,
-                            ) {
+                            errorBuilder: (context, error, stackTrace) {
                               return const Center(
                                 child: Icon(
                                   Icons.person_rounded,
-                                  color:
-                                      Colors.white24,
+                                  color: Colors.white24,
                                   size: 50,
                                 ),
                               );
@@ -233,15 +176,13 @@ class _PersonDetailsScreenState
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         name,
                         style: const TextStyle(
                           fontSize: 22,
-                          fontWeight:
-                              FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
@@ -250,10 +191,8 @@ class _PersonDetailsScreenState
                         Text(
                           knownFor,
                           style: const TextStyle(
-                            color:
-                                Color(0xFFA855F7),
-                            fontWeight:
-                                FontWeight.w600,
+                            color: Color(0xFFA855F7),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -267,14 +206,12 @@ class _PersonDetailsScreenState
                           ),
                         ),
                       ],
-                      if (placeOfBirth
-                          .isNotEmpty) ...[
+                      if (placeOfBirth.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           placeOfBirth,
                           maxLines: 2,
-                          overflow:
-                              TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white38,
                             fontSize: 12,
@@ -306,8 +243,7 @@ class _PersonDetailsScreenState
             ),
             const SizedBox(height: 28),
             Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Filmography',
@@ -330,24 +266,17 @@ class _PersonDetailsScreenState
             const SizedBox(height: 14),
             if (castCredits.isEmpty)
               const Padding(
-                padding: EdgeInsets.symmetric(
-                  vertical: 16,
-                ),
+                padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'No credits found.',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white54, fontSize: 14),
                 ),
               )
             else
               GridView.builder(
                 shrinkWrap: true,
-                physics:
-                    const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                    const SliverGridDelegateWithMaxCrossAxisExtent(
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 150,
                   mainAxisExtent: 280,
                   crossAxisSpacing: 16,
@@ -355,84 +284,57 @@ class _PersonDetailsScreenState
                 ),
                 itemCount: castCredits.length,
                 itemBuilder: (context, index) {
-                  final item =
-                      castCredits[index];
+                  final item = castCredits[index];
 
-                  final mediaId = int.tryParse(
-                        (item['id'] ?? 0)
-                            .toString(),
-                      ) ??
-                      0;
+                  final mediaId =
+                      int.tryParse((item['id'] ?? 0).toString()) ?? 0;
 
-                  final mediaTitle = (
-                    item['title'] ??
-                        item['name'] ??
-                        'Untitled'
-                  ).toString();
+                  final mediaTitle =
+                      (item['title'] ?? item['name'] ?? 'Untitled').toString();
 
-                  final character =
-                      (item['character'] ?? '')
-                          .toString()
-                          .trim();
+                  final character = (item['character'] ?? '').toString().trim();
 
-                  final rawType = (
-                    item['media_type'] ?? ''
-                  ).toString().toLowerCase();
+                  final rawType = (item['media_type'] ?? '')
+                      .toString()
+                      .toLowerCase();
 
-                  final isTv = rawType == 'tv' ||
+                  final isTv =
+                      rawType == 'tv' ||
                       rawType == 'show' ||
-                      item['first_air_date'] !=
-                          null ||
-                      (item['name'] != null &&
-                          item['title'] == null);
+                      item['first_air_date'] != null ||
+                      (item['name'] != null && item['title'] == null);
 
-                  final parsedMediaType =
-                      isTv ? 'tv' : 'movie';
+                  final parsedMediaType = isTv ? 'tv' : 'movie';
 
-                  final dateStr = (
-                    item['release_date'] ??
-                        item['first_air_date'] ??
-                        ''
-                  ).toString();
+                  final dateStr =
+                      (item['release_date'] ?? item['first_air_date'] ?? '')
+                          .toString();
 
-                  final year =
-                      dateStr.length >= 4
-                          ? dateStr.substring(0, 4)
-                          : 'TBA';
+                  final year = dateStr.length >= 4
+                      ? dateStr.substring(0, 4)
+                      : 'TBA';
 
-                  final itemPoster =
-                      item['poster_path'];
+                  final itemPoster = item['poster_path'];
 
                   final itemPosterUrl =
-                      itemPoster != null &&
-                              itemPoster
-                                  .toString()
-                                  .isNotEmpty
-                          ? 'https://image.tmdb.org'
-                              '/t/p/w342'
-                              '${itemPoster.toString()}'
-                          : '';
+                      itemPoster != null && itemPoster.toString().isNotEmpty
+                      ? 'https://image.tmdb.org'
+                            '/t/p/w342'
+                            '${itemPoster.toString()}'
+                      : '';
 
-                  final rating =
-                      item['vote_average'] != null
-                          ? double.tryParse(
-                              item['vote_average']
-                                  .toString(),
-                            )
-                          : null;
+                  final rating = item['vote_average'] != null
+                      ? double.tryParse(item['vote_average'].toString())
+                      : null;
 
                   return MovieCard(
                     id: mediaId,
                     title: mediaTitle,
                     imageUrl: itemPosterUrl,
-                    mediaType:
-                        parsedMediaType,
+                    mediaType: parsedMediaType,
                     year: year,
                     rating: rating,
-                    subtitle:
-                        character.isNotEmpty
-                            ? character
-                            : null,
+                    subtitle: character.isNotEmpty ? character : null,
                   );
                 },
               ),

@@ -14,7 +14,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
   List<dynamic> _progressItems = [];
-  
+
   final Set<int> _markingShows = {};
   final Set<int> _removingShows = {};
 
@@ -50,10 +50,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Future<void> _markNextEpisodeWatched(dynamic show) async {
-    final showId = int.tryParse(
-          (show['show_id'] ?? 0).toString(),
-        ) ??
-        0;
+    final showId = int.tryParse((show['show_id'] ?? 0).toString()) ?? 0;
 
     if (showId <= 0 || _markingShows.contains(showId)) return;
 
@@ -63,28 +60,22 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
     try {
       final details = await ApiService.getTvDetails(showId);
-      final watched =
-          await ApiService.getSpecificShowProgress(showId);
+      final watched = await ApiService.getSpecificShowProgress(showId);
 
       final watchedKeys = watched
-          .map(
-            (item) =>
-                '${item['season_number']}:${item['episode_number']}',
-          )
+          .map((item) => '${item['season_number']}:${item['episode_number']}')
           .toSet();
 
       final seasons =
-          (details['seasons'] as List<dynamic>?)
-                  ?.where((season) {
-                final number = season['season_number'];
-                return number is int && number > 0;
-              })
-                  .toList() ??
-              [];
+          (details['seasons'] as List<dynamic>?)?.where((season) {
+            final number = season['season_number'];
+            return number is int && number > 0;
+          }).toList() ??
+          [];
 
       seasons.sort(
-        (a, b) => (a['season_number'] as int)
-            .compareTo(b['season_number'] as int),
+        (a, b) =>
+            (a['season_number'] as int).compareTo(b['season_number'] as int),
       );
 
       Map<String, dynamic>? nextEpisode;
@@ -103,24 +94,20 @@ class _ProgressScreenState extends State<ProgressScreen> {
         if (nextEpisode != null) continue;
 
         for (final rawEpisode in episodes) {
-          final episode =
-              Map<String, dynamic>.from(rawEpisode as Map);
+          final episode = Map<String, dynamic>.from(rawEpisode as Map);
           final episodeNumber = int.tryParse(
             (episode['episode_number'] ?? '').toString(),
           );
 
           if (episodeNumber == null) continue;
 
-          final airDate =
-              DateTime.tryParse('${episode['air_date'] ?? ''}');
+          final airDate = DateTime.tryParse('${episode['air_date'] ?? ''}');
 
           if (airDate != null && airDate.isAfter(DateTime.now())) {
             continue;
           }
 
-          if (!watchedKeys.contains(
-            '$seasonNumber:$episodeNumber',
-          )) {
+          if (!watchedKeys.contains('$seasonNumber:$episodeNumber')) {
             nextEpisode = episode;
             nextSeasonNumber = seasonNumber;
             break;
@@ -133,13 +120,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
         return;
       }
 
-      final episodeNumber = int.parse(
-        nextEpisode['episode_number'].toString(),
-      );
+      final episodeNumber = int.parse(nextEpisode['episode_number'].toString());
 
-      final title = (details['name'] ??
-              show['title'] ??
-              'Unknown Show')
+      final title = (details['name'] ?? show['title'] ?? 'Unknown Show')
           .toString();
 
       await ApiService.logWatchHistory(
@@ -148,19 +131,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
         title: title,
         seasonNumber: nextSeasonNumber,
         episodeNumber: episodeNumber,
-        runtimeMinutes: int.tryParse(
-              (nextEpisode['runtime'] ?? 45).toString(),
-            ) ??
-            45,
+        runtimeMinutes:
+            int.tryParse((nextEpisode['runtime'] ?? 45).toString()) ?? 45,
         posterPath: details['poster_path']?.toString(),
         backdropPath: details['backdrop_path']?.toString(),
         totalEpisodes: releasedEpisodeCount > 0
             ? releasedEpisodeCount
-            : int.tryParse(
-                  (details['number_of_episodes'] ?? 1)
-                      .toString(),
-                ) ??
-                1,
+            : int.tryParse((details['number_of_episodes'] ?? 1).toString()) ??
+                  1,
       );
 
       if (!mounted) return;
@@ -200,45 +178,32 @@ class _ProgressScreenState extends State<ProgressScreen> {
     }
   }
 
-  Future<void> _removeShowFromHistory(
-    dynamic show,
-  ) async {
-    final showId = int.tryParse(
-          (show['show_id'] ?? 0).toString(),
-        ) ??
-        0;
+  Future<void> _removeShowFromHistory(dynamic show) async {
+    final showId = int.tryParse((show['show_id'] ?? 0).toString()) ?? 0;
 
-    if (showId <= 0 ||
-        _removingShows.contains(showId)) {
+    if (showId <= 0 || _removingShows.contains(showId)) {
       return;
     }
 
-    final title =
-        (show['title'] ?? 'this show').toString();
+    final title = (show['title'] ?? 'this show').toString();
 
     final shouldRemove = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(
-        alpha: 0.78,
-      ),
+      barrierColor: Colors.black.withValues(alpha: 0.78),
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFF17151B),
           surfaceTintColor: const Color(0xFF17151B),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(
-              color: Color(0xFF39333F),
-            ),
+            side: const BorderSide(color: Color(0xFF39333F)),
           ),
           title: Row(
             children: [
               const DecoratedBox(
                 decoration: BoxDecoration(
                   color: Color(0xFF2A151C),
-                  borderRadius: BorderRadius.all(
-                    Radius.circular(10),
-                  ),
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(9),
@@ -278,8 +243,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 Navigator.pop(dialogContext, false);
               },
               style: TextButton.styleFrom(
-                foregroundColor:
-                    const Color(0xFF918B99),
+                foregroundColor: const Color(0xFF918B99),
               ),
               child: const Text('Cancel'),
             ),
@@ -288,8 +252,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 Navigator.pop(dialogContext, true);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    const Color(0xFFE34D67),
+                backgroundColor: const Color(0xFFE34D67),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(
@@ -297,19 +260,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-                size: 18,
-              ),
+              icon: const Icon(Icons.delete_outline_rounded, size: 18),
               label: const Text(
                 'Remove all',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -332,10 +289,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
       setState(() {
         _progressItems.removeWhere((item) {
-          final itemId = int.tryParse(
-                (item['show_id'] ?? 0).toString(),
-              ) ??
-              0;
+          final itemId = int.tryParse((item['show_id'] ?? 0).toString()) ?? 0;
 
           return itemId == showId;
         });
@@ -368,9 +322,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(
-              color: Color(0xFF39333F),
-            ),
+            side: const BorderSide(color: Color(0xFF39333F)),
           ),
         ),
       );
@@ -381,9 +333,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         SnackBar(
           content: Text(
             e.toString().replaceAll('Exception: ', ''),
-            style: const TextStyle(
-              color: Colors.white,
-            ),
+            style: const TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xFFE34D67),
           behavior: SnackBarBehavior.floating,
@@ -409,7 +359,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
         backgroundColor: const Color(0xFF08080B),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Colors.white,
+            size: 24,
+          ),
           onPressed: () => context.pop(),
         ),
         title: const Text(
@@ -427,325 +381,309 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 child: CircularProgressIndicator(color: Color(0xFFCA66FF)),
               )
             : _errorMessage.isNotEmpty
-                ? Center(
-                    child: Text(
-                      _errorMessage,
-                      style: const TextStyle(color: Color(0xFFFF647C)),
-                    ),
-                  )
-                : _progressItems.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No media currently in progress',
-                          style: TextStyle(color: Color(0xFF817C87), fontSize: 14),
+            ? Center(
+                child: Text(
+                  _errorMessage,
+                  style: const TextStyle(color: Color(0xFFFF647C)),
+                ),
+              )
+            : _progressItems.isEmpty
+            ? const Center(
+                child: Text(
+                  'No media currently in progress',
+                  style: TextStyle(color: Color(0xFF817C87), fontSize: 14),
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _fetchProgressData,
+                color: const Color(0xFFCA66FF),
+                backgroundColor: const Color(0xFF17151B),
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 450,
+                    mainAxisExtent: 154,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: _progressItems.length,
+                  itemBuilder: (context, index) {
+                    final item = _progressItems[index];
+
+                    final int showIdInt = item['show_id'] ?? 0;
+                    final String id = showIdInt.toString();
+                    final String title = item['title'] ?? 'Untitled';
+                    final String seasonStr = item['season'] ?? '';
+                    final int watchedEps = item['watchedEpisodes'] ?? 0;
+                    final int totalEps = item['totalEpisodes'] ?? 1;
+
+                    final double progressVal = (watchedEps / totalEps).clamp(
+                      0.0,
+                      1.0,
+                    );
+                    final bool isFinished = watchedEps >= totalEps;
+
+                    final int seasonNum =
+                        int.tryParse(
+                          (item['nextSeasonNumber'] ??
+                                  seasonStr.replaceAll(RegExp(r'[^0-9]'), ''))
+                              .toString(),
+                        ) ??
+                        1;
+
+                    final int nextEp =
+                        int.tryParse(
+                          (item['nextEpisodeNumber'] ?? watchedEps + 1)
+                              .toString(),
+                        ) ??
+                        watchedEps + 1;
+
+                    final String subtitle = isFinished
+                        ? 'Completed'
+                        : 'Next: S$seasonNum • E$nextEp';
+
+                    final String rawPoster = (item['backdrop_path'] ?? '')
+                        .toString();
+                    final String imageUrl =
+                        rawPoster.isNotEmpty && rawPoster != 'null'
+                        ? 'https://image.tmdb.org/t/p/w500$rawPoster'
+                        : '';
+
+                    return GestureDetector(
+                      onTap: () {
+                        context.go('/tv/$id');
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF15151B),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF2D2933)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 18,
+                              offset: Offset(0, 10),
+                            ),
+                          ],
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _fetchProgressData,
-                        color: const Color(0xFFCA66FF),
-                        backgroundColor: const Color(0xFF17151B),
-                        child: GridView.builder(
-                          padding: const EdgeInsets.all(16.0),
-                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 450,
-                            mainAxisExtent: 154, 
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                          itemCount: _progressItems.length,
-                          itemBuilder: (context, index) {
-                            final item = _progressItems[index];
-                            
-                            final int showIdInt = item['show_id'] ?? 0;
-                            final String id = showIdInt.toString();
-                            final String title = item['title'] ?? 'Untitled';
-                            final String seasonStr = item['season'] ?? '';
-                            final int watchedEps = item['watchedEpisodes'] ?? 0;
-                            final int totalEps = item['totalEpisodes'] ?? 1;
-                            
-                            final double progressVal = (watchedEps / totalEps).clamp(0.0, 1.0);
-                            final bool isFinished = watchedEps >= totalEps;
-                            
-                            final int seasonNum = int.tryParse(
-                                  (item['nextSeasonNumber'] ??
-                                          seasonStr.replaceAll(RegExp(r'[^0-9]'), ''))
-                                      .toString(),
-                                ) ??
-                                1;
-
-                            final int nextEp = int.tryParse(
-                                  (item['nextEpisodeNumber'] ?? watchedEps + 1)
-                                      .toString(),
-                                ) ??
-                                watchedEps + 1;
-
-                            final String subtitle = isFinished
-                                ? 'Completed'
-                                : 'Next: S$seasonNum • E$nextEp';
-
-                            final String rawPoster = (item['backdrop_path'] ?? '').toString();
-                            final String imageUrl = rawPoster.isNotEmpty && rawPoster != 'null'
-                                ? 'https://image.tmdb.org/t/p/w500$rawPoster'
-                                : '';
-
-                            return GestureDetector(
-                              onTap: () {
-                                context.go('/tv/$id');
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF15151B),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFF2D2933)),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x33000000),
-                                      blurRadius: 18,
-                                      offset: Offset(0, 10),
-                                    ),
-                                  ],
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.horizontal(
+                                left: Radius.circular(15),
+                              ),
+                              child: SizedBox(
+                                width: 105,
+                                height: double.infinity,
+                                child: imageUrl.isNotEmpty
+                                    ? Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) =>
+                                            _buildPlaceholder(),
+                                      )
+                                    : _buildPlaceholder(),
+                              ),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  14,
+                                  12,
+                                  12,
+                                  12,
                                 ),
-                                child: Row(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.horizontal(
-                                        left: Radius.circular(15),
-                                      ),
-                                      child: SizedBox(
-                                        width: 105,
-                                        height: double.infinity,
-                                        child: imageUrl.isNotEmpty
-                                            ? Image.network(
-                                                imageUrl,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, _, _) => _buildPlaceholder(),
-                                              )
-                                            : _buildPlaceholder(),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    title,
-                                                    maxLines: 2,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: Color(0xFFF5F3F8),
-                                                      fontWeight: FontWeight.w800,
-                                                      fontSize: 15,
-                                                      height: 1.2,
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                if (_removingShows
-                                                    .contains(
-                                                  showIdInt,
-                                                ))
-                                                  const SizedBox(
-                                                    width: 18,
-                                                    height: 18,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: Color(
-                                                        0xFFFF647C,
-                                                      ),
-                                                    ),
-                                                  )
-                                                else
-                                                  PopupMenuButton<
-                                                      String>(
-                                                    tooltip:
-                                                        'Show options',
-                                                    padding:
-                                                        EdgeInsets.zero,
-                                                    color: const Color(
-                                                      0xFF17151B,
-                                                    ),
-                                                    surfaceTintColor:
-                                                        const Color(
-                                                      0xFF17151B,
-                                                    ),
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius
-                                                              .circular(
-                                                        12,
-                                                      ),
-                                                      side:
-                                                          const BorderSide(
-                                                        color: Color(
-                                                          0xFF39333F,
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            title,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Color(0xFFF5F3F8),
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 15,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        if (_removingShows.contains(showIdInt))
+                                          const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFFFF647C),
+                                            ),
+                                          )
+                                        else
+                                          PopupMenuButton<String>(
+                                            tooltip: 'Show options',
+                                            padding: EdgeInsets.zero,
+                                            color: const Color(0xFF17151B),
+                                            surfaceTintColor: const Color(
+                                              0xFF17151B,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              side: const BorderSide(
+                                                color: Color(0xFF39333F),
+                                              ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.more_vert_rounded,
+                                              color: Color(0xFF817C87),
+                                              size: 19,
+                                            ),
+                                            onSelected: (value) {
+                                              if (value == 'remove') {
+                                                _removeShowFromHistory(item);
+                                              }
+                                            },
+                                            itemBuilder: (context) {
+                                              return [
+                                                const PopupMenuItem<String>(
+                                                  value: 'remove',
+                                                  child: Row(
+                                                    children: [
+                                                      DecoratedBox(
+                                                        decoration: BoxDecoration(
+                                                          color: Color(
+                                                            0xFF2A151C,
+                                                          ),
+                                                          borderRadius:
+                                                              BorderRadius.all(
+                                                                Radius.circular(
+                                                                  8,
+                                                                ),
+                                                              ),
                                                         ),
-                                                      ),
-                                                    ),
-                                                    icon: const Icon(
-                                                      Icons
-                                                          .more_vert_rounded,
-                                                      color: Color(
-                                                        0xFF817C87,
-                                                      ),
-                                                      size: 19,
-                                                    ),
-                                                    onSelected:
-                                                        (value) {
-                                                      if (value ==
-                                                          'remove') {
-                                                        _removeShowFromHistory(
-                                                          item,
-                                                        );
-                                                      }
-                                                    },
-                                                    itemBuilder:
-                                                        (context) {
-                                                      return [
-                                                        const PopupMenuItem<
-                                                            String>(
-                                                          value:
-                                                              'remove',
-                                                          child: Row(
-                                                            children: [
-                                                              DecoratedBox(
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color:
-                                                                      Color(
-                                                                    0xFF2A151C,
-                                                                  ),
-                                                                  borderRadius:
-                                                                      BorderRadius.all(
-                                                                    Radius.circular(
-                                                                      8,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                child:
-                                                                    Padding(
-                                                                  padding:
-                                                                      EdgeInsets.all(
-                                                                    7,
-                                                                  ),
-                                                                  child:
-                                                                      Icon(
-                                                                    Icons
-                                                                        .delete_outline_rounded,
-                                                                    color:
-                                                                        Color(
-                                                                      0xFFFF647C,
-                                                                    ),
-                                                                    size:
-                                                                        17,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              SizedBox(
-                                                                width:
-                                                                    10,
-                                                              ),
-                                                              Text(
-                                                                'Remove from History',
-                                                                style:
-                                                                    TextStyle(
-                                                                  color:
-                                                                      Color(
-                                                                    0xFFFF647C,
-                                                                  ),
-                                                                  fontSize:
-                                                                      12,
-                                                                  fontWeight:
-                                                                      FontWeight.w600,
-                                                                ),
-                                                              ),
-                                                            ],
+                                                        child: Padding(
+                                                          padding:
+                                                              EdgeInsets.all(7),
+                                                          child: Icon(
+                                                            Icons
+                                                                .delete_outline_rounded,
+                                                            color: Color(
+                                                              0xFFFF647C,
+                                                            ),
+                                                            size: 17,
                                                           ),
                                                         ),
-                                                      ];
-                                                    },
-                                                  ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              subtitle,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                color: Color(0xFF817C87),
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            const Spacer(),
-                                            ClipRRect(
-                                              borderRadius: BorderRadius.circular(8),
-                                              child: LinearProgressIndicator(
-                                                value: progressVal,
-                                                minHeight: 6,
-                                                backgroundColor: const Color(0xFF2A2730),
-                                                valueColor: AlwaysStoppedAnimation<Color>(
-                                                  isFinished
-                                                      ? const Color(0xFFCA66FF)
-                                                      : const Color(0xFFE8E4EB),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Row(
-                                              crossAxisAlignment: CrossAxisAlignment.end,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    isFinished ? 'All caught up' : '${totalEps - watchedEps} left',
-                                                    style: const TextStyle(
-                                                      color: Color(0xFFF5F3F8),
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.w700,
-                                                    ),
+                                                      ),
+                                                      SizedBox(width: 10),
+                                                      Text(
+                                                        'Remove from History',
+                                                        style: TextStyle(
+                                                          color: Color(
+                                                            0xFFFF647C,
+                                                          ),
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                                if (!isFinished)
-                                                  GestureDetector(
-                                                    onTap: () => _markNextEpisodeWatched(item),
-                                                    child: Container(
-                                                      color: Colors.transparent,
-                                                      child: _markingShows.contains(showIdInt)
-                                                          ? const SizedBox(
-                                                              width: 18,
-                                                              height: 18,
-                                                              child: CircularProgressIndicator(
-                                                                strokeWidth: 2,
-                                                                color: Color(0xFFCA66FF),
-                                                              ),
-                                                            )
-                                                          : const Icon(
-                                                              Icons.done_all_rounded,
-                                                              color: Color(0xFFCA66FF),
-                                                              size: 20,
-                                                            ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
+                                              ];
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      subtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFF817C87),
+                                        fontSize: 12,
                                       ),
+                                    ),
+                                    const Spacer(),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: LinearProgressIndicator(
+                                        value: progressVal,
+                                        minHeight: 6,
+                                        backgroundColor: const Color(
+                                          0xFF2A2730,
+                                        ),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              isFinished
+                                                  ? const Color(0xFFCA66FF)
+                                                  : const Color(0xFFE8E4EB),
+                                            ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            isFinished
+                                                ? 'All caught up'
+                                                : '${totalEps - watchedEps} left',
+                                            style: const TextStyle(
+                                              color: Color(0xFFF5F3F8),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                        if (!isFinished)
+                                          GestureDetector(
+                                            onTap: () =>
+                                                _markNextEpisodeWatched(item),
+                                            child: Container(
+                                              color: Colors.transparent,
+                                              child:
+                                                  _markingShows.contains(
+                                                    showIdInt,
+                                                  )
+                                                  ? const SizedBox(
+                                                      width: 18,
+                                                      height: 18,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                            color: Color(
+                                                              0xFFCA66FF,
+                                                            ),
+                                                          ),
+                                                    )
+                                                  : const Icon(
+                                                      Icons.done_all_rounded,
+                                                      color: Color(0xFFCA66FF),
+                                                      size: 20,
+                                                    ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ),
+                    );
+                  },
+                ),
+              ),
       ),
     );
   }
@@ -754,11 +692,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     return Container(
       color: const Color(0xFF201824),
       child: const Center(
-        child: Icon(
-          Icons.tv_rounded,
-          color: Color(0xFF694078),
-          size: 32,
-        ),
+        child: Icon(Icons.tv_rounded, color: Color(0xFF694078), size: 32),
       ),
     );
   }

@@ -14,14 +14,10 @@ import '../services/api_service.dart';
 class ShowDetailsScreen extends StatefulWidget {
   final int showId;
 
-  const ShowDetailsScreen({
-    super.key,
-    required this.showId,
-  });
+  const ShowDetailsScreen({super.key, required this.showId});
 
   @override
-  State<ShowDetailsScreen> createState() =>
-      _ShowDetailsScreenState();
+  State<ShowDetailsScreen> createState() => _ShowDetailsScreenState();
 }
 
 class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
@@ -34,7 +30,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
   List<dynamic> _episodes = [];
   int _currentSeason = 1;
-  
+
   // 👇 Added state variable to hold the user's specific progress
   List<dynamic> _watchedEpisodes = [];
 
@@ -45,30 +41,24 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     _fetchShowDetails();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<WatchlistProvider>(
-        context,
-        listen: false,
-      ).fetchCustomLists();
+      Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
     });
   }
 
   Future<void> _fetchShowDetails() async {
     try {
-      final details =
-          await ApiService.getTvDetails(widget.showId);
+      final details = await ApiService.getTvDetails(widget.showId);
 
       List<Review> fetchedReviews = [];
 
       try {
-        fetchedReviews =
-            await ApiService.getMovieReviews(widget.showId);
+        fetchedReviews = await ApiService.getMovieReviews(widget.showId);
       } catch (_) {}
 
       List<dynamic> fetchedEpisodes = [];
 
       try {
-        fetchedEpisodes =
-            await ApiService.getTvSeasonDetails(
+        fetchedEpisodes = await ApiService.getTvSeasonDetails(
           widget.showId,
           _currentSeason,
         );
@@ -77,7 +67,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       // 👇 Fetch exact episode progress
       List<dynamic> fetchedProgress = [];
       try {
-        fetchedProgress = await ApiService.getSpecificShowProgress(widget.showId);
+        fetchedProgress = await ApiService.getSpecificShowProgress(
+          widget.showId,
+        );
       } catch (_) {}
 
       if (mounted) {
@@ -92,33 +84,27 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage =
-              e.toString().replaceAll('Exception: ', '');
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
           _isLoading = false;
         });
       }
     }
   }
 
-  List<Map<String, dynamic>> _buildEpisodePayload({
-    int? selectedSeason,
-  }) {
+  List<Map<String, dynamic>> _buildEpisodePayload({int? selectedSeason}) {
     final details = _showDetails;
 
     if (details == null) {
       return <Map<String, dynamic>>[];
     }
 
-    final runtimes =
-        details['episode_run_time'] as List<dynamic>?;
+    final runtimes = details['episode_run_time'] as List<dynamic>?;
 
-    final defaultRuntime =
-        runtimes != null && runtimes.isNotEmpty
-            ? int.tryParse(runtimes.first.toString()) ?? 45
-            : 45;
+    final defaultRuntime = runtimes != null && runtimes.isNotEmpty
+        ? int.tryParse(runtimes.first.toString()) ?? 45
+        : 45;
 
-    final nextEpisode =
-        details['next_episode_to_air'];
+    final nextEpisode = details['next_episode_to_air'];
 
     final nextSeasonNumber = int.tryParse(
       (nextEpisode?['season_number'] ?? '').toString(),
@@ -129,50 +115,38 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
 
     final seasons =
-        (details['seasons'] as List<dynamic>?)
-                ?.where((season) {
-              final number = int.tryParse(
-                (season['season_number'] ?? '').toString(),
-              );
+        (details['seasons'] as List<dynamic>?)?.where((season) {
+          final number = int.tryParse(
+            (season['season_number'] ?? '').toString(),
+          );
 
-              if (number == null || number <= 0) {
-                return false;
-              }
+          if (number == null || number <= 0) {
+            return false;
+          }
 
-              return selectedSeason == null ||
-                  number == selectedSeason;
-            })
-                .toList() ??
-            <dynamic>[];
+          return selectedSeason == null || number == selectedSeason;
+        }).toList() ??
+        <dynamic>[];
 
     final episodes = <Map<String, dynamic>>[];
 
     for (final season in seasons) {
-      final seasonNumber = int.tryParse(
-            (season['season_number'] ?? '').toString(),
-          ) ??
-          0;
+      final seasonNumber =
+          int.tryParse((season['season_number'] ?? '').toString()) ?? 0;
 
-      var episodeCount = int.tryParse(
-            (season['episode_count'] ?? 0).toString(),
-          ) ??
-          0;
+      var episodeCount =
+          int.tryParse((season['episode_count'] ?? 0).toString()) ?? 0;
 
       final seasonAirDate = DateTime.tryParse(
         (season['air_date'] ?? '').toString(),
       );
 
-      if (seasonAirDate != null &&
-          seasonAirDate.isAfter(DateTime.now())) {
+      if (seasonAirDate != null && seasonAirDate.isAfter(DateTime.now())) {
         continue;
       }
 
-      if (nextSeasonNumber == seasonNumber &&
-          nextEpisodeNumber != null) {
-        episodeCount = (nextEpisodeNumber - 1).clamp(
-          0,
-          episodeCount,
-        );
+      if (nextSeasonNumber == seasonNumber && nextEpisodeNumber != null) {
+        episodeCount = (nextEpisodeNumber - 1).clamp(0, episodeCount);
       }
 
       for (
@@ -215,8 +189,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         releaseDateStr != null &&
         releaseDateStr.isNotEmpty) {
       watchedAtDate =
-          DateTime.tryParse(releaseDateStr)?.toUtc() ??
-              DateTime.now().toUtc();
+          DateTime.tryParse(releaseDateStr)?.toUtc() ?? DateTime.now().toUtc();
     } else if (option == 'Other date') {
       final pickedDate = await showDatePicker(
         context: context,
@@ -254,9 +227,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     }
 
     try {
-      final allEpisodes = _buildEpisodePayload(
-        selectedSeason: seasonNumber,
-      );
+      final allEpisodes = _buildEpisodePayload(selectedSeason: seasonNumber);
 
       if (allEpisodes.isEmpty) {
         throw Exception(
@@ -266,9 +237,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         );
       }
 
-      final totalShowEpisodes = int.tryParse(
-            (_showDetails?['number_of_episodes'] ?? '')
-                .toString(),
+      final totalShowEpisodes =
+          int.tryParse(
+            (_showDetails?['number_of_episodes'] ?? '').toString(),
           ) ??
           allEpisodes.length;
 
@@ -296,10 +267,8 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           for (final newItem in newItems) {
             final alreadyExists = _watchedEpisodes.any(
               (item) =>
-                  item['season_number'] ==
-                      newItem['season_number'] &&
-                  item['episode_number'] ==
-                      newItem['episode_number'],
+                  item['season_number'] == newItem['season_number'] &&
+                  item['episode_number'] == newItem['episode_number'],
             );
 
             if (!alreadyExists) {
@@ -369,9 +338,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         });
       }
 
-      _showSnackBar(
-        'Marked S$seasonNumber • E$episodeNumber as watched',
-      );
+      _showSnackBar('Marked S$seasonNumber • E$episodeNumber as watched');
 
       return true;
     } catch (e) {
@@ -390,27 +357,19 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     String? firstAirDate,
   ) {
     final seasons =
-        (_showDetails?['seasons'] as List<dynamic>?)
-                ?.where((season) {
-              final number = int.tryParse(
-                (season['season_number'] ?? '').toString(),
-              );
+        (_showDetails?['seasons'] as List<dynamic>?)?.where((season) {
+          final number = int.tryParse(
+            (season['season_number'] ?? '').toString(),
+          );
 
-              return number != null && number > 0;
-            })
-                .toList() ??
-            <dynamic>[];
+          return number != null && number > 0;
+        }).toList() ??
+        <dynamic>[];
 
     seasons.sort((a, b) {
-      final aNumber = int.tryParse(
-            (a['season_number'] ?? 0).toString(),
-          ) ??
-          0;
+      final aNumber = int.tryParse((a['season_number'] ?? 0).toString()) ?? 0;
 
-      final bNumber = int.tryParse(
-            (b['season_number'] ?? 0).toString(),
-          ) ??
-          0;
+      final bNumber = int.tryParse((b['season_number'] ?? 0).toString()) ?? 0;
 
       return aNumber.compareTo(bNumber);
     });
@@ -418,56 +377,40 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xFF15151B),
-      barrierColor:
-          Colors.black.withValues(alpha: 0.75),
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
         return SafeArea(
           top: false,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight:
-                  MediaQuery.sizeOf(sheetContext).height *
-                      0.78,
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                12,
-                10,
-                12,
-                24,
-              ),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildSheetHandle(),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       children: [
-                        _buildSheetIcon(
-                          Icons.checklist_rounded,
-                        ),
+                        _buildSheetIcon(Icons.checklist_rounded),
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Track episodes',
                                 style: TextStyle(
                                   color: Color(0xFFF5F3F8),
                                   fontSize: 17,
-                                  fontWeight:
-                                      FontWeight.w800,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                               SizedBox(height: 3),
@@ -486,15 +429,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Divider(
-                    color: Color(0xFF2D2933),
-                    height: 1,
-                  ),
+                  const Divider(color: Color(0xFF2D2933), height: 1),
                   Flexible(
                     child: ListView(
                       shrinkWrap: true,
-                      padding:
-                          const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(top: 8),
                       children: [
                         _buildMenuOption(
                           Icons.done_all_rounded,
@@ -502,19 +441,16 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           () {
                             Navigator.pop(sheetContext);
 
-                            Future<void>.delayed(
-                              Duration.zero,
-                              () {
-                                if (!mounted) return;
+                            Future<void>.delayed(Duration.zero, () {
+                              if (!mounted) return;
 
-                                _showMarkWatchedMenu(
-                                  title,
-                                  poster,
-                                  backdrop,
-                                  firstAirDate,
-                                );
-                              },
-                            );
+                              _showMarkWatchedMenu(
+                                title,
+                                poster,
+                                backdrop,
+                                firstAirDate,
+                              );
+                            });
                           },
                         ),
                         const Padding(
@@ -522,56 +458,39 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             horizontal: 12,
                             vertical: 6,
                           ),
-                          child: Divider(
-                            color: Color(0xFF2D2933),
-                            height: 1,
-                          ),
+                          child: Divider(color: Color(0xFF2D2933), height: 1),
                         ),
                         ...seasons.map((season) {
                           final seasonNumber =
                               int.tryParse(
-                                (season[
-                                            'season_number'] ??
-                                        0)
-                                    .toString(),
+                                (season['season_number'] ?? 0).toString(),
                               ) ??
                               0;
 
                           final episodeCount =
                               int.tryParse(
-                                (season[
-                                            'episode_count'] ??
-                                        0)
-                                    .toString(),
+                                (season['episode_count'] ?? 0).toString(),
                               ) ??
                               0;
 
                           return _buildMenuOption(
-                            Icons
-                                .video_library_outlined,
+                            Icons.video_library_outlined,
                             'Season $seasonNumber'
                             '  •  $episodeCount episodes',
                             () {
-                              Navigator.pop(
-                                sheetContext,
-                              );
+                              Navigator.pop(sheetContext);
 
-                              Future<void>.delayed(
-                                Duration.zero,
-                                () {
-                                  if (!mounted) return;
+                              Future<void>.delayed(Duration.zero, () {
+                                if (!mounted) return;
 
-                                  _showMarkWatchedMenu(
-                                    title,
-                                    poster,
-                                    backdrop,
-                                    season['air_date']
-                                        ?.toString(),
-                                    seasonNumber:
-                                        seasonNumber,
-                                  );
-                                },
-                              );
+                                _showMarkWatchedMenu(
+                                  title,
+                                  poster,
+                                  backdrop,
+                                  season['air_date']?.toString(),
+                                  seasonNumber: seasonNumber,
+                                );
+                              });
                             },
                           );
                         }),
@@ -600,36 +519,26 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              12,
-              10,
-              12,
-              24,
-            ),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildSheetHandle(),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
                       _buildSheetIcon(Icons.check_rounded),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               seasonNumber == null
@@ -659,10 +568,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Divider(
-                  color: Color(0xFF2D2933),
-                  height: 1,
-                ),
+                const Divider(color: Color(0xFF2D2933), height: 1),
                 const SizedBox(height: 8),
                 _buildMenuOption(
                   Icons.bolt_rounded,
@@ -717,38 +623,26 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              12,
-              10,
-              12,
-              24,
-            ),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildSheetHandle(),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
-                      _buildSheetIcon(
-                        Icons.playlist_add_rounded,
-                      ),
+                      _buildSheetIcon(Icons.playlist_add_rounded),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Add to custom list',
@@ -774,10 +668,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Divider(
-                  color: Color(0xFF2D2933),
-                  height: 1,
-                ),
+                const Divider(color: Color(0xFF2D2933), height: 1),
                 const SizedBox(height: 8),
                 if (provider.customLists.isEmpty)
                   _buildSheetEmptyState(
@@ -790,9 +681,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     final int listId = listData['id'];
 
                     final String listTitle =
-                        listData['name'] ??
-                            listData['title'] ??
-                            'Untitled';
+                        listData['name'] ?? listData['title'] ?? 'Untitled';
 
                     return _buildMenuOption(
                       Icons.playlist_add_rounded,
@@ -808,9 +697,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
                         Navigator.pop(context);
 
-                        _showSnackBar(
-                          'Added to "$listTitle"',
-                        );
+                        _showSnackBar('Added to "$listTitle"');
                       },
                     );
                   }),
@@ -843,10 +730,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFCA53FF),
-            Color(0xFF7C2BE8),
-          ],
+          colors: [Color(0xFFCA53FF), Color(0xFF7C2BE8)],
         ),
         boxShadow: const [
           BoxShadow(
@@ -856,25 +740,15 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           ),
         ],
       ),
-      child: Icon(
-        icon,
-        color: Colors.white,
-        size: 21,
-      ),
+      child: Icon(icon, color: Colors.white, size: 21),
     );
   }
 
   Widget _buildCloseButton(BuildContext context) {
     return IconButton(
       onPressed: () => Navigator.pop(context),
-      style: IconButton.styleFrom(
-        backgroundColor: const Color(0xFF202026),
-      ),
-      icon: const Icon(
-        Icons.close_rounded,
-        color: Color(0xFFC1BBC6),
-        size: 20,
-      ),
+      style: IconButton.styleFrom(backgroundColor: const Color(0xFF202026)),
+      icon: const Icon(Icons.close_rounded, color: Color(0xFFC1BBC6), size: 20),
     );
   }
 
@@ -883,10 +757,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     required String message,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 28,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
       child: Column(
         children: [
           Container(
@@ -895,15 +766,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF211528),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF4B2A59),
-              ),
+              border: Border.all(color: const Color(0xFF4B2A59)),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFFBD4DFF),
-              size: 26,
-            ),
+            child: Icon(icon, color: const Color(0xFFBD4DFF), size: 26),
           ),
           const SizedBox(height: 14),
           Text(
@@ -920,11 +785,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
-  Widget _buildMenuOption(
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
+  Widget _buildMenuOption(IconData icon, String label, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Material(
@@ -933,10 +794,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
                 Container(
@@ -945,15 +803,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF271630),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFF4B2A59),
-                    ),
+                    border: Border.all(color: const Color(0xFF4B2A59)),
                   ),
-                  child: Icon(
-                    icon,
-                    color: const Color(0xFFCA66FF),
-                    size: 19,
-                  ),
+                  child: Icon(icon, color: const Color(0xFFCA66FF), size: 19),
                 ),
                 const SizedBox(width: 13),
                 Expanded(
@@ -981,28 +833,19 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
   void _showWhereToWatchModal(String showTitle) {
     final results =
-        _showDetails!['watch/providers']?['results']
-                as Map<String, dynamic>? ??
-            {};
+        _showDetails!['watch/providers']?['results'] as Map<String, dynamic>? ??
+        {};
 
-    final providers =
-        results['IN'] ?? results['US'] ?? {};
+    final providers = results['IN'] ?? results['US'] ?? {};
 
-    final flatrate =
-        providers['flatrate'] as List<dynamic>? ?? [];
+    final flatrate = providers['flatrate'] as List<dynamic>? ?? [];
 
-    final rent =
-        providers['rent'] as List<dynamic>? ?? [];
+    final rent = providers['rent'] as List<dynamic>? ?? [];
 
-    final buy =
-        providers['buy'] as List<dynamic>? ?? [];
+    final buy = providers['buy'] as List<dynamic>? ?? [];
 
-    if (flatrate.isEmpty &&
-        rent.isEmpty &&
-        buy.isEmpty) {
-      _showSnackBar(
-        'No streaming providers available',
-      );
+    if (flatrate.isEmpty && rent.isEmpty && buy.isEmpty) {
+      _showSnackBar('No streaming providers available');
 
       return;
     }
@@ -1013,43 +856,30 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
           top: false,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight:
-                  MediaQuery.sizeOf(context).height * 0.8,
+              maxHeight: MediaQuery.sizeOf(context).height * 0.8,
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                12,
-                10,
-                12,
-                24,
-              ),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildSheetHandle(),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       children: [
-                        _buildSheetIcon(
-                          Icons.live_tv_rounded,
-                        ),
+                        _buildSheetIcon(Icons.live_tv_rounded),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Where to watch',
@@ -1063,8 +893,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               Text(
                                 showTitle,
                                 maxLines: 1,
-                                overflow:
-                                    TextOverflow.ellipsis,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Color(0xFF817C87),
                                   fontSize: 11,
@@ -1078,44 +907,30 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Divider(
-                    color: Color(0xFF2D2933),
-                    height: 1,
-                  ),
+                  const Divider(color: Color(0xFF2D2933), height: 1),
                   Flexible(
                     child: ListView(
                       shrinkWrap: true,
                       children: [
                         if (flatrate.isNotEmpty) ...[
-                          _buildProviderHeading(
-                            'Subscription',
-                          ),
+                          _buildProviderHeading('Subscription'),
                           ...flatrate.map(
                             (provider) =>
-                                _buildProviderTile(
-                              provider,
-                              showTitle,
-                            ),
+                                _buildProviderTile(provider, showTitle),
                           ),
                         ],
                         if (rent.isNotEmpty) ...[
                           _buildProviderHeading('Rent'),
                           ...rent.map(
                             (provider) =>
-                                _buildProviderTile(
-                              provider,
-                              showTitle,
-                            ),
+                                _buildProviderTile(provider, showTitle),
                           ),
                         ],
                         if (buy.isNotEmpty) ...[
                           _buildProviderHeading('Buy'),
                           ...buy.map(
                             (provider) =>
-                                _buildProviderTile(
-                              provider,
-                              showTitle,
-                            ),
+                                _buildProviderTile(provider, showTitle),
                           ),
                         ],
                       ],
@@ -1132,12 +947,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
   Widget _buildProviderHeading(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        12,
-        20,
-        12,
-        8,
-      ),
+      padding: const EdgeInsets.fromLTRB(12, 20, 12, 8),
       child: Text(
         title.toUpperCase(),
         style: const TextStyle(
@@ -1150,44 +960,28 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
-  Widget _buildProviderTile(
-    dynamic provider,
-    String showTitle,
-  ) {
+  Widget _buildProviderTile(dynamic provider, String showTitle) {
     final logoPath = provider['logo_path'];
-    final name =
-        provider['provider_name'] ?? 'Unknown';
+    final name = provider['provider_name'] ?? 'Unknown';
 
     final logoUrl = logoPath != null
         ? 'https://image.tmdb.org/t/p/w92$logoPath'
         : '';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 4,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
-            final query = Uri.encodeComponent(
-              'Watch $showTitle on $name',
-            );
+            final query = Uri.encodeComponent('Watch $showTitle on $name');
 
-            final url = Uri.parse(
-              'https://www.google.com/search?q=$query',
-            );
+            final url = Uri.parse('https://www.google.com/search?q=$query');
 
             if (await canLaunchUrl(url)) {
-              await launchUrl(
-                url,
-                mode: LaunchMode.externalApplication,
-              );
+              await launchUrl(url, mode: LaunchMode.externalApplication);
             } else if (mounted) {
-              _showSnackBar(
-                'Could not launch provider link',
-              );
+              _showSnackBar('Could not launch provider link');
             }
           },
           borderRadius: BorderRadius.circular(14),
@@ -1196,9 +990,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF1A191F),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFF302C35),
-              ),
+              border: Border.all(color: const Color(0xFF302C35)),
             ),
             child: Row(
               children: [
@@ -1210,11 +1002,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           width: 44,
                           height: 44,
                           fit: BoxFit.cover,
-                          errorBuilder: (
-                            context,
-                            error,
-                            stackTrace,
-                          ) {
+                          errorBuilder: (context, error, stackTrace) {
                             return _buildProviderPlaceholder();
                           },
                         )
@@ -1223,8 +1011,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         name,
@@ -1283,27 +1070,21 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     if (_showDetails == null) return '';
 
     final results =
-        _showDetails!['watch/providers']?['results']
-                as Map<String, dynamic>? ??
-            {};
+        _showDetails!['watch/providers']?['results'] as Map<String, dynamic>? ??
+        {};
 
-    final providers =
-        results['IN'] ?? results['US'] ?? {};
+    final providers = results['IN'] ?? results['US'] ?? {};
 
-    final flatrate =
-        providers['flatrate'] as List<dynamic>? ?? [];
+    final flatrate = providers['flatrate'] as List<dynamic>? ?? [];
 
-    if (flatrate.isNotEmpty &&
-        flatrate.first['logo_path'] != null) {
+    if (flatrate.isNotEmpty && flatrate.first['logo_path'] != null) {
       return 'https://image.tmdb.org/t/p/w92'
           '${flatrate.first['logo_path']}';
     }
 
-    final rent =
-        providers['rent'] as List<dynamic>? ?? [];
+    final rent = providers['rent'] as List<dynamic>? ?? [];
 
-    if (rent.isNotEmpty &&
-        rent.first['logo_path'] != null) {
+    if (rent.isNotEmpty && rent.first['logo_path'] != null) {
       return 'https://image.tmdb.org/t/p/w92'
           '${rent.first['logo_path']}';
     }
@@ -1311,17 +1092,12 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     return '';
   }
 
-  void _showSeasonEpisodesModal(
-    String fallbackBackdrop,
-  ) {
+  void _showSeasonEpisodesModal(String fallbackBackdrop) {
     final seasons =
         (_showDetails!['seasons'] as List<dynamic>?)
-                ?.where(
-                  (season) =>
-                      season['season_number'] != null,
-                )
-                .toList() ??
-            [];
+            ?.where((season) => season['season_number'] != null)
+            .toList() ??
+        [];
 
     bool isFetchingSeason = false;
 
@@ -1331,9 +1107,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -1345,55 +1119,42 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               expand: false,
               builder: (context, scrollController) {
                 return Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Center(
                       child: Container(
                         width: 42,
                         height: 4,
-                        margin: const EdgeInsets.only(
-                          top: 10,
-                          bottom: 16,
-                        ),
+                        margin: const EdgeInsets.only(top: 10, bottom: 16),
                         decoration: BoxDecoration(
                           color: const Color(0xFF45404B),
-                          borderRadius:
-                              BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(
                         children: [
-                          _buildSheetIcon(
-                            Icons.video_library_outlined,
-                          ),
+                          _buildSheetIcon(Icons.video_library_outlined),
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Episodes',
                                   style: TextStyle(
-                                    color:
-                                        Color(0xFFF5F3F8),
+                                    color: Color(0xFFF5F3F8),
                                     fontSize: 17,
-                                    fontWeight:
-                                        FontWeight.w800,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                                 SizedBox(height: 3),
                                 Text(
                                   'Browse seasons and episodes',
                                   style: TextStyle(
-                                    color:
-                                        Color(0xFF817C87),
+                                    color: Color(0xFF817C87),
                                     fontSize: 11,
                                   ),
                                 ),
@@ -1406,27 +1167,19 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     ),
                     const SizedBox(height: 18),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(
                         children: [
                           PopupMenuButton<int>(
                             color: const Color(0xFF1E1E24),
-                            surfaceTintColor:
-                                const Color(0xFF1E1E24),
+                            surfaceTintColor: const Color(0xFF1E1E24),
                             initialValue: _currentSeason,
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(12),
-                              side: const BorderSide(
-                                color: Color(0xFF39343F),
-                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(color: Color(0xFF39343F)),
                             ),
-                            onSelected:
-                                (int selectedSeason) async {
-                              if (selectedSeason ==
-                                  _currentSeason) {
+                            onSelected: (int selectedSeason) async {
+                              if (selectedSeason == _currentSeason) {
                                 return;
                               }
 
@@ -1437,16 +1190,15 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               List<dynamic> newEpisodes = [];
 
                               try {
-                                newEpisodes = await ApiService
-                                    .getTvSeasonDetails(
-                                  widget.showId,
-                                  selectedSeason,
-                                );
+                                newEpisodes =
+                                    await ApiService.getTvSeasonDetails(
+                                      widget.showId,
+                                      selectedSeason,
+                                    );
                               } catch (_) {}
 
                               setState(() {
-                                _currentSeason =
-                                    selectedSeason;
+                                _currentSeason = selectedSeason;
                                 _episodes = newEpisodes;
                               });
 
@@ -1456,56 +1208,44 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             },
                             itemBuilder: (context) {
                               return seasons.map((season) {
-                                final seasonNumber =
-                                    season['season_number'];
+                                final seasonNumber = season['season_number'];
 
                                 return PopupMenuItem<int>(
                                   value: seasonNumber,
                                   child: Text(
-                                    season['name'] ??
-                                        'Season $seasonNumber',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                    ),
+                                    season['name'] ?? 'Season $seasonNumber',
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                 );
                               }).toList();
                             },
                             child: Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color:
-                                    const Color(0xFF1E1E24),
-                                borderRadius:
-                                    BorderRadius.circular(10),
+                                color: const Color(0xFF1E1E24),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color:
-                                      const Color(0xFF39343F),
+                                  color: const Color(0xFF39343F),
                                 ),
                               ),
                               child: Row(
-                                mainAxisSize:
-                                    MainAxisSize.min,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     'Season $_currentSeason',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,
-                                      fontWeight:
-                                          FontWeight.w700,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   const Icon(
-                                    Icons
-                                        .keyboard_arrow_down_rounded,
-                                    color:
-                                        Color(0xFF918B99),
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: Color(0xFF918B99),
                                     size: 19,
                                   ),
                                 ],
@@ -1525,10 +1265,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Divider(
-                      color: Color(0xFF2D2933),
-                      height: 1,
-                    ),
+                    const Divider(color: Color(0xFF2D2933), height: 1),
                     Expanded(
                       child: isFetchingSeason
                           ? const Center(
@@ -1539,71 +1276,54 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             )
                           : ListView.separated(
                               controller: scrollController,
-                              padding:
-                                  const EdgeInsets.all(20),
+                              padding: const EdgeInsets.all(20),
                               itemCount: _episodes.length,
-                              separatorBuilder:
-                                  (context, index) {
-                                return const SizedBox(
-                                  height: 12,
-                                );
+                              separatorBuilder: (context, index) {
+                                return const SizedBox(height: 12);
                               },
-                              itemBuilder:
-                                  (context, index) {
-                                final episode =
-                                    _episodes[index];
+                              itemBuilder: (context, index) {
+                                final episode = _episodes[index];
 
-                                final episodeStill =
-                                    episode['still_path'];
+                                final episodeStill = episode['still_path'];
 
-                                final imageUrl =
-                                    episodeStill != null
-                                        ? 'https://image.tmdb.org/t/p/w300'
-                                            '$episodeStill'
-                                        : fallbackBackdrop
-                                                .isNotEmpty
-                                            ? fallbackBackdrop
-                                            : 'https://via.placeholder.com/300x170?text=No+Image';
+                                final imageUrl = episodeStill != null
+                                    ? 'https://image.tmdb.org/t/p/w300'
+                                          '$episodeStill'
+                                    : fallbackBackdrop.isNotEmpty
+                                    ? fallbackBackdrop
+                                    : 'https://via.placeholder.com/300x170?text=No+Image';
 
                                 final episodeNumber =
-                                    episode[
-                                            'episode_number'] ??
-                                        index + 1;
-                                        
+                                    episode['episode_number'] ?? index + 1;
+
                                 // 👇 Determine if THIS exact episode has been watched
-                                final bool isWatched = _watchedEpisodes.any((item) => 
-                                  item['season_number'] == _currentSeason && 
-                                  item['episode_number'] == episodeNumber
+                                final bool isWatched = _watchedEpisodes.any(
+                                  (item) =>
+                                      item['season_number'] == _currentSeason &&
+                                      item['episode_number'] == episodeNumber,
                                 );
 
                                 return _buildEpisodeListTile(
                                   episode: episode,
                                   imageUrl: imageUrl,
-                                  episodeNumber:
-                                      episodeNumber,
+                                  episodeNumber: episodeNumber,
                                   isWatched: isWatched,
                                   onMarkWatched: () async {
-                                    final success =
-                                        await _markEpisodeWatched(
+                                    final success = await _markEpisodeWatched(
                                       showTitle:
                                           _showDetails?['name'] ??
-                                              'Untitled Show',
-                                      posterPath:
-                                          _showDetails?['poster_path']
-                                              ?.toString(),
+                                          'Untitled Show',
+                                      posterPath: _showDetails?['poster_path']
+                                          ?.toString(),
                                       backdropPath:
                                           _showDetails?['backdrop_path']
                                               ?.toString(),
-                                      seasonNumber:
-                                          _currentSeason,
-                                      episodeNumber:
-                                          episodeNumber,
-                                      runtime:
-                                          episode['runtime'] ?? 45,
+                                      seasonNumber: _currentSeason,
+                                      episodeNumber: episodeNumber,
+                                      runtime: episode['runtime'] ?? 45,
                                       totalEpisodes:
-                                          _showDetails?[
-                                                  'number_of_episodes'] ??
-                                              1,
+                                          _showDetails?['number_of_episodes'] ??
+                                          1,
                                     );
 
                                     if (success) {
@@ -1637,9 +1357,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1A191F),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFF302C35),
-        ),
+        border: Border.all(color: const Color(0xFF302C35)),
       ),
       child: Row(
         children: [
@@ -1650,19 +1368,12 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               width: 140,
               height: 79,
               fit: BoxFit.cover,
-              errorBuilder: (
-                context,
-                error,
-                stackTrace,
-              ) {
+              errorBuilder: (context, error, stackTrace) {
                 return Container(
                   width: 140,
                   height: 79,
                   color: const Color(0xFF242129),
-                  child: const Icon(
-                    Icons.tv_rounded,
-                    color: Color(0xFF77717D),
-                  ),
+                  child: const Icon(Icons.tv_rounded, color: Color(0xFF77717D)),
                 );
               },
             ),
@@ -1670,12 +1381,10 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           const SizedBox(width: 14),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  episode['name'] ??
-                      'Episode $episodeNumber',
+                  episode['name'] ?? 'Episode $episodeNumber',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1715,7 +1424,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          
+
           // 👇 Interactive Checkmark for marking individual episodes!
           Material(
             color: Colors.transparent,
@@ -1726,18 +1435,20 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isWatched 
-                      ? const Color(0xFF7D398F).withValues(alpha: 0.2) 
+                  color: isWatched
+                      ? const Color(0xFF7D398F).withValues(alpha: 0.2)
                       : Colors.transparent,
                   border: Border.all(
-                    color: isWatched 
-                        ? const Color(0xFF7D398F) 
+                    color: isWatched
+                        ? const Color(0xFF7D398F)
                         : const Color(0xFF302C35),
                   ),
                 ),
                 child: Icon(
                   Icons.check_rounded,
-                  color: isWatched ? const Color(0xFFCA66FF) : const Color(0xFF514C59),
+                  color: isWatched
+                      ? const Color(0xFFCA66FF)
+                      : const Color(0xFF514C59),
                   size: 20,
                 ),
               ),
@@ -1749,8 +1460,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   }
 
   void _showAddReviewDialog() {
-    final reviewController =
-        TextEditingController();
+    final reviewController = TextEditingController();
 
     double currentRating = 5.0;
     bool isSubmitting = false;
@@ -1766,36 +1476,17 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               surfaceTintColor: const Color(0xFF17151B),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(
-                  color: Color(0xFF39333F),
-                ),
+                side: const BorderSide(color: Color(0xFF39333F)),
               ),
-              titlePadding: const EdgeInsets.fromLTRB(
-                24,
-                24,
-                24,
-                0,
-              ),
-              contentPadding: const EdgeInsets.fromLTRB(
-                24,
-                20,
-                24,
-                12,
-              ),
-              actionsPadding: const EdgeInsets.fromLTRB(
-                24,
-                0,
-                24,
-                20,
-              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+              actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               title: const Row(
                 children: [
                   DecoratedBox(
                     decoration: BoxDecoration(
                       color: Color(0xFF281732),
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(10),
-                      ),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
                     child: Padding(
                       padding: EdgeInsets.all(9),
@@ -1818,8 +1509,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 ],
               ),
               content: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(maxWidth: 440),
+                constraints: const BoxConstraints(maxWidth: 440),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1831,9 +1521,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF0E0E12),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF34313A),
-                        ),
+                        border: Border.all(color: const Color(0xFF34313A)),
                       ),
                       child: Row(
                         children: [
@@ -1865,14 +1553,10 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     ),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        activeTrackColor:
-                            const Color(0xFFB143EB),
-                        inactiveTrackColor:
-                            const Color(0xFF34303A),
-                        thumbColor:
-                            const Color(0xFFCA66FF),
-                        overlayColor:
-                            const Color(0x337C2BE8),
+                        activeTrackColor: const Color(0xFFB143EB),
+                        inactiveTrackColor: const Color(0xFF34303A),
+                        thumbColor: const Color(0xFFCA66FF),
+                        overlayColor: const Color(0x337C2BE8),
                       ),
                       child: Slider(
                         value: currentRating,
@@ -1903,18 +1587,15 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         ),
                         filled: true,
                         fillColor: const Color(0xFF0E0E12),
-                        contentPadding:
-                            const EdgeInsets.all(16),
+                        contentPadding: const EdgeInsets.all(16),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
                             color: Color(0xFF34313A),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
                             color: Color(0xFFA943E9),
                             width: 1.4,
@@ -1929,8 +1610,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(
-                    foregroundColor:
-                        const Color(0xFF918B99),
+                    foregroundColor: const Color(0xFF918B99),
                   ),
                   child: const Text('Cancel'),
                 ),
@@ -1938,10 +1618,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFB143EB),
-                        Color(0xFF8431D9),
-                      ],
+                      colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
                     ),
                   ),
                   child: ElevatedButton(
@@ -1956,8 +1633,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               await ApiService.postReview(
                                 movieId: widget.showId,
                                 rating: currentRating,
-                                comment:
-                                    reviewController.text,
+                                comment: reviewController.text,
                               );
 
                               if (!context.mounted) return;
@@ -1965,15 +1641,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               Navigator.pop(context);
                               _fetchShowDetails();
 
-                              _showSnackBar(
-                                'Review added successfully',
-                              );
+                              _showSnackBar('Review added successfully');
                             } catch (e) {
                               if (!context.mounted) return;
 
-                              _showSnackBar(
-                                'Failed to post review',
-                              );
+                              _showSnackBar('Failed to post review');
 
                               setDialogState(() {
                                 isSubmitting = false;
@@ -1983,33 +1655,28 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: Colors.transparent,
-                      disabledBackgroundColor:
-                          Colors.transparent,
+                      disabledBackgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 13,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     child: isSubmitting
                         ? const SizedBox(
                             width: 17,
                             height: 17,
-                            child:
-                                CircularProgressIndicator(
+                            child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
                           )
                         : const Text(
                             'Submit',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                   ),
                 ),
@@ -2022,15 +1689,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   }
 
   Future<void> _launchTrailer() async {
-    final videos =
-        _showDetails!['videos']?['results']
-            as List<dynamic>?;
+    final videos = _showDetails!['videos']?['results'] as List<dynamic>?;
 
     if (videos != null && videos.isNotEmpty) {
       final trailer = videos.firstWhere(
-        (video) =>
-            video['site'] == 'YouTube' &&
-            video['type'] == 'Trailer',
+        (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
         orElse: () => videos.first,
       );
 
@@ -2040,10 +1703,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       );
 
       if (await canLaunchUrl(url)) {
-        await launchUrl(
-          url,
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(url, mode: LaunchMode.externalApplication);
 
         return;
       }
@@ -2079,9 +1739,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(
-            color: Color(0xFF39333F),
-          ),
+          side: const BorderSide(color: Color(0xFF39333F)),
         ),
       ),
     );
@@ -2119,89 +1777,67 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       );
     }
 
-    if (_errorMessage.isNotEmpty ||
-        _showDetails == null) {
+    if (_errorMessage.isNotEmpty || _showDetails == null) {
       return _buildErrorScreen();
     }
 
-    final name =
-        _showDetails!['name'] ?? 'Untitled Show';
+    final name = _showDetails!['name'] ?? 'Untitled Show';
 
-    final backdropPath =
-        _showDetails!['backdrop_path'];
+    final backdropPath = _showDetails!['backdrop_path'];
 
-    final posterPath =
-        _showDetails!['poster_path'];
+    final posterPath = _showDetails!['poster_path'];
 
-    final overview =
-        _showDetails!['overview'] ??
-            'No overview available.';
+    final overview = _showDetails!['overview'] ?? 'No overview available.';
 
-    final firstAirDate =
-        _showDetails!['first_air_date'] ?? '';
+    final firstAirDate = _showDetails!['first_air_date'] ?? '';
 
     final releaseYear = firstAirDate.length >= 4
         ? firstAirDate.substring(0, 4)
         : '';
 
-    final voteAverage =
-        (_showDetails!['vote_average'] ?? 0.0)
-            .toStringAsFixed(1);
+    final voteAverage = (_showDetails!['vote_average'] ?? 0.0).toStringAsFixed(
+      1,
+    );
 
-    final status =
-        _showDetails!['status'] ?? 'Unknown';
+    final status = _showDetails!['status'] ?? 'Unknown';
 
-    final numberOfEpisodes =
-        _showDetails!['number_of_episodes'] ?? 0;
+    final numberOfEpisodes = _showDetails!['number_of_episodes'] ?? 0;
 
     final genres =
         (_showDetails!['genres'] as List<dynamic>?)
-                ?.map(
-                  (genre) => genre['name'].toString(),
-                )
-                .toList() ??
-            [];
+            ?.map((genre) => genre['name'].toString())
+            .toList() ??
+        [];
 
-    final cast =
-        (_showDetails!['credits']?['cast']
-                as List<dynamic>?) ??
-            [];
+    final cast = (_showDetails!['credits']?['cast'] as List<dynamic>?) ?? [];
 
     final creator =
-        (_showDetails!['created_by']
-                        as List<dynamic>?)
-                    ?.isNotEmpty ==
-                true
-            ? _showDetails!['created_by'][0]['name']
-            : 'Unknown Creator';
+        (_showDetails!['created_by'] as List<dynamic>?)?.isNotEmpty == true
+        ? _showDetails!['created_by'][0]['name']
+        : 'Unknown Creator';
 
     final backdropUrl = backdropPath != null
         ? 'https://image.tmdb.org/t/p/w1280'
-            '$backdropPath'
+              '$backdropPath'
         : '';
 
     final posterUrl = posterPath != null
         ? 'https://image.tmdb.org/t/p/w500'
-            '$posterPath'
+              '$posterPath'
         : '';
 
-    final watchlistProvider =
-        Provider.of<WatchlistProvider>(context);
+    final watchlistProvider = Provider.of<WatchlistProvider>(context);
 
-    final currentStatus =
-        watchlistProvider.getMediaStatus(
+    final currentStatus = watchlistProvider.getMediaStatus(
       widget.showId,
       mediaType: 'tv',
     );
 
-    final isWatchlist =
-        currentStatus == 'watchlist';
+    final isWatchlist = currentStatus == 'watchlist';
 
-    final isFavorite =
-        currentStatus == 'favorite';
+    final isFavorite = currentStatus == 'favorite';
 
-    final bool isWide =
-        MediaQuery.sizeOf(context).width >= 760;
+    final bool isWide = MediaQuery.sizeOf(context).width >= 760;
 
     return Scaffold(
       backgroundColor: const Color(0xFF08080B),
@@ -2217,11 +1853,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 backdropUrl,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
-                errorBuilder: (
-                  context,
-                  error,
-                  stackTrace,
-                ) {
+                errorBuilder: (context, error, stackTrace) {
                   return const SizedBox.shrink();
                 },
               ),
@@ -2249,10 +1881,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           ),
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: 2,
-                sigmaY: 2,
-              ),
+              filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
               child: const SizedBox.shrink(),
             ),
           ),
@@ -2268,25 +1897,19 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             child: CustomScrollView(
               slivers: [
                 SliverAppBar(
-                  backgroundColor:
-                      const Color(0xCC08080B),
-                  surfaceTintColor:
-                      Colors.transparent,
+                  backgroundColor: const Color(0xCC08080B),
+                  surfaceTintColor: Colors.transparent,
                   elevation: 0,
                   pinned: true,
                   toolbarHeight: 64,
                   leadingWidth: 72,
                   leading: Padding(
-                    padding: const EdgeInsets.only(
-                      left: 18,
-                    ),
+                    padding: const EdgeInsets.only(left: 18),
                     child: _buildTopButton(
                       icon: Icons.arrow_back_rounded,
                       tooltip: 'Back',
                       onTap: () {
-                        context.canPop()
-                            ? context.pop()
-                            : context.go('/');
+                        context.canPop() ? context.pop() : context.go('/');
                       },
                     ),
                   ),
@@ -2294,10 +1917,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 SliverToBoxAdapter(
                   child: Center(
                     child: ConstrainedBox(
-                      constraints:
-                          const BoxConstraints(
-                        maxWidth: 1400,
-                      ),
+                      constraints: const BoxConstraints(maxWidth: 1400),
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(
                           isWide ? 36 : 20,
@@ -2306,19 +1926,16 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           48,
                         ),
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (isWide)
                               Row(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _buildPoster(posterUrl),
                                   const SizedBox(width: 42),
                                   Expanded(
-                                    child:
-                                        _buildDetailsColumn(
+                                    child: _buildDetailsColumn(
                                       name,
                                       creator,
                                       releaseYear,
@@ -2338,13 +1955,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               )
                             else
                               Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Center(
-                                    child:
-                                        _buildPoster(posterUrl),
-                                  ),
+                                  Center(child: _buildPoster(posterUrl)),
                                   const SizedBox(height: 26),
                                   _buildDetailsColumn(
                                     name,
@@ -2365,18 +1978,14 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               ),
                             const SizedBox(height: 48),
                             if (_episodes.isNotEmpty) ...[
-                              _buildEpisodesSection(
-                                backdropUrl,
-                              ),
+                              _buildEpisodesSection(backdropUrl),
                               const SizedBox(height: 38),
                             ],
                             if (cast.isNotEmpty) ...[
                               _buildSectionHeader(
-                                icon:
-                                    Icons.groups_2_outlined,
+                                icon: Icons.groups_2_outlined,
                                 title: 'Cast',
-                                subtitle:
-                                    'Meet the people behind the show',
+                                subtitle: 'Meet the people behind the show',
                               ),
                               const SizedBox(height: 16),
                               _buildCastList(cast),
@@ -2408,33 +2017,22 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         elevation: 0,
         leading: IconButton(
           onPressed: () {
-            context.canPop()
-                ? context.pop()
-                : context.go('/');
+            context.canPop() ? context.pop() : context.go('/');
           },
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: Colors.white,
-          ),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
         ),
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints:
-              const BoxConstraints(maxWidth: 380),
+          constraints: const BoxConstraints(maxWidth: 380),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 30,
-                vertical: 34,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 34),
               decoration: BoxDecoration(
                 color: const Color(0xFF15151B),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF382832),
-                ),
+                border: Border.all(color: const Color(0xFF382832)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -2501,15 +2099,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             decoration: BoxDecoration(
               color: const Color(0xCC17151B),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF39343F),
-              ),
+              border: Border.all(color: const Color(0xFF39343F)),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 21,
-            ),
+            child: Icon(icon, color: Colors.white, size: 21),
           ),
         ),
       ),
@@ -2517,14 +2109,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   }
 
   Widget _buildPoster(String posterUrl) {
-    final screenWidth =
-        MediaQuery.sizeOf(context).width;
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     final width = screenWidth < 420
         ? screenWidth - 64
         : screenWidth < 760
-            ? 260.0
-            : 300.0;
+        ? 260.0
+        : 300.0;
 
     final height = width * 1.5;
 
@@ -2534,9 +2125,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF15151B),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFF3A3540),
-        ),
+        border: Border.all(color: const Color(0xFF3A3540)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x8A000000),
@@ -2556,11 +2145,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             ? Image.network(
                 posterUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (
-                  context,
-                  error,
-                  stackTrace,
-                ) {
+                errorBuilder: (context, error, stackTrace) {
                   return _buildPosterPlaceholder();
                 },
               )
@@ -2580,11 +2165,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           color: Color(0xFF211528),
           shape: BoxShape.circle,
         ),
-        child: const Icon(
-          Icons.tv_rounded,
-          color: Color(0xFF694078),
-          size: 38,
-        ),
+        child: const Icon(Icons.tv_rounded, color: Color(0xFF694078), size: 38),
       ),
     );
   }
@@ -2604,8 +2185,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     bool isFavorite,
     WatchlistProvider watchlistProvider,
   ) {
-    final providerLogoUrl =
-        _getTopProviderLogoUrl();
+    final providerLogoUrl = _getTopProviderLogoUrl();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2624,10 +2204,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   ),
                 ],
               ),
-              child: SizedBox(
-                width: 7,
-                height: 7,
-              ),
+              child: SizedBox(width: 7, height: 7),
             ),
             SizedBox(width: 9),
             Text(
@@ -2646,10 +2223,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           title,
           style: TextStyle(
             color: const Color(0xFFFAF9FC),
-            fontSize:
-                MediaQuery.sizeOf(context).width < 760
-                    ? 34
-                    : 48,
+            fontSize: MediaQuery.sizeOf(context).width < 760 ? 34 : 48,
             height: 1.02,
             fontWeight: FontWeight.w800,
             letterSpacing: -2,
@@ -2704,9 +2278,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xB315151B),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0xFF34303A),
-                  ),
+                  border: Border.all(color: const Color(0xFF34303A)),
                 ),
                 child: Text(
                   genre,
@@ -2731,10 +2303,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         ),
         const SizedBox(height: 28),
         if (providerLogoUrl.isNotEmpty)
-          _buildTopProvider(
-            title,
-            providerLogoUrl,
-          )
+          _buildTopProvider(title, providerLogoUrl)
         else
           _buildUnavailableProvider(title),
         const SizedBox(height: 28),
@@ -2743,9 +2312,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           runSpacing: 10,
           children: [
             _buildPrimaryActionButton(
-              label: _isLogging
-                  ? 'Adding...'
-                  : 'Mark watched',
+              label: _isLogging ? 'Adding...' : 'Mark watched',
               icon: Icons.check_rounded,
               isLoading: _isLogging,
               onTap: () => _showTrackPicker(
@@ -2759,11 +2326,8 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               tooltip: 'Add to custom list',
               icon: Icons.list_alt_rounded,
               isActive: false,
-              onTap: () => _showMoreOptions(
-                watchlistProvider,
-                posterPath,
-                title,
-              ),
+              onTap: () =>
+                  _showMoreOptions(watchlistProvider, posterPath, title),
             ),
             _buildActionButton(
               tooltip: isWatchlist
@@ -2775,16 +2339,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               isActive: isWatchlist,
               onTap: () async {
                 if (isWatchlist) {
-                  await watchlistProvider
-                      .removeFromWatchlist(
+                  await watchlistProvider.removeFromWatchlist(
                     widget.showId,
                     mediaType: 'tv',
                   );
 
                   if (mounted) {
-                    _showSnackBar(
-                      'Removed from Watchlist',
-                    );
+                    _showSnackBar('Removed from Watchlist');
                   }
                 } else {
                   await watchlistProvider.addToWatchlist(
@@ -2795,15 +2356,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     mediaType: 'tv',
                     releaseYear: releaseYear,
                     totalEpisodes: episodes,
-                    voteAverage:
-                        double.tryParse(voteAverage) ??
-                            0.0,
+                    voteAverage: double.tryParse(voteAverage) ?? 0.0,
                   );
 
                   if (mounted) {
-                    _showSnackBar(
-                      'Added to Watchlist',
-                    );
+                    _showSnackBar('Added to Watchlist');
                   }
                 }
               },
@@ -2822,20 +2379,16 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   ? Icons.favorite_rounded
                   : Icons.favorite_border_rounded,
               isActive: isFavorite,
-              activeColor:
-                  const Color(0xFFFF647C),
+              activeColor: const Color(0xFFFF647C),
               onTap: () async {
                 if (isFavorite) {
-                  await watchlistProvider
-                      .removeFromWatchlist(
+                  await watchlistProvider.removeFromWatchlist(
                     widget.showId,
                     mediaType: 'tv',
                   );
 
                   if (mounted) {
-                    _showSnackBar(
-                      'Removed from Favorite',
-                    );
+                    _showSnackBar('Removed from Favorite');
                   }
                 } else {
                   await watchlistProvider.addToWatchlist(
@@ -2846,15 +2399,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     mediaType: 'tv',
                     releaseYear: releaseYear,
                     totalEpisodes: episodes,
-                    voteAverage:
-                        double.tryParse(voteAverage) ??
-                            0.0,
+                    voteAverage: double.tryParse(voteAverage) ?? 0.0,
                   );
 
                   if (mounted) {
-                    _showSnackBar(
-                      'Added to Favorite',
-                    );
+                    _showSnackBar('Added to Favorite');
                   }
                 }
               },
@@ -2871,14 +2420,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     bool highlighted = false,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: highlighted
-            ? const Color(0xFF281732)
-            : const Color(0xB315151B),
+        color: highlighted ? const Color(0xFF281732) : const Color(0xB315151B),
         borderRadius: BorderRadius.circular(9),
         border: Border.all(
           color: highlighted
@@ -2912,10 +2456,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
-  Widget _buildTopProvider(
-    String title,
-    String providerLogoUrl,
-  ) {
+  Widget _buildTopProvider(String title, String providerLogoUrl) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -2926,9 +2467,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           decoration: BoxDecoration(
             color: const Color(0xB315151B),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: const Color(0xFF34303A),
-            ),
+            border: Border.all(color: const Color(0xFF34303A)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -2944,8 +2483,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               ),
               const SizedBox(width: 12),
               const Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'WHERE TO WATCH',
@@ -2991,18 +2529,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.live_tv_rounded,
-                color: Color(0xFF6F6975),
-                size: 18,
-              ),
+              Icon(Icons.live_tv_rounded, color: Color(0xFF6F6975), size: 18),
               SizedBox(width: 9),
               Text(
                 'No streaming services listed',
-                style: TextStyle(
-                  color: Color(0xFF77717D),
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: Color(0xFF77717D), fontSize: 11),
               ),
             ],
           ),
@@ -3022,10 +2553,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFFB143EB),
-            Color(0xFF8431D9),
-          ],
+          colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
         ),
         boxShadow: const [
           BoxShadow(
@@ -3041,9 +2569,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           onTap: isLoading ? null : onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 18,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -3057,11 +2583,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     ),
                   )
                 else
-                  Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 19,
-                  ),
+                  Icon(icon, color: Colors.white, size: 19),
                 const SizedBox(width: 9),
                 Text(
                   label,
@@ -3109,9 +2631,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             ),
             child: Icon(
               icon,
-              color: isActive
-                  ? activeColor
-                  : const Color(0xFFE1DDE5),
+              color: isActive ? activeColor : const Color(0xFFE1DDE5),
               size: 21,
             ),
           ),
@@ -3120,30 +2640,24 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
-  Widget _buildEpisodesSection(
-    String backdropUrl,
-  ) {
+  Widget _buildEpisodesSection(String backdropUrl) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () =>
-                _showSeasonEpisodesModal(backdropUrl),
+            onTap: () => _showSeasonEpisodesModal(backdropUrl),
             borderRadius: BorderRadius.circular(12),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 3),
+              padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(
                 children: [
                   Expanded(
                     child: _buildSectionHeader(
                       icon: Icons.video_library_outlined,
-                      title:
-                          'Season $_currentSeason',
-                      subtitle:
-                          '${_episodes.length} available episodes',
+                      title: 'Season $_currentSeason',
+                      subtitle: '${_episodes.length} available episodes',
                     ),
                   ),
                   Container(
@@ -3151,12 +2665,8 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     height: 34,
                     decoration: BoxDecoration(
                       color: const Color(0xFF18181D),
-                      borderRadius:
-                          BorderRadius.circular(10),
-                      border: Border.all(
-                        color:
-                            const Color(0xFF2D2933),
-                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF2D2933)),
                     ),
                     child: const Icon(
                       Icons.arrow_forward_rounded,
@@ -3173,38 +2683,28 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         SizedBox(
           height: 196,
           child: ScrollConfiguration(
-            behavior:
-                ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-              },
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
             ),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _episodes.length,
               itemBuilder: (context, index) {
                 final episode = _episodes[index];
-                final episodeStill =
-                    episode['still_path'];
+                final episodeStill = episode['still_path'];
 
                 final imageUrl = episodeStill != null
                     ? 'https://image.tmdb.org/t/p/w300'
-                        '$episodeStill'
+                          '$episodeStill'
                     : backdropUrl.isNotEmpty
-                        ? backdropUrl
-                        : 'https://via.placeholder.com/300x170?text=No+Image';
+                    ? backdropUrl
+                    : 'https://via.placeholder.com/300x170?text=No+Image';
 
-                final episodeName =
-                    episode['name'] ??
-                        'Episode ${index + 1}';
+                final episodeName = episode['name'] ?? 'Episode ${index + 1}';
 
-                final episodeRuntime =
-                    episode['runtime'] ?? 45;
+                final episodeRuntime = episode['runtime'] ?? 45;
 
-                final episodeNumber =
-                    episode['episode_number'] ??
-                        index + 1;
+                final episodeNumber = episode['episode_number'] ?? index + 1;
 
                 final isWatched = _watchedEpisodes.any(
                   (item) =>
@@ -3214,56 +2714,40 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
                 return Container(
                   width: 250,
-                  margin:
-                      const EdgeInsets.only(right: 16),
+                  margin: const EdgeInsets.only(right: 16),
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: const Color(0xFF15151B),
-                    borderRadius:
-                        BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFF2D2933),
-                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF2D2933)),
                   ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: ClipRRect(
-                          borderRadius:
-                              BorderRadius.circular(11),
+                          borderRadius: BorderRadius.circular(11),
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
                               Image.network(
                                 imageUrl,
                                 fit: BoxFit.cover,
-                                errorBuilder: (
-                                  context,
-                                  error,
-                                  stackTrace,
-                                ) {
+                                errorBuilder: (context, error, stackTrace) {
                                   return Container(
-                                    color: const Color(
-                                      0xFF242129,
-                                    ),
+                                    color: const Color(0xFF242129),
                                     child: const Icon(
                                       Icons.tv_rounded,
-                                      color: Color(
-                                        0xFF77717D,
-                                      ),
+                                      color: Color(0xFF77717D),
                                     ),
                                   );
                                 },
                               ),
                               const DecoratedBox(
                                 decoration: BoxDecoration(
-                                  gradient:
-                                      LinearGradient(
+                                  gradient: LinearGradient(
                                     begin: Alignment.topCenter,
-                                    end: Alignment
-                                        .bottomCenter,
+                                    end: Alignment.bottomCenter,
                                     colors: [
                                       Colors.transparent,
                                       Color(0xB3000000),
@@ -3275,24 +2759,20 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                                 left: 8,
                                 bottom: 8,
                                 child: Container(
-                                  padding: const EdgeInsets
-                                      .symmetric(
+                                  padding: const EdgeInsets.symmetric(
                                     horizontal: 7,
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color:
-                                        const Color(0xD90C0B0F),
-                                    borderRadius:
-                                        BorderRadius.circular(6),
+                                    color: const Color(0xD90C0B0F),
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     '${episodeRuntime}m',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 9,
-                                      fontWeight:
-                                          FontWeight.w700,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
@@ -3303,24 +2783,18 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       ),
                       const SizedBox(height: 9),
                       Padding(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Row(
                           children: [
                             Expanded(
                               child: Text(
                                 episodeName,
                                 maxLines: 1,
-                                overflow:
-                                    TextOverflow.ellipsis,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  color:
-                                      Color(0xFFF2EFF4),
+                                  color: Color(0xFFF2EFF4),
                                   fontSize: 11,
-                                  fontWeight:
-                                      FontWeight.w700,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
@@ -3338,10 +2812,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       ),
                       const SizedBox(height: 3),
                       Padding(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(
                           'S$_currentSeason • E$episodeNumber',
                           style: const TextStyle(
@@ -3375,21 +2846,14 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF281732),
             borderRadius: BorderRadius.circular(11),
-            border: Border.all(
-              color: const Color(0xFF4B2A59),
-            ),
+            border: Border.all(color: const Color(0xFF4B2A59)),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFFCA66FF),
-            size: 19,
-          ),
+          child: Icon(icon, color: const Color(0xFFCA66FF), size: 19),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
@@ -3403,10 +2867,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: Color(0xFF77717D),
-                  fontSize: 10,
-                ),
+                style: const TextStyle(color: Color(0xFF77717D), fontSize: 10),
               ),
             ],
           ),
@@ -3420,10 +2881,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       height: 210,
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(
-          dragDevices: {
-            PointerDeviceKind.touch,
-            PointerDeviceKind.mouse,
-          },
+          dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
         ),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
@@ -3432,14 +2890,12 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             final person = cast[index];
             final personId = person['id'];
             final personName = person['name'] ?? '';
-            final character =
-                person['character'] ?? '';
-            final profilePath =
-                person['profile_path'];
+            final character = person['character'] ?? '';
+            final profilePath = person['profile_path'];
 
             final profileUrl = profilePath != null
                 ? 'https://image.tmdb.org/t/p/w185'
-                    '$profilePath'
+                      '$profilePath'
                 : '';
 
             return GestureDetector(
@@ -3448,34 +2904,25 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               },
               child: Container(
                 width: 124,
-                margin:
-                    const EdgeInsets.only(right: 14),
+                margin: const EdgeInsets.only(right: 14),
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF15151B),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF2D2933),
-                  ),
+                  border: Border.all(color: const Color(0xFF2D2933)),
                 ),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(11),
+                        borderRadius: BorderRadius.circular(11),
                         child: profileUrl.isNotEmpty
                             ? Image.network(
                                 profileUrl,
                                 width: double.infinity,
                                 fit: BoxFit.cover,
-                                errorBuilder: (
-                                  context,
-                                  error,
-                                  stackTrace,
-                                ) {
+                                errorBuilder: (context, error, stackTrace) {
                                   return _buildPersonPlaceholder();
                                 },
                               )
@@ -3484,14 +2931,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     ),
                     const SizedBox(height: 9),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
                         personName,
                         maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFFF2EFF4),
                           fontSize: 11,
@@ -3501,14 +2945,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     ),
                     const SizedBox(height: 3),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
                         character,
                         maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFF77717D),
                           fontSize: 9,
@@ -3554,24 +2995,15 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF281732),
             borderRadius: BorderRadius.circular(11),
-            border: Border.all(
-              color: const Color(0xFF4B2A59),
-            ),
+            border: Border.all(color: const Color(0xFF4B2A59)),
           ),
           child: TextButton.icon(
             onPressed: _showAddReviewDialog,
-            icon: const Icon(
-              Icons.add_rounded,
-              size: 17,
-            ),
+            icon: const Icon(Icons.add_rounded, size: 17),
             label: const Text('Add review'),
             style: TextButton.styleFrom(
-              foregroundColor:
-                  const Color(0xFFCA66FF),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 13,
-                vertical: 11,
-              ),
+              foregroundColor: const Color(0xFFCA66FF),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
               textStyle: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -3587,16 +3019,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     if (_reviews.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 30,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
         decoration: BoxDecoration(
           color: const Color(0x9915151B),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: const Color(0xFF28242E),
-          ),
+          border: Border.all(color: const Color(0xFF28242E)),
         ),
         child: const Column(
           children: [
@@ -3626,10 +3053,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             SizedBox(height: 6),
             Text(
               'Be the first to share your thoughts.',
-              style: TextStyle(
-                color: Color(0xFF817C87),
-                fontSize: 11,
-              ),
+              style: TextStyle(color: Color(0xFF817C87), fontSize: 11),
             ),
           ],
         ),
@@ -3640,10 +3064,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       height: 170,
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(
-          dragDevices: {
-            PointerDeviceKind.touch,
-            PointerDeviceKind.mouse,
-          },
+          dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
         ),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
@@ -3651,10 +3072,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           itemBuilder: (context, index) {
             final review = _reviews[index];
 
-            final authorLetter =
-                review.username.isNotEmpty
-                    ? review.username[0].toUpperCase()
-                    : '?';
+            final authorLetter = review.username.isNotEmpty
+                ? review.username[0].toUpperCase()
+                : '?';
 
             return Container(
               width: 300,
@@ -3663,13 +3083,10 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xCC15151B),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF2D2933),
-                ),
+                border: Border.all(color: const Color(0xFF2D2933)),
               ),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -3678,13 +3095,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         height: 36,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(10),
                           gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFB143EB),
-                              Color(0xFF7130BA),
-                            ],
+                            colors: [Color(0xFFB143EB), Color(0xFF7130BA)],
                           ),
                         ),
                         child: Text(
@@ -3716,8 +3129,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF281732),
-                          borderRadius:
-                              BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           children: [
@@ -3730,11 +3142,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             Text(
                               '${review.rating}/10',
                               style: const TextStyle(
-                                color:
-                                    Color(0xFFF0D9FF),
+                                color: Color(0xFFF0D9FF),
                                 fontSize: 9,
-                                fontWeight:
-                                    FontWeight.w800,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ],
@@ -3764,10 +3174,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
-  Widget _buildBackgroundGlow({
-    required double size,
-    required Color color,
-  }) {
+  Widget _buildBackgroundGlow({required double size, required Color color}) {
     return IgnorePointer(
       child: Container(
         width: size,
@@ -3775,10 +3182,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: 0.18),
-              color.withValues(alpha: 0),
-            ],
+            colors: [color.withValues(alpha: 0.18), color.withValues(alpha: 0)],
           ),
         ),
       ),

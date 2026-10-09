@@ -21,7 +21,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  String _selectedFilter = 'media'; 
+  String _selectedFilter = 'media';
   String _selectedGenre = 'All';
   String _selectedStatus = 'All';
   String _selectedDecade = 'All';
@@ -50,26 +50,45 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     try {
       final targetType = _apiMediaType;
-      
+
       // 👇 Bulletproof fallback prevents the screen from crashing
       final fallback = <String, dynamic>{'results': <dynamic>[]};
 
       final results = await Future.wait([
-        ApiService.getDiscoverMedia(category: 'trending', type: targetType).catchError((_) => fallback),
-        ApiService.getUpcomingMedia().catchError((_) => fallback), 
-        ApiService.getDiscoverMedia(category: 'releases', page: 1, type: targetType).catchError((_) => fallback),
-        ApiService.getDiscoverMedia(category: 'releases', page: 2, type: targetType).catchError((_) => fallback),
-        ApiService.getDiscoverMedia(category: 'anticipated', type: targetType).catchError((_) => fallback),
-        ApiService.getDiscoverMedia(category: 'popular', type: targetType).catchError((_) => fallback),
+        ApiService.getDiscoverMedia(
+          category: 'trending',
+          type: targetType,
+        ).catchError((_) => fallback),
+        ApiService.getUpcomingMedia().catchError((_) => fallback),
+        ApiService.getDiscoverMedia(
+          category: 'releases',
+          page: 1,
+          type: targetType,
+        ).catchError((_) => fallback),
+        ApiService.getDiscoverMedia(
+          category: 'releases',
+          page: 2,
+          type: targetType,
+        ).catchError((_) => fallback),
+        ApiService.getDiscoverMedia(
+          category: 'anticipated',
+          type: targetType,
+        ).catchError((_) => fallback),
+        ApiService.getDiscoverMedia(
+          category: 'popular',
+          type: targetType,
+        ).catchError((_) => fallback),
       ]);
 
       final anticipatedList = (results[4]['results'] as List<dynamic>?) ?? [];
-      
+
       List<dynamic> rawReleases = [];
       rawReleases.addAll((results[1]['results'] as List<dynamic>?) ?? []);
       rawReleases.addAll((results[2]['results'] as List<dynamic>?) ?? []);
       rawReleases.addAll((results[3]['results'] as List<dynamic>?) ?? []);
-      rawReleases.addAll(anticipatedList); // 💡 Pooled anticipated data to guarantee future TV shows
+      rawReleases.addAll(
+        anticipatedList,
+      ); // 💡 Pooled anticipated data to guarantee future TV shows
 
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -77,18 +96,25 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       // 1. Soft Filter: Anything dropping Today or in the Future
       List<dynamic> upcomingReleases = rawReleases.where((item) {
         final rawType = (item['media_type'] ?? '').toString().toLowerCase();
-        final bool isTv = rawType == 'tv' || rawType == 'show' || item['first_air_date'] != null || (item['name'] != null && item['title'] == null);
+        final bool isTv =
+            rawType == 'tv' ||
+            rawType == 'show' ||
+            item['first_air_date'] != null ||
+            (item['name'] != null && item['title'] == null);
         if (_selectedFilter == 'shows' && !isTv) return false;
         if (_selectedFilter == 'movies' && isTv) return false;
 
-        final dateStr = item['release_date'] ?? item['first_air_date'] ?? item['calendar_date'];
+        final dateStr =
+            item['release_date'] ??
+            item['first_air_date'] ??
+            item['calendar_date'];
         if (dateStr == null || dateStr.toString().trim().isEmpty) return false;
-        
+
         try {
           final dt = DateTime.parse(dateStr.toString());
           final releaseDay = DateTime(dt.year, dt.month, dt.day);
           // Only keep Today or Future dates
-          return !releaseDay.isBefore(today); 
+          return !releaseDay.isBefore(today);
         } catch (_) {
           return false;
         }
@@ -96,8 +122,22 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
       // 2. Sort Ascending: Closest upcoming dates first
       upcomingReleases.sort((a, b) {
-        final dateA = DateTime.tryParse(a['release_date'] ?? a['first_air_date'] ?? a['calendar_date'] ?? '') ?? DateTime(2099);
-        final dateB = DateTime.tryParse(b['release_date'] ?? b['first_air_date'] ?? b['calendar_date'] ?? '') ?? DateTime(2099);
+        final dateA =
+            DateTime.tryParse(
+              a['release_date'] ??
+                  a['first_air_date'] ??
+                  a['calendar_date'] ??
+                  '',
+            ) ??
+            DateTime(2099);
+        final dateB =
+            DateTime.tryParse(
+              b['release_date'] ??
+                  b['first_air_date'] ??
+                  b['calendar_date'] ??
+                  '',
+            ) ??
+            DateTime(2099);
         return dateA.compareTo(dateB);
       });
 
@@ -136,8 +176,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   List<dynamic> _filterList(List<dynamic> list) {
     return list.where((item) {
-      final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
-      final bool isTv = rawType == 'tv' ||
+      final String rawType = (item['media_type'] ?? '')
+          .toString()
+          .toLowerCase();
+      final bool isTv =
+          rawType == 'tv' ||
           rawType == 'show' ||
           item['first_air_date'] != null ||
           (item['name'] != null && item['title'] == null);
@@ -148,7 +191,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       if (_selectedGenre != 'All') {
         final List<dynamic> genreIds = item['genre_ids'] ?? [];
         final targetGenreId = FilterDrawer.genreMap[_selectedGenre];
-        if (targetGenreId != null && !genreIds.contains(targetGenreId)) return false;
+        if (targetGenreId != null && !genreIds.contains(targetGenreId))
+          return false;
       }
 
       return true;
@@ -156,14 +200,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   bool get _hasActiveSidebarFilters =>
-      _selectedGenre != 'All' || _selectedStatus != 'All' || _selectedDecade != 'All';
+      _selectedGenre != 'All' ||
+      _selectedStatus != 'All' ||
+      _selectedDecade != 'All';
 
   @override
   Widget build(BuildContext context) {
     final filteredTrending = _filterList(_trending);
     final filteredAnticipated = _filterList(_anticipated);
     final filteredPopular = _filterList(_popular);
-    final filteredReleases = _filterList(_releases); 
+    final filteredReleases = _filterList(_releases);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -191,12 +237,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 10.0,
+              ),
               child: Row(
                 children: [
                   const Text(
                     'Discover',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   const Spacer(),
                   TraktFilterBar(
@@ -205,7 +258,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     onFilterChanged: (filter) {
                       if (_selectedFilter != filter) {
                         setState(() => _selectedFilter = filter);
-                        _loadDiscoverData(); 
+                        _loadDiscoverData();
                       }
                     },
                   ),
@@ -214,7 +267,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
                     icon: Stack(
                       children: [
-                        const Icon(Icons.tune_rounded, color: Colors.white, size: 22),
+                        const Icon(
+                          Icons.tune_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                         if (_hasActiveSidebarFilters)
                           Positioned(
                             right: 0,
@@ -244,51 +301,73 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             ),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFA855F7)))
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFA855F7),
+                      ),
+                    )
                   : _errorMessage.isNotEmpty
-                      ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.redAccent)))
-                      : SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(vertical: 12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SectionHeader(
-                                title: 'Trending',
-                                onTap: () => context.go('/discover/trending'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildHorizontalMediaList(items: filteredTrending, isLandscape: false),
-
-                              const SizedBox(height: 28),
-
-                              SectionHeader(
-                                title: 'Releases (Next 30 Days)',
-                                onTap: () => context.go('/releases'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildHorizontalMediaList(items: filteredReleases, isLandscape: true, isReleases: true),
-
-                              const SizedBox(height: 28),
-
-                              SectionHeader(
-                                title: 'Anticipated',
-                                onTap: () => context.go('/discover/anticipated'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildHorizontalMediaList(items: filteredAnticipated, isLandscape: false),
-
-                              const SizedBox(height: 28),
-
-                              SectionHeader(
-                                title: 'Popular',
-                                onTap: () => context.go('/discover/popular'),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildHorizontalMediaList(items: filteredPopular, isLandscape: false),
-                              const SizedBox(height: 20),
-                            ],
+                  ? Center(
+                      child: Text(
+                        _errorMessage,
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SectionHeader(
+                            title: 'Trending',
+                            onTap: () => context.go('/discover/trending'),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          _buildHorizontalMediaList(
+                            items: filteredTrending,
+                            isLandscape: false,
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          SectionHeader(
+                            title: 'Releases (Next 30 Days)',
+                            onTap: () => context.go('/releases'),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildHorizontalMediaList(
+                            items: filteredReleases,
+                            isLandscape: true,
+                            isReleases: true,
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          SectionHeader(
+                            title: 'Anticipated',
+                            onTap: () => context.go('/discover/anticipated'),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildHorizontalMediaList(
+                            items: filteredAnticipated,
+                            isLandscape: false,
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          SectionHeader(
+                            title: 'Popular',
+                            onTap: () => context.go('/discover/popular'),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildHorizontalMediaList(
+                            items: filteredPopular,
+                            isLandscape: false,
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
             ),
           ],
         ),
@@ -311,14 +390,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           border: Border.all(color: Colors.white10),
         ),
         child: const Center(
-          child: Text('No titles found matching criteria', style: TextStyle(color: Colors.white38, fontSize: 13)),
+          child: Text(
+            'No titles found matching criteria',
+            style: TextStyle(color: Colors.white38, fontSize: 13),
+          ),
         ),
       );
     }
 
     final int limit = isReleases ? 30 : 20;
     final displayItems = items.take(limit).toList();
-    
+
     final double listHeight = isLandscape ? 170 : 230;
     final double cardWidth = isLandscape ? 240 : 115;
 
@@ -334,32 +416,57 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           itemCount: displayItems.length,
           itemBuilder: (context, index) {
             final item = displayItems[index];
-            
+
             final rawId = item['id'] ?? item['movie_id'] ?? item['media_id'];
-            final int id = rawId != null ? int.tryParse(rawId.toString()) ?? 0 : 0;
-            
+            final int id = rawId != null
+                ? int.tryParse(rawId.toString()) ?? 0
+                : 0;
+
             final title = item['title'] ?? item['name'] ?? 'Untitled';
 
             final rawType = (item['media_type'] ?? '').toString().toLowerCase();
-            final mediaType = (rawType == 'tv' || rawType == 'show' || item['name'] != null) ? 'tv' : 'movie';
+            final mediaType =
+                (rawType == 'tv' || rawType == 'show' || item['name'] != null)
+                ? 'tv'
+                : 'movie';
 
             final imagePath = isLandscape
                 ? (item['backdrop_path'] ?? item['poster_path'])
                 : item['poster_path'];
 
-            final imageUrl = (imagePath != null && imagePath.toString().trim().isNotEmpty)
+            final imageUrl =
+                (imagePath != null && imagePath.toString().trim().isNotEmpty)
                 ? 'https://image.tmdb.org/t/p/w500$imagePath'
                 : '';
 
-            final releaseDate = (item['release_date'] ?? item['first_air_date'] ?? '').toString();
-            final yearStr = (releaseDate.length >= 4) ? releaseDate.substring(0, 4) : null;
-            final voteAverage = double.tryParse((item['vote_average'] ?? 0.0).toString()) ?? 0.0;
-            
+            final releaseDate =
+                (item['release_date'] ?? item['first_air_date'] ?? '')
+                    .toString();
+            final yearStr = (releaseDate.length >= 4)
+                ? releaseDate.substring(0, 4)
+                : null;
+            final voteAverage =
+                double.tryParse((item['vote_average'] ?? 0.0).toString()) ??
+                0.0;
+
             String? overlayLeft;
             if (isReleases && releaseDate.isNotEmpty) {
               try {
                 final dt = DateTime.parse(releaseDate);
-                final List<String> months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                final List<String> months = [
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr',
+                  'May',
+                  'Jun',
+                  'Jul',
+                  'Aug',
+                  'Sep',
+                  'Oct',
+                  'Nov',
+                  'Dec',
+                ];
                 overlayLeft = '${months[dt.month - 1]} ${dt.day}';
               } catch (_) {}
             }
@@ -371,7 +478,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 id: id,
                 title: title,
                 imageUrl: imageUrl,
-                mediaType: mediaType, 
+                mediaType: mediaType,
                 isLandscape: isLandscape,
                 year: yearStr,
                 rating: voteAverage,

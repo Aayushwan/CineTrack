@@ -8,10 +8,7 @@ import '../widgets/trakt_filter_bar.dart';
 class DiscoverCategoryScreen extends StatefulWidget {
   final String category; // 'trending', 'anticipated', 'popular'
 
-  const DiscoverCategoryScreen({
-    super.key,
-    required this.category,
-  });
+  const DiscoverCategoryScreen({super.key, required this.category});
 
   @override
   State<DiscoverCategoryScreen> createState() => _DiscoverCategoryScreenState();
@@ -75,11 +72,31 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
       final targetType = _apiMediaType;
 
       final results = await Future.wait([
-        ApiService.getDiscoverMedia(category: widget.category, page: 1, type: targetType),
-        ApiService.getDiscoverMedia(category: widget.category, page: 2, type: targetType),
-        ApiService.getDiscoverMedia(category: widget.category, page: 3, type: targetType),
-        ApiService.getDiscoverMedia(category: widget.category, page: 4, type: targetType),
-        ApiService.getDiscoverMedia(category: widget.category, page: 5, type: targetType),
+        ApiService.getDiscoverMedia(
+          category: widget.category,
+          page: 1,
+          type: targetType,
+        ),
+        ApiService.getDiscoverMedia(
+          category: widget.category,
+          page: 2,
+          type: targetType,
+        ),
+        ApiService.getDiscoverMedia(
+          category: widget.category,
+          page: 3,
+          type: targetType,
+        ),
+        ApiService.getDiscoverMedia(
+          category: widget.category,
+          page: 4,
+          type: targetType,
+        ),
+        ApiService.getDiscoverMedia(
+          category: widget.category,
+          page: 5,
+          type: targetType,
+        ),
       ]);
 
       List<dynamic> combined = [];
@@ -152,8 +169,11 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
   // Filter items based on active Trakt filter
   List<dynamic> get _filteredItems {
     return _items.where((item) {
-      final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
-      final bool isTv = rawType == 'tv' ||
+      final String rawType = (item['media_type'] ?? '')
+          .toString()
+          .toLowerCase();
+      final bool isTv =
+          rawType == 'tv' ||
           rawType == 'show' ||
           item['first_air_date'] != null ||
           (item['name'] != null && item['title'] == null);
@@ -174,12 +194,20 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
         backgroundColor: const Color(0xFF09090B),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => context.go('/discover'),
         ),
         title: Row(
           children: [
-            const Icon(Icons.arrow_circle_up_outlined, color: Colors.white, size: 22),
+            const Icon(
+              Icons.arrow_circle_up_outlined,
+              color: Colors.white,
+              size: 22,
+            ),
             const SizedBox(width: 8),
             Text(
               _title,
@@ -215,78 +243,105 @@ class _DiscoverCategoryScreenState extends State<DiscoverCategoryScreen> {
             Expanded(
               child: _isLoadingInitial
                   ? const Center(
-                      child: CircularProgressIndicator(color: Color(0xFFA855F7)),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFA855F7),
+                      ),
                     )
                   : _errorMessage.isNotEmpty
-                      ? Center(
-                          child: Text(
-                            _errorMessage,
-                            style: const TextStyle(color: Colors.redAccent),
-                          ),
-                        )
-                      : filteredList.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No $_selectedFilter found in $_title.',
-                                style: const TextStyle(color: Colors.white54, fontSize: 14),
-                              ),
-                            )
-                          : RefreshIndicator(
-                              color: const Color(0xFFA855F7),
-                              backgroundColor: const Color(0xFF131316),
-                              onRefresh: _fetchInitialData,
-                              child: GridView.builder(
-                                controller: _scrollController,
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 160,
-                                  childAspectRatio: 0.58,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 16,
-                                ),
-                                itemCount: filteredList.length + (_isLoadingMore ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  if (index == filteredList.length) {
-                                    return const Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.all(16.0),
-                                        child: CircularProgressIndicator(
-                                          color: Color(0xFFA855F7),
-                                          strokeWidth: 2.5,
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  final item = filteredList[index];
-                                  final id = item['id'];
-                                  final title = item['title'] ?? item['name'] ?? 'Untitled';
-                                  
-                                  // Normalize mediaType to 'tv' or 'movie'
-                                  final rawType = (item['media_type'] ?? '').toString().toLowerCase();
-                                  final mediaType = (rawType == 'tv' || rawType == 'show' || item['name'] != null) ? 'tv' : 'movie';
-
-                                  final posterPath = item['poster_path'];
-                                  final imageUrl = (posterPath != null && posterPath.toString().trim().isNotEmpty)
-                                      ? 'https://image.tmdb.org/t/p/w500$posterPath'
-                                      : '';
-
-                                  final releaseDate = item['release_date'] ?? item['first_air_date'] ?? '';
-                                  final yearStr = (releaseDate.length >= 4) ? releaseDate.substring(0, 4) : null;
-                                  final voteAverage = (item['vote_average'] ?? 0.0) as num;
-
-                                  return MovieCard(
-                                    id: id,
-                                    title: title,
-                                    imageUrl: imageUrl,
-                                    mediaType: mediaType, // 👈 Dynamically routes /tv/:id vs /movie/:id
-                                    isLandscape: false,
-                                    year: yearStr,
-                                    rating: voteAverage.toDouble(),
-                                  );
-                                },
-                              ),
+                  ? Center(
+                      child: Text(
+                        _errorMessage,
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+                    )
+                  : filteredList.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No $_selectedFilter found in $_title.',
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 14,
+                        ),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: const Color(0xFFA855F7),
+                      backgroundColor: const Color(0xFF131316),
+                      onRefresh: _fetchInitialData,
+                      child: GridView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 12.0,
+                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 160,
+                              childAspectRatio: 0.58,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 16,
                             ),
+                        itemCount:
+                            filteredList.length + (_isLoadingMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == filteredList.length) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFA855F7),
+                                  strokeWidth: 2.5,
+                                ),
+                              ),
+                            );
+                          }
+
+                          final item = filteredList[index];
+                          final id = item['id'];
+                          final title =
+                              item['title'] ?? item['name'] ?? 'Untitled';
+
+                          // Normalize mediaType to 'tv' or 'movie'
+                          final rawType = (item['media_type'] ?? '')
+                              .toString()
+                              .toLowerCase();
+                          final mediaType =
+                              (rawType == 'tv' ||
+                                  rawType == 'show' ||
+                                  item['name'] != null)
+                              ? 'tv'
+                              : 'movie';
+
+                          final posterPath = item['poster_path'];
+                          final imageUrl =
+                              (posterPath != null &&
+                                  posterPath.toString().trim().isNotEmpty)
+                              ? 'https://image.tmdb.org/t/p/w500$posterPath'
+                              : '';
+
+                          final releaseDate =
+                              item['release_date'] ??
+                              item['first_air_date'] ??
+                              '';
+                          final yearStr = (releaseDate.length >= 4)
+                              ? releaseDate.substring(0, 4)
+                              : null;
+                          final voteAverage =
+                              (item['vote_average'] ?? 0.0) as num;
+
+                          return MovieCard(
+                            id: id,
+                            title: title,
+                            imageUrl: imageUrl,
+                            mediaType:
+                                mediaType, // 👈 Dynamically routes /tv/:id vs /movie/:id
+                            isLandscape: false,
+                            year: yearStr,
+                            rating: voteAverage.toDouble(),
+                          );
+                        },
+                      ),
+                    ),
             ),
           ],
         ),

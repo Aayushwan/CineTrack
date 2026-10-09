@@ -14,18 +14,13 @@ import '../services/api_service.dart';
 class MovieDetailsScreen extends StatefulWidget {
   final int movieId;
 
-  const MovieDetailsScreen({
-    super.key,
-    required this.movieId,
-  });
+  const MovieDetailsScreen({super.key, required this.movieId});
 
   @override
-  State<MovieDetailsScreen> createState() =>
-      _MovieDetailsScreenState();
+  State<MovieDetailsScreen> createState() => _MovieDetailsScreenState();
 }
 
-class _MovieDetailsScreenState
-    extends State<MovieDetailsScreen> {
+class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   bool _isLoading = true;
   bool _isLogging = false;
 
@@ -40,23 +35,18 @@ class _MovieDetailsScreenState
     _fetchDetails();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<WatchlistProvider>(
-        context,
-        listen: false,
-      ).fetchCustomLists();
+      Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
     });
   }
 
   Future<void> _fetchDetails() async {
     try {
-      final details =
-          await ApiService.getMovieDetails(widget.movieId);
+      final details = await ApiService.getMovieDetails(widget.movieId);
 
       List<Review> fetchedReviews = [];
 
       try {
-        fetchedReviews =
-            await ApiService.getMovieReviews(widget.movieId);
+        fetchedReviews = await ApiService.getMovieReviews(widget.movieId);
       } catch (_) {}
 
       if (mounted) {
@@ -69,8 +59,7 @@ class _MovieDetailsScreenState
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage =
-              e.toString().replaceAll('Exception: ', '');
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
           _isLoading = false;
         });
       }
@@ -86,8 +75,7 @@ class _MovieDetailsScreenState
   }) async {
     Navigator.pop(context);
 
-    final scaffoldMessenger =
-        ScaffoldMessenger.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     if (_isLogging) return;
 
@@ -100,11 +88,9 @@ class _MovieDetailsScreenState
     if (option == 'Just now') {
       watchedAtDate = DateTime.now().toUtc();
     } else if (option == 'Release date') {
-      if (releaseDateStr != null &&
-          releaseDateStr.isNotEmpty) {
+      if (releaseDateStr != null && releaseDateStr.isNotEmpty) {
         try {
-          watchedAtDate =
-              DateTime.parse(releaseDateStr).toUtc();
+          watchedAtDate = DateTime.parse(releaseDateStr).toUtc();
         } catch (_) {
           watchedAtDate = DateTime.now().toUtc();
         }
@@ -197,38 +183,26 @@ class _MovieDetailsScreenState
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              12,
-              10,
-              12,
-              24,
-            ),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildSheetHandle(),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
-                      _buildSheetIcon(
-                        Icons.check_rounded,
-                      ),
+                      _buildSheetIcon(Icons.check_rounded),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'Mark as watched',
@@ -256,20 +230,12 @@ class _MovieDetailsScreenState
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Divider(
-                  color: Color(0xFF2D2933),
-                  height: 1,
-                ),
+                const Divider(color: Color(0xFF2D2933), height: 1),
                 const SizedBox(height: 8),
                 _buildMenuOption(
                   Icons.bolt_rounded,
                   'Just now',
-                  () => _markAsWatched(
-                    title,
-                    poster,
-                    runtime,
-                    'Just now',
-                  ),
+                  () => _markAsWatched(title, poster, runtime, 'Just now'),
                 ),
                 _buildMenuOption(
                   Icons.calendar_today_rounded,
@@ -285,12 +251,7 @@ class _MovieDetailsScreenState
                 _buildMenuOption(
                   Icons.edit_calendar_rounded,
                   'Other date',
-                  () => _markAsWatched(
-                    title,
-                    poster,
-                    runtime,
-                    'Other date',
-                  ),
+                  () => _markAsWatched(title, poster, runtime, 'Other date'),
                 ),
               ],
             ),
@@ -311,38 +272,26 @@ class _MovieDetailsScreenState
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              12,
-              10,
-              12,
-              24,
-            ),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildSheetHandle(),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
-                      _buildSheetIcon(
-                        Icons.playlist_add_rounded,
-                      ),
+                      _buildSheetIcon(Icons.playlist_add_rounded),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Add to custom list',
@@ -368,10 +317,7 @@ class _MovieDetailsScreenState
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Divider(
-                  color: Color(0xFF2D2933),
-                  height: 1,
-                ),
+                const Divider(color: Color(0xFF2D2933), height: 1),
                 const SizedBox(height: 8),
                 if (provider.customLists.isEmpty)
                   _buildSheetEmptyState(
@@ -383,8 +329,7 @@ class _MovieDetailsScreenState
                   ...provider.customLists.map((listData) {
                     final int listId = listData['id'];
                     final String listTitle =
-                        listData['title'] ??
-                            listData['name'];
+                        listData['title'] ?? listData['name'];
 
                     return _buildMenuOption(
                       Icons.playlist_add_rounded,
@@ -400,12 +345,9 @@ class _MovieDetailsScreenState
 
                         Navigator.pop(context);
 
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(
-                          _buildSnackBar(
-                            'Added to "$listTitle"',
-                          ),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(_buildSnackBar('Added to "$listTitle"'));
                       },
                     );
                   }),
@@ -438,10 +380,7 @@ class _MovieDetailsScreenState
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFCA53FF),
-            Color(0xFF7C2BE8),
-          ],
+          colors: [Color(0xFFCA53FF), Color(0xFF7C2BE8)],
         ),
         boxShadow: const [
           BoxShadow(
@@ -451,25 +390,15 @@ class _MovieDetailsScreenState
           ),
         ],
       ),
-      child: Icon(
-        icon,
-        color: Colors.white,
-        size: 21,
-      ),
+      child: Icon(icon, color: Colors.white, size: 21),
     );
   }
 
   Widget _buildCloseButton(BuildContext context) {
     return IconButton(
       onPressed: () => Navigator.pop(context),
-      style: IconButton.styleFrom(
-        backgroundColor: const Color(0xFF202026),
-      ),
-      icon: const Icon(
-        Icons.close_rounded,
-        color: Color(0xFFC1BBC6),
-        size: 20,
-      ),
+      style: IconButton.styleFrom(backgroundColor: const Color(0xFF202026)),
+      icon: const Icon(Icons.close_rounded, color: Color(0xFFC1BBC6), size: 20),
     );
   }
 
@@ -478,10 +407,7 @@ class _MovieDetailsScreenState
     required String message,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 28,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
       child: Column(
         children: [
           Container(
@@ -490,15 +416,9 @@ class _MovieDetailsScreenState
             decoration: BoxDecoration(
               color: const Color(0xFF211528),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF4B2A59),
-              ),
+              border: Border.all(color: const Color(0xFF4B2A59)),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFFBD4DFF),
-              size: 26,
-            ),
+            child: Icon(icon, color: const Color(0xFFBD4DFF), size: 26),
           ),
           const SizedBox(height: 14),
           Text(
@@ -515,11 +435,7 @@ class _MovieDetailsScreenState
     );
   }
 
-  Widget _buildMenuOption(
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
+  Widget _buildMenuOption(IconData icon, String label, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Material(
@@ -528,10 +444,7 @@ class _MovieDetailsScreenState
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
                 Container(
@@ -540,15 +453,9 @@ class _MovieDetailsScreenState
                   decoration: BoxDecoration(
                     color: const Color(0xFF271630),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFF4B2A59),
-                    ),
+                    border: Border.all(color: const Color(0xFF4B2A59)),
                   ),
-                  child: Icon(
-                    icon,
-                    color: const Color(0xFFCA66FF),
-                    size: 19,
-                  ),
+                  child: Icon(icon, color: const Color(0xFFCA66FF), size: 19),
                 ),
                 const SizedBox(width: 13),
                 Expanded(
@@ -576,30 +483,21 @@ class _MovieDetailsScreenState
 
   void _showWhereToWatchModal(String movieTitle) {
     final results =
-        _movieData!['watch/providers']?['results']
-                as Map<String, dynamic>? ??
-            {};
+        _movieData!['watch/providers']?['results'] as Map<String, dynamic>? ??
+        {};
 
-    final providers =
-        results['IN'] ?? results['US'] ?? {};
+    final providers = results['IN'] ?? results['US'] ?? {};
 
-    final flatrate =
-        providers['flatrate'] as List<dynamic>? ?? [];
+    final flatrate = providers['flatrate'] as List<dynamic>? ?? [];
 
-    final rent =
-        providers['rent'] as List<dynamic>? ?? [];
+    final rent = providers['rent'] as List<dynamic>? ?? [];
 
-    final buy =
-        providers['buy'] as List<dynamic>? ?? [];
+    final buy = providers['buy'] as List<dynamic>? ?? [];
 
-    if (flatrate.isEmpty &&
-        rent.isEmpty &&
-        buy.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        _buildSnackBar(
-          'No streaming providers available',
-        ),
-      );
+    if (flatrate.isEmpty && rent.isEmpty && buy.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(_buildSnackBar('No streaming providers available'));
 
       return;
     }
@@ -610,43 +508,30 @@ class _MovieDetailsScreenState
       barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
           top: false,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight:
-                  MediaQuery.sizeOf(context).height * 0.8,
+              maxHeight: MediaQuery.sizeOf(context).height * 0.8,
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                12,
-                10,
-                12,
-                24,
-              ),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildSheetHandle(),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       children: [
-                        _buildSheetIcon(
-                          Icons.live_tv_rounded,
-                        ),
+                        _buildSheetIcon(Icons.live_tv_rounded),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Where to watch',
@@ -660,8 +545,7 @@ class _MovieDetailsScreenState
                               Text(
                                 movieTitle,
                                 maxLines: 1,
-                                overflow:
-                                    TextOverflow.ellipsis,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Color(0xFF817C87),
                                   fontSize: 11,
@@ -675,44 +559,30 @@ class _MovieDetailsScreenState
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Divider(
-                    color: Color(0xFF2D2933),
-                    height: 1,
-                  ),
+                  const Divider(color: Color(0xFF2D2933), height: 1),
                   Flexible(
                     child: ListView(
                       shrinkWrap: true,
                       children: [
                         if (flatrate.isNotEmpty) ...[
-                          _buildProviderHeading(
-                            'Subscription',
-                          ),
+                          _buildProviderHeading('Subscription'),
                           ...flatrate.map(
                             (provider) =>
-                                _buildProviderTile(
-                              provider,
-                              movieTitle,
-                            ),
+                                _buildProviderTile(provider, movieTitle),
                           ),
                         ],
                         if (rent.isNotEmpty) ...[
                           _buildProviderHeading('Rent'),
                           ...rent.map(
                             (provider) =>
-                                _buildProviderTile(
-                              provider,
-                              movieTitle,
-                            ),
+                                _buildProviderTile(provider, movieTitle),
                           ),
                         ],
                         if (buy.isNotEmpty) ...[
                           _buildProviderHeading('Buy'),
                           ...buy.map(
                             (provider) =>
-                                _buildProviderTile(
-                              provider,
-                              movieTitle,
-                            ),
+                                _buildProviderTile(provider, movieTitle),
                           ),
                         ],
                       ],
@@ -729,12 +599,7 @@ class _MovieDetailsScreenState
 
   Widget _buildProviderHeading(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        12,
-        20,
-        12,
-        8,
-      ),
+      padding: const EdgeInsets.fromLTRB(12, 20, 12, 8),
       child: Text(
         title.toUpperCase(),
         style: const TextStyle(
@@ -747,46 +612,30 @@ class _MovieDetailsScreenState
     );
   }
 
-  Widget _buildProviderTile(
-    dynamic provider,
-    String movieTitle,
-  ) {
+  Widget _buildProviderTile(dynamic provider, String movieTitle) {
     final logoPath = provider['logo_path'];
-    final name =
-        provider['provider_name'] ?? 'Unknown';
+    final name = provider['provider_name'] ?? 'Unknown';
 
     final logoUrl = logoPath != null
         ? 'https://image.tmdb.org/t/p/w92$logoPath'
         : '';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 4,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
-            final query = Uri.encodeComponent(
-              'Watch $movieTitle on$name',
-            );
+            final query = Uri.encodeComponent('Watch $movieTitle on$name');
 
-            final url = Uri.parse(
-              'https://www.google.com/search?q=$query',
-            );
+            final url = Uri.parse('https://www.google.com/search?q=$query');
 
             if (await canLaunchUrl(url)) {
-              await launchUrl(
-                url,
-                mode: LaunchMode.externalApplication,
-              );
+              await launchUrl(url, mode: LaunchMode.externalApplication);
             } else if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                _buildSnackBar(
-                  'Could not launch provider link',
-                ),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(_buildSnackBar('Could not launch provider link'));
             }
           },
           borderRadius: BorderRadius.circular(14),
@@ -795,9 +644,7 @@ class _MovieDetailsScreenState
             decoration: BoxDecoration(
               color: const Color(0xFF1A191F),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFF302C35),
-              ),
+              border: Border.all(color: const Color(0xFF302C35)),
             ),
             child: Row(
               children: [
@@ -809,11 +656,7 @@ class _MovieDetailsScreenState
                           width: 44,
                           height: 44,
                           fit: BoxFit.cover,
-                          errorBuilder: (
-                            context,
-                            error,
-                            stackTrace,
-                          ) {
+                          errorBuilder: (context, error, stackTrace) {
                             return _buildProviderPlaceholder();
                           },
                         )
@@ -822,8 +665,7 @@ class _MovieDetailsScreenState
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         name,
@@ -882,27 +724,21 @@ class _MovieDetailsScreenState
     if (_movieData == null) return '';
 
     final results =
-        _movieData!['watch/providers']?['results']
-                as Map<String, dynamic>? ??
-            {};
+        _movieData!['watch/providers']?['results'] as Map<String, dynamic>? ??
+        {};
 
-    final providers =
-        results['IN'] ?? results['US'] ?? {};
+    final providers = results['IN'] ?? results['US'] ?? {};
 
-    final flatrate =
-        providers['flatrate'] as List<dynamic>? ?? [];
+    final flatrate = providers['flatrate'] as List<dynamic>? ?? [];
 
-    if (flatrate.isNotEmpty &&
-        flatrate.first['logo_path'] != null) {
+    if (flatrate.isNotEmpty && flatrate.first['logo_path'] != null) {
       return 'https://image.tmdb.org/t/p/w92'
           '${flatrate.first['logo_path']}';
     }
 
-    final rent =
-        providers['rent'] as List<dynamic>? ?? [];
+    final rent = providers['rent'] as List<dynamic>? ?? [];
 
-    if (rent.isNotEmpty &&
-        rent.first['logo_path'] != null) {
+    if (rent.isNotEmpty && rent.first['logo_path'] != null) {
       return 'https://image.tmdb.org/t/p/w92'
           '${rent.first['logo_path']}';
     }
@@ -911,23 +747,20 @@ class _MovieDetailsScreenState
   }
 
   Future<void> _launchTrailerDirectly() async {
-    final videos =
-        _movieData!['videos']?['results']
-            as List<dynamic>?;
+    final videos = _movieData!['videos']?['results'] as List<dynamic>?;
 
-    final trailer = videos?.firstWhere(
-          (video) =>
-              video['site'] == 'YouTube' &&
-              video['type'] == 'Trailer',
+    final trailer =
+        videos?.firstWhere(
+          (video) => video['site'] == 'YouTube' && video['type'] == 'Trailer',
           orElse: () => videos.firstOrNull,
         ) ??
         videos?.firstOrNull;
 
     if (trailer == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          _buildSnackBar('No trailer available'),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(_buildSnackBar('No trailer available'));
       }
 
       return;
@@ -939,26 +772,21 @@ class _MovieDetailsScreenState
     );
 
     if (await canLaunchUrl(url)) {
-      await launchUrl(
-        url,
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        _buildSnackBar('Could not launch trailer'),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(_buildSnackBar('Could not launch trailer'));
     }
   }
 
   void _showAddReviewDialog() {
-    final reviewController =
-        TextEditingController();
+    final reviewController = TextEditingController();
 
     double currentRating = 5.0;
     bool isSubmitting = false;
 
-    final scaffoldMessenger =
-        ScaffoldMessenger.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     showDialog(
       context: context,
@@ -971,36 +799,17 @@ class _MovieDetailsScreenState
               surfaceTintColor: const Color(0xFF17151B),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(
-                  color: Color(0xFF39333F),
-                ),
+                side: const BorderSide(color: Color(0xFF39333F)),
               ),
-              titlePadding: const EdgeInsets.fromLTRB(
-                24,
-                24,
-                24,
-                0,
-              ),
-              contentPadding: const EdgeInsets.fromLTRB(
-                24,
-                20,
-                24,
-                12,
-              ),
-              actionsPadding: const EdgeInsets.fromLTRB(
-                24,
-                0,
-                24,
-                20,
-              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+              actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               title: const Row(
                 children: [
                   DecoratedBox(
                     decoration: BoxDecoration(
                       color: Color(0xFF281732),
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(10),
-                      ),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
                     child: Padding(
                       padding: EdgeInsets.all(9),
@@ -1023,8 +832,7 @@ class _MovieDetailsScreenState
                 ],
               ),
               content: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(maxWidth: 440),
+                constraints: const BoxConstraints(maxWidth: 440),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1036,9 +844,7 @@ class _MovieDetailsScreenState
                       decoration: BoxDecoration(
                         color: const Color(0xFF0E0E12),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF34313A),
-                        ),
+                        border: Border.all(color: const Color(0xFF34313A)),
                       ),
                       child: Row(
                         children: [
@@ -1070,12 +876,9 @@ class _MovieDetailsScreenState
                     ),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        activeTrackColor:
-                            const Color(0xFFB143EB),
-                        inactiveTrackColor:
-                            const Color(0xFF34303A),
-                        thumbColor:
-                            const Color(0xFFCA66FF),
+                        activeTrackColor: const Color(0xFFB143EB),
+                        inactiveTrackColor: const Color(0xFF34303A),
+                        thumbColor: const Color(0xFFCA66FF),
                         overlayColor: const Color(0x337C2BE8),
                       ),
                       child: Slider(
@@ -1107,18 +910,15 @@ class _MovieDetailsScreenState
                         ),
                         filled: true,
                         fillColor: const Color(0xFF0E0E12),
-                        contentPadding:
-                            const EdgeInsets.all(16),
+                        contentPadding: const EdgeInsets.all(16),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
                             color: Color(0xFF34313A),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
                             color: Color(0xFFA943E9),
                             width: 1.4,
@@ -1135,8 +935,7 @@ class _MovieDetailsScreenState
                     Navigator.pop(context);
                   },
                   style: TextButton.styleFrom(
-                    foregroundColor:
-                        const Color(0xFF918B99),
+                    foregroundColor: const Color(0xFF918B99),
                   ),
                   child: const Text('Cancel'),
                 ),
@@ -1144,10 +943,7 @@ class _MovieDetailsScreenState
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFB143EB),
-                        Color(0xFF8431D9),
-                      ],
+                      colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
                     ),
                   ),
                   child: ElevatedButton(
@@ -1162,8 +958,7 @@ class _MovieDetailsScreenState
                               await ApiService.postReview(
                                 movieId: widget.movieId,
                                 rating: currentRating,
-                                comment:
-                                    reviewController.text,
+                                comment: reviewController.text,
                               );
 
                               if (!context.mounted) return;
@@ -1172,9 +967,7 @@ class _MovieDetailsScreenState
                               _fetchDetails();
 
                               scaffoldMessenger.showSnackBar(
-                                _buildSnackBar(
-                                  'Review added successfully',
-                                ),
+                                _buildSnackBar('Review added successfully'),
                               );
                             } catch (e) {
                               if (!context.mounted) return;
@@ -1183,14 +976,10 @@ class _MovieDetailsScreenState
                                 SnackBar(
                                   content: const Text(
                                     'Failed to post review',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                    ),
+                                    style: TextStyle(color: Colors.white),
                                   ),
-                                  backgroundColor:
-                                      const Color(0xFFE34D67),
-                                  behavior:
-                                      SnackBarBehavior.floating,
+                                  backgroundColor: const Color(0xFFE34D67),
+                                  behavior: SnackBarBehavior.floating,
                                 ),
                               );
 
@@ -1202,33 +991,28 @@ class _MovieDetailsScreenState
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: Colors.transparent,
-                      disabledBackgroundColor:
-                          Colors.transparent,
+                      disabledBackgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 13,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     child: isSubmitting
                         ? const SizedBox(
                             width: 17,
                             height: 17,
-                            child:
-                                CircularProgressIndicator(
+                            child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
                           )
                         : const Text(
                             'Submit',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                   ),
                 ),
@@ -1289,25 +1073,18 @@ class _MovieDetailsScreenState
       );
     }
 
-    if (_errorMessage.isNotEmpty ||
-        _movieData == null) {
+    if (_errorMessage.isNotEmpty || _movieData == null) {
       return _buildErrorScreen();
     }
 
-    final title =
-        _movieData!['title'] ??
-            _movieData!['name'] ??
-            'Untitled';
+    final title = _movieData!['title'] ?? _movieData!['name'] ?? 'Untitled';
 
-    final overview =
-        _movieData!['overview'] ??
-            'No overview available.';
+    final overview = _movieData!['overview'] ?? 'No overview available.';
 
     final posterPath = _movieData!['poster_path'];
     final backdropPath = _movieData!['backdrop_path'];
 
-    final releaseDate =
-        _movieData!['release_date'] ?? '';
+    final releaseDate = _movieData!['release_date'] ?? '';
 
     final releaseYear = releaseDate.length >= 4
         ? releaseDate.substring(0, 4)
@@ -1315,57 +1092,43 @@ class _MovieDetailsScreenState
 
     final runtime = _movieData!['runtime'] is int
         ? _movieData!['runtime'] as int
-        : int.tryParse(
-              _movieData!['runtime']?.toString() ?? '0',
-            ) ??
-            0;
+        : int.tryParse(_movieData!['runtime']?.toString() ?? '0') ?? 0;
 
     final formattedRuntime = _formatRuntime(runtime);
 
-    final voteAverage =
-        (_movieData!['vote_average'] ?? 0.0)
-            .toStringAsFixed(1);
+    final voteAverage = (_movieData!['vote_average'] ?? 0.0).toStringAsFixed(1);
 
     final genres =
         (_movieData!['genres'] as List<dynamic>?)
-                ?.map(
-                  (genre) => genre['name'].toString(),
-                )
-                .toList() ??
-            [];
+            ?.map((genre) => genre['name'].toString())
+            .toList() ??
+        [];
 
-    final cast =
-        (_movieData!['credits']?['cast']
-                as List<dynamic>?) ??
-            [];
+    final cast = (_movieData!['credits']?['cast'] as List<dynamic>?) ?? [];
 
     final director =
-        (_movieData!['credits']?['crew']
-                as List<dynamic>?)
-            ?.firstWhere(
-              (crew) => crew['job'] == 'Director',
-              orElse: () => null,
-            )?['name'] ??
+        (_movieData!['credits']?['crew'] as List<dynamic>?)?.firstWhere(
+          (crew) => crew['job'] == 'Director',
+          orElse: () => null,
+        )?['name'] ??
         'Unknown Director';
 
     final backdropUrl = backdropPath != null
         ? 'https://image.tmdb.org/t/p/w1280'
-            '$backdropPath'
+              '$backdropPath'
         : posterPath != null
-            ? 'https://image.tmdb.org/t/p/w500'
-                '$posterPath'
-            : '';
+        ? 'https://image.tmdb.org/t/p/w500'
+              '$posterPath'
+        : '';
 
     final posterUrl = posterPath != null
         ? 'https://image.tmdb.org/t/p/w500'
-            '$posterPath'
+              '$posterPath'
         : '';
 
-    final watchlistProvider =
-        Provider.of<WatchlistProvider>(context);
+    final watchlistProvider = Provider.of<WatchlistProvider>(context);
 
-    final currentStatus =
-        watchlistProvider.getMediaStatus(
+    final currentStatus = watchlistProvider.getMediaStatus(
       widget.movieId,
       mediaType: 'movie',
     );
@@ -1373,11 +1136,9 @@ class _MovieDetailsScreenState
     final isWatchlist = currentStatus == 'watchlist';
     final isFavorite = currentStatus == 'favorite';
 
-    final scaffoldMessenger =
-        ScaffoldMessenger.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    final isWide =
-        MediaQuery.sizeOf(context).width >= 760;
+    final isWide = MediaQuery.sizeOf(context).width >= 760;
 
     return Scaffold(
       backgroundColor: const Color(0xFF08080B),
@@ -1393,11 +1154,7 @@ class _MovieDetailsScreenState
                 backdropUrl,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
-                errorBuilder: (
-                  context,
-                  error,
-                  stackTrace,
-                ) {
+                errorBuilder: (context, error, stackTrace) {
                   return const SizedBox.shrink();
                 },
               ),
@@ -1425,10 +1182,7 @@ class _MovieDetailsScreenState
           ),
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: 2,
-                sigmaY: 2,
-              ),
+              filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
               child: const SizedBox.shrink(),
             ),
           ),
@@ -1456,9 +1210,7 @@ class _MovieDetailsScreenState
                       icon: Icons.arrow_back_rounded,
                       tooltip: 'Back',
                       onTap: () {
-                        context.canPop()
-                            ? context.pop()
-                            : context.go('/');
+                        context.canPop() ? context.pop() : context.go('/');
                       },
                     ),
                   ),
@@ -1466,10 +1218,7 @@ class _MovieDetailsScreenState
                 SliverToBoxAdapter(
                   child: Center(
                     child: ConstrainedBox(
-                      constraints:
-                          const BoxConstraints(
-                        maxWidth: 1400,
-                      ),
+                      constraints: const BoxConstraints(maxWidth: 1400),
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(
                           isWide ? 36 : 20,
@@ -1478,19 +1227,16 @@ class _MovieDetailsScreenState
                           48,
                         ),
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (isWide)
                               Row(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _buildPoster(posterUrl),
                                   const SizedBox(width: 42),
                                   Expanded(
-                                    child:
-                                        _buildDetailsColumn(
+                                    child: _buildDetailsColumn(
                                       title,
                                       director,
                                       voteAverage,
@@ -1511,13 +1257,9 @@ class _MovieDetailsScreenState
                               )
                             else
                               Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Center(
-                                    child:
-                                        _buildPoster(posterUrl),
-                                  ),
+                                  Center(child: _buildPoster(posterUrl)),
                                   const SizedBox(height: 26),
                                   _buildDetailsColumn(
                                     title,
@@ -1540,11 +1282,9 @@ class _MovieDetailsScreenState
                             const SizedBox(height: 48),
                             if (cast.isNotEmpty) ...[
                               _buildSectionHeader(
-                                icon:
-                                    Icons.groups_2_outlined,
+                                icon: Icons.groups_2_outlined,
                                 title: 'Cast',
-                                subtitle:
-                                    'Meet the people behind the story',
+                                subtitle: 'Meet the people behind the story',
                               ),
                               const SizedBox(height: 16),
                               _buildCastList(cast),
@@ -1576,33 +1316,22 @@ class _MovieDetailsScreenState
         elevation: 0,
         leading: IconButton(
           onPressed: () {
-            context.canPop()
-                ? context.pop()
-                : context.go('/');
+            context.canPop() ? context.pop() : context.go('/');
           },
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: Colors.white,
-          ),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
         ),
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints:
-              const BoxConstraints(maxWidth: 380),
+          constraints: const BoxConstraints(maxWidth: 380),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 30,
-                vertical: 34,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 34),
               decoration: BoxDecoration(
                 color: const Color(0xFF15151B),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF382832),
-                ),
+                border: Border.all(color: const Color(0xFF382832)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1669,15 +1398,9 @@ class _MovieDetailsScreenState
             decoration: BoxDecoration(
               color: const Color(0xCC17151B),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF39343F),
-              ),
+              border: Border.all(color: const Color(0xFF39343F)),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 21,
-            ),
+            child: Icon(icon, color: Colors.white, size: 21),
           ),
         ),
       ),
@@ -1685,14 +1408,13 @@ class _MovieDetailsScreenState
   }
 
   Widget _buildPoster(String posterUrl) {
-    final screenWidth =
-        MediaQuery.sizeOf(context).width;
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     final width = screenWidth < 420
         ? screenWidth - 64
         : screenWidth < 760
-            ? 260.0
-            : 300.0;
+        ? 260.0
+        : 300.0;
 
     final height = width * 1.5;
 
@@ -1702,9 +1424,7 @@ class _MovieDetailsScreenState
       decoration: BoxDecoration(
         color: const Color(0xFF15151B),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFF3A3540),
-        ),
+        border: Border.all(color: const Color(0xFF3A3540)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x8A000000),
@@ -1724,11 +1444,7 @@ class _MovieDetailsScreenState
             ? Image.network(
                 posterUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (
-                  context,
-                  error,
-                  stackTrace,
-                ) {
+                errorBuilder: (context, error, stackTrace) {
                   return _buildPosterPlaceholder();
                 },
               )
@@ -1773,8 +1489,7 @@ class _MovieDetailsScreenState
     WatchlistProvider watchlistProvider,
     ScaffoldMessengerState scaffoldMessenger,
   ) {
-    final providerLogoUrl =
-        _getTopProviderLogoUrl();
+    final providerLogoUrl = _getTopProviderLogoUrl();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1793,10 +1508,7 @@ class _MovieDetailsScreenState
                   ),
                 ],
               ),
-              child: SizedBox(
-                width: 7,
-                height: 7,
-              ),
+              child: SizedBox(width: 7, height: 7),
             ),
             SizedBox(width: 9),
             Text(
@@ -1815,10 +1527,7 @@ class _MovieDetailsScreenState
           title,
           style: TextStyle(
             color: const Color(0xFFFAF9FC),
-            fontSize:
-                MediaQuery.sizeOf(context).width < 760
-                    ? 34
-                    : 48,
+            fontSize: MediaQuery.sizeOf(context).width < 760 ? 34 : 48,
             height: 1.02,
             fontWeight: FontWeight.w800,
             letterSpacing: -2,
@@ -1869,9 +1578,7 @@ class _MovieDetailsScreenState
                 decoration: BoxDecoration(
                   color: const Color(0xB315151B),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0xFF34303A),
-                  ),
+                  border: Border.all(color: const Color(0xFF34303A)),
                 ),
                 child: Text(
                   genre,
@@ -1896,10 +1603,7 @@ class _MovieDetailsScreenState
         ),
         const SizedBox(height: 28),
         if (providerLogoUrl.isNotEmpty)
-          _buildTopProvider(
-            title,
-            providerLogoUrl,
-          )
+          _buildTopProvider(title, providerLogoUrl)
         else
           _buildUnavailableProvider(title),
         const SizedBox(height: 28),
@@ -1908,17 +1612,11 @@ class _MovieDetailsScreenState
           runSpacing: 10,
           children: [
             _buildPrimaryActionButton(
-              label: _isLogging
-                  ? 'Adding...'
-                  : 'Mark watched',
+              label: _isLogging ? 'Adding...' : 'Mark watched',
               icon: Icons.check_rounded,
               isLoading: _isLogging,
-              onTap: () => _showMarkWatchedMenu(
-                title,
-                posterPath,
-                runtime,
-                releaseDate,
-              ),
+              onTap: () =>
+                  _showMarkWatchedMenu(title, posterPath, runtime, releaseDate),
             ),
             _buildActionButton(
               tooltip: isWatchlist
@@ -1930,16 +1628,13 @@ class _MovieDetailsScreenState
               isActive: isWatchlist,
               onTap: () async {
                 if (isWatchlist) {
-                  await watchlistProvider
-                      .removeFromWatchlist(
+                  await watchlistProvider.removeFromWatchlist(
                     widget.movieId,
                     mediaType: 'movie',
                   );
 
                   scaffoldMessenger.showSnackBar(
-                    _buildSnackBar(
-                      'Removed from Watchlist',
-                    ),
+                    _buildSnackBar('Removed from Watchlist'),
                   );
                 } else {
                   await watchlistProvider.addToWatchlist(
@@ -1950,15 +1645,11 @@ class _MovieDetailsScreenState
                     mediaType: 'movie',
                     releaseYear: releaseYear,
                     runtime: runtime,
-                    voteAverage:
-                        double.tryParse(voteAverage) ??
-                            0.0,
+                    voteAverage: double.tryParse(voteAverage) ?? 0.0,
                   );
 
                   scaffoldMessenger.showSnackBar(
-                    _buildSnackBar(
-                      'Added to Watchlist',
-                    ),
+                    _buildSnackBar('Added to Watchlist'),
                   );
                 }
               },
@@ -1977,20 +1668,16 @@ class _MovieDetailsScreenState
                   ? Icons.favorite_rounded
                   : Icons.favorite_border_rounded,
               isActive: isFavorite,
-              activeColor:
-                  const Color(0xFFFF647C),
+              activeColor: const Color(0xFFFF647C),
               onTap: () async {
                 if (isFavorite) {
-                  await watchlistProvider
-                      .removeFromWatchlist(
+                  await watchlistProvider.removeFromWatchlist(
                     widget.movieId,
                     mediaType: 'movie',
                   );
 
                   scaffoldMessenger.showSnackBar(
-                    _buildSnackBar(
-                      'Removed from Favorite',
-                    ),
+                    _buildSnackBar('Removed from Favorite'),
                   );
                 } else {
                   await watchlistProvider.addToWatchlist(
@@ -2001,15 +1688,11 @@ class _MovieDetailsScreenState
                     mediaType: 'movie',
                     releaseYear: releaseYear,
                     runtime: runtime,
-                    voteAverage:
-                        double.tryParse(voteAverage) ??
-                            0.0,
+                    voteAverage: double.tryParse(voteAverage) ?? 0.0,
                   );
 
                   scaffoldMessenger.showSnackBar(
-                    _buildSnackBar(
-                      'Added to Favorite',
-                    ),
+                    _buildSnackBar('Added to Favorite'),
                   );
                 }
               },
@@ -2018,11 +1701,8 @@ class _MovieDetailsScreenState
               tooltip: 'Add to custom list',
               icon: Icons.more_horiz_rounded,
               isActive: false,
-              onTap: () => _showMoreOptions(
-                watchlistProvider,
-                posterPath,
-                title,
-              ),
+              onTap: () =>
+                  _showMoreOptions(watchlistProvider, posterPath, title),
             ),
           ],
         ),
@@ -2036,14 +1716,9 @@ class _MovieDetailsScreenState
     bool highlighted = false,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: highlighted
-            ? const Color(0xFF281732)
-            : const Color(0xB315151B),
+        color: highlighted ? const Color(0xFF281732) : const Color(0xB315151B),
         borderRadius: BorderRadius.circular(9),
         border: Border.all(
           color: highlighted
@@ -2077,10 +1752,7 @@ class _MovieDetailsScreenState
     );
   }
 
-  Widget _buildTopProvider(
-    String title,
-    String providerLogoUrl,
-  ) {
+  Widget _buildTopProvider(String title, String providerLogoUrl) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -2091,9 +1763,7 @@ class _MovieDetailsScreenState
           decoration: BoxDecoration(
             color: const Color(0xB315151B),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: const Color(0xFF34303A),
-            ),
+            border: Border.all(color: const Color(0xFF34303A)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -2109,8 +1779,7 @@ class _MovieDetailsScreenState
               ),
               const SizedBox(width: 12),
               const Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'WHERE TO WATCH',
@@ -2152,24 +1821,15 @@ class _MovieDetailsScreenState
         onTap: () => _showWhereToWatchModal(title),
         borderRadius: BorderRadius.circular(12),
         child: const Padding(
-          padding: EdgeInsets.symmetric(
-            vertical: 8,
-          ),
+          padding: EdgeInsets.symmetric(vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.live_tv_rounded,
-                color: Color(0xFF6F6975),
-                size: 18,
-              ),
+              Icon(Icons.live_tv_rounded, color: Color(0xFF6F6975), size: 18),
               SizedBox(width: 9),
               Text(
                 'No streaming services listed',
-                style: TextStyle(
-                  color: Color(0xFF77717D),
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: Color(0xFF77717D), fontSize: 11),
               ),
             ],
           ),
@@ -2191,10 +1851,7 @@ class _MovieDetailsScreenState
         gradient: const LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [
-            Color(0xFFB143EB),
-            Color(0xFF8431D9),
-          ],
+          colors: [Color(0xFFB143EB), Color(0xFF8431D9)],
         ),
         boxShadow: const [
           BoxShadow(
@@ -2210,9 +1867,7 @@ class _MovieDetailsScreenState
           onTap: isLoading ? null : onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 18,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -2226,11 +1881,7 @@ class _MovieDetailsScreenState
                     ),
                   )
                 else
-                  Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 19,
-                  ),
+                  Icon(icon, color: Colors.white, size: 19),
                 const SizedBox(width: 9),
                 Text(
                   label,
@@ -2278,9 +1929,7 @@ class _MovieDetailsScreenState
             ),
             child: Icon(
               icon,
-              color: isActive
-                  ? activeColor
-                  : const Color(0xFFE1DDE5),
+              color: isActive ? activeColor : const Color(0xFFE1DDE5),
               size: 21,
             ),
           ),
@@ -2302,21 +1951,14 @@ class _MovieDetailsScreenState
           decoration: BoxDecoration(
             color: const Color(0xFF281732),
             borderRadius: BorderRadius.circular(11),
-            border: Border.all(
-              color: const Color(0xFF4B2A59),
-            ),
+            border: Border.all(color: const Color(0xFF4B2A59)),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFFCA66FF),
-            size: 19,
-          ),
+          child: Icon(icon, color: const Color(0xFFCA66FF), size: 19),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
@@ -2330,10 +1972,7 @@ class _MovieDetailsScreenState
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: Color(0xFF77717D),
-                  fontSize: 10,
-                ),
+                style: const TextStyle(color: Color(0xFF77717D), fontSize: 10),
               ),
             ],
           ),
@@ -2347,10 +1986,7 @@ class _MovieDetailsScreenState
       height: 210,
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(
-          dragDevices: {
-            PointerDeviceKind.touch,
-            PointerDeviceKind.mouse,
-          },
+          dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
         ),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
@@ -2359,14 +1995,12 @@ class _MovieDetailsScreenState
             final person = cast[index];
             final personId = person['id'];
             final personName = person['name'] ?? '';
-            final character =
-                person['character'] ?? '';
+            final character = person['character'] ?? '';
 
-            final profileUrl =
-                person['profile_path'] != null
-                    ? 'https://image.tmdb.org/t/p/w185'
-                        '${person['profile_path']}'
-                    : '';
+            final profileUrl = person['profile_path'] != null
+                ? 'https://image.tmdb.org/t/p/w185'
+                      '${person['profile_path']}'
+                : '';
 
             return GestureDetector(
               onTap: () {
@@ -2374,34 +2008,25 @@ class _MovieDetailsScreenState
               },
               child: Container(
                 width: 124,
-                margin:
-                    const EdgeInsets.only(right: 14),
+                margin: const EdgeInsets.only(right: 14),
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF15151B),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF2D2933),
-                  ),
+                  border: Border.all(color: const Color(0xFF2D2933)),
                 ),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(11),
+                        borderRadius: BorderRadius.circular(11),
                         child: profileUrl.isNotEmpty
                             ? Image.network(
                                 profileUrl,
                                 width: double.infinity,
                                 fit: BoxFit.cover,
-                                errorBuilder: (
-                                  context,
-                                  error,
-                                  stackTrace,
-                                ) {
+                                errorBuilder: (context, error, stackTrace) {
                                   return _buildPersonPlaceholder();
                                 },
                               )
@@ -2410,14 +2035,11 @@ class _MovieDetailsScreenState
                     ),
                     const SizedBox(height: 9),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
                         personName,
                         maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFFF2EFF4),
                           fontSize: 11,
@@ -2427,14 +2049,11 @@ class _MovieDetailsScreenState
                     ),
                     const SizedBox(height: 3),
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
                         character,
                         maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFF77717D),
                           fontSize: 9,
@@ -2480,24 +2099,15 @@ class _MovieDetailsScreenState
           decoration: BoxDecoration(
             color: const Color(0xFF281732),
             borderRadius: BorderRadius.circular(11),
-            border: Border.all(
-              color: const Color(0xFF4B2A59),
-            ),
+            border: Border.all(color: const Color(0xFF4B2A59)),
           ),
           child: TextButton.icon(
             onPressed: _showAddReviewDialog,
-            icon: const Icon(
-              Icons.add_rounded,
-              size: 17,
-            ),
+            icon: const Icon(Icons.add_rounded, size: 17),
             label: const Text('Add review'),
             style: TextButton.styleFrom(
-              foregroundColor:
-                  const Color(0xFFCA66FF),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 13,
-                vertical: 11,
-              ),
+              foregroundColor: const Color(0xFFCA66FF),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
               textStyle: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -2513,16 +2123,11 @@ class _MovieDetailsScreenState
     if (_reviews.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 30,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
         decoration: BoxDecoration(
           color: const Color(0x9915151B),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: const Color(0xFF28242E),
-          ),
+          border: Border.all(color: const Color(0xFF28242E)),
         ),
         child: const Column(
           children: [
@@ -2552,10 +2157,7 @@ class _MovieDetailsScreenState
             SizedBox(height: 6),
             Text(
               'Be the first to share your thoughts.',
-              style: TextStyle(
-                color: Color(0xFF817C87),
-                fontSize: 11,
-              ),
+              style: TextStyle(color: Color(0xFF817C87), fontSize: 11),
             ),
           ],
         ),
@@ -2569,10 +2171,9 @@ class _MovieDetailsScreenState
       itemBuilder: (context, index) {
         final review = _reviews[index];
 
-        final authorLetter =
-            review.username.isNotEmpty
-                ? review.username[0].toUpperCase()
-                : '?';
+        final authorLetter = review.username.isNotEmpty
+            ? review.username[0].toUpperCase()
+            : '?';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -2580,13 +2181,10 @@ class _MovieDetailsScreenState
           decoration: BoxDecoration(
             color: const Color(0xCC15151B),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFF2D2933),
-            ),
+            border: Border.all(color: const Color(0xFF2D2933)),
           ),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -2595,15 +2193,11 @@ class _MovieDetailsScreenState
                     height: 38,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      borderRadius:
-                          BorderRadius.circular(11),
+                      borderRadius: BorderRadius.circular(11),
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFB143EB),
-                          Color(0xFF7130BA),
-                        ],
+                        colors: [Color(0xFFB143EB), Color(0xFF7130BA)],
                       ),
                     ),
                     child: Text(
@@ -2635,8 +2229,7 @@ class _MovieDetailsScreenState
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF281732),
-                      borderRadius:
-                          BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -2704,17 +2297,12 @@ class _MovieDetailsScreenState
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(
-          color: Color(0xFF39333F),
-        ),
+        side: const BorderSide(color: Color(0xFF39333F)),
       ),
     );
   }
 
-  Widget _buildBackgroundGlow({
-    required double size,
-    required Color color,
-  }) {
+  Widget _buildBackgroundGlow({required double size, required Color color}) {
     return IgnorePointer(
       child: Container(
         width: size,
@@ -2722,10 +2310,7 @@ class _MovieDetailsScreenState
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: 0.18),
-              color.withValues(alpha: 0),
-            ],
+            colors: [color.withValues(alpha: 0.18), color.withValues(alpha: 0)],
           ),
         ),
       ),

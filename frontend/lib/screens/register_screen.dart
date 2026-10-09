@@ -62,10 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     gradient: RadialGradient(
                       center: Alignment(0.85, -0.9),
                       radius: 1.15,
-                      colors: [
-                        Color(0x332A0A42),
-                        Color(0xFF08080B),
-                      ],
+                      colors: [Color(0x332A0A42), Color(0xFF08080B)],
                     ),
                   ),
                 ),
@@ -73,11 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               SafeArea(
                 child: Row(
                   children: [
-                    if (showHero)
-                      Expanded(
-                        flex: 11,
-                        child: _buildHeroPanel(),
-                      ),
+                    if (showHero) Expanded(flex: 11, child: _buildHeroPanel()),
                     Expanded(
                       flex: showHero ? 9 : 1,
                       child: _buildRegisterPanel(
@@ -100,17 +93,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Container(
       height: double.infinity,
       decoration: const BoxDecoration(
-        border: Border(
-          right: BorderSide(color: Color(0xFF27232E)),
-        ),
+        border: Border(right: BorderSide(color: Color(0xFF27232E))),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF17111E),
-            Color(0xFF0F0C14),
-            Color(0xFF08080B),
-          ],
+          colors: [Color(0xFF17111E), Color(0xFF0F0C14), Color(0xFF08080B)],
         ),
       ),
       child: Stack(
@@ -118,47 +105,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Positioned(
             top: -100,
             right: -80,
-            child: _buildGlow(
-              size: 360,
-              color: const Color(0xFF9E3DDA),
-            ),
+            child: _buildGlow(size: 360, color: const Color(0xFF9E3DDA)),
           ),
           Positioned(
             bottom: -160,
             left: -120,
-            child: _buildGlow(
-              size: 420,
-              color: const Color(0xFF5D1B89),
-            ),
+            child: _buildGlow(size: 420, color: const Color(0xFF5D1B89)),
           ),
-          Positioned(
-            top: 32,
-            left: 40,
-            child: _buildBrand(),
-          ),
+          Positioned(top: 32, left: 40, child: _buildBrand()),
           Positioned(
             top: 34,
             right: 40,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 9,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
                 color: const Color(0xFF17151B),
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: const Color(0xFF36313D),
-                ),
+                border: Border.all(color: const Color(0xFF36313D)),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.circle,
-                    size: 7,
-                    color: Color(0xFFBE4EFF),
-                  ),
+                  Icon(Icons.circle, size: 7, color: Color(0xFFBE4EFF)),
                   SizedBox(width: 8),
                   Text(
                     'MOVIES & TV, ORGANIZED',
@@ -202,9 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           TextSpan(
                             text: 'all in one place.',
-                            style: TextStyle(
-                              color: Color(0xFFC452FF),
-                            ),
+                            style: TextStyle(color: Color(0xFFC452FF)),
                           ),
                         ],
                       ),
@@ -229,20 +195,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 30),
                     Row(
                       children: [
-                        _buildStat(
-                          value: '12K+',
-                          label: 'TITLES TO DISCOVER',
-                        ),
+                        _buildStat(value: '12K+', label: 'TITLES TO DISCOVER'),
                         Container(
                           width: 1,
                           height: 38,
                           margin: const EdgeInsets.symmetric(horizontal: 24),
                           color: const Color(0xFF3B3742),
                         ),
-                        _buildStat(
-                          value: '4.9',
-                          label: 'MEMBER RATING',
-                        ),
+                        _buildStat(value: '4.9', label: 'MEMBER RATING'),
                       ],
                     ),
                   ],
@@ -277,10 +237,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (!showHero) ...[
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: _buildBrand(),
-                  ),
+                  Align(alignment: Alignment.centerLeft, child: _buildBrand()),
                   const SizedBox(height: 48),
                 ],
                 Container(
@@ -288,9 +245,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xE615151B),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFF2D2933),
-                    ),
+                    border: Border.all(color: const Color(0xFF2D2933)),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x66000000),
@@ -546,8 +501,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              onPressed:
-                                  authProvider.isLoading ? null : _submit,
+                              onPressed: authProvider.isLoading
+                                  ? null
+                                  : _submit,
                               child: authProvider.isLoading
                                   ? const SizedBox(
                                       width: 21,
@@ -611,8 +567,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   vertical: 4,
                                 ),
                                 minimumSize: Size.zero,
-                                tapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: const Text(
                                 'Sign in',
@@ -654,52 +609,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: const TextStyle(
-        color: Color(0xFF625D67),
-        fontSize: 13,
-      ),
-      prefixIcon: Icon(
-        icon,
-        color: const Color(0xFF77717D),
-        size: 20,
-      ),
+      hintStyle: const TextStyle(color: Color(0xFF625D67), fontSize: 13),
+      prefixIcon: Icon(icon, color: const Color(0xFF77717D), size: 20),
       suffixIcon: suffixIcon, // 👇 Assigned here
       filled: true,
       fillColor: const Color(0xFF0E0E12),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 18,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color(0xFF37323D),
-        ),
+        borderSide: const BorderSide(color: Color(0xFF37323D)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color(0xFFA943E9),
-          width: 1.4,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFA943E9), width: 1.4),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color(0xFFE34D67),
-        ),
+        borderSide: const BorderSide(color: Color(0xFFE34D67)),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color(0xFFFF647C),
-          width: 1.4,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFFF647C), width: 1.4),
       ),
-      errorStyle: const TextStyle(
-        color: Color(0xFFFF7388),
-        fontSize: 11,
-      ),
+      errorStyle: const TextStyle(color: Color(0xFFFF7388), fontSize: 11),
     );
   }
 
@@ -722,10 +654,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildStat({
-    required String value,
-    required String label,
-  }) {
+  Widget _buildStat({required String value, required String label}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -751,10 +680,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildGlow({
-    required double size,
-    required Color color,
-  }) {
+  Widget _buildGlow({required double size, required Color color}) {
     return IgnorePointer(
       child: Container(
         width: size,
@@ -762,10 +688,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: 0.22),
-              color.withValues(alpha: 0),
-            ],
+            colors: [color.withValues(alpha: 0.22), color.withValues(alpha: 0)],
           ),
         ),
       ),
@@ -786,14 +709,9 @@ class _BrandMark extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFCA53FF),
-            Color(0xFF7C2BE8),
-          ],
+          colors: [Color(0xFFCA53FF), Color(0xFF7C2BE8)],
         ),
-        border: Border.all(
-          color: const Color(0x55D9A8FF),
-        ),
+        border: Border.all(color: const Color(0x55D9A8FF)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x447C2BE8),

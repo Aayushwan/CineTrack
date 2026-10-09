@@ -49,8 +49,7 @@ class _MovieCardState extends State<MovieCard> {
   }) async {
     Navigator.pop(context);
 
-    final scaffoldMessenger =
-        ScaffoldMessenger.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     if (_isLogging) return;
 
@@ -106,19 +105,13 @@ class _MovieCardState extends State<MovieCard> {
     String? posterPath = widget.imageUrl;
 
     try {
-      final details =
-          await ApiService.getMovieDetails(widget.id);
+      final details = await ApiService.getMovieDetails(widget.id);
 
-      releaseDate =
-          (details['release_date'] ?? '').toString();
+      releaseDate = (details['release_date'] ?? '').toString();
 
-      runtime = int.tryParse(
-            (details['runtime'] ?? 120).toString(),
-          ) ??
-          120;
+      runtime = int.tryParse((details['runtime'] ?? 120).toString()) ?? 120;
 
-      final rawPoster =
-          details['poster_path']?.toString();
+      final rawPoster = details['poster_path']?.toString();
 
       if (rawPoster != null && rawPoster.isNotEmpty) {
         posterPath = rawPoster;
@@ -146,9 +139,7 @@ class _MovieCardState extends State<MovieCard> {
     );
 
     scaffoldMessenger.showSnackBar(
-      _buildSnackBar(
-        'Marked "${widget.title}" as watched',
-      ),
+      _buildSnackBar('Marked "${widget.title}" as watched'),
     );
   }
 
@@ -158,63 +149,42 @@ class _MovieCardState extends State<MovieCard> {
     required DateTime now,
     required ScaffoldMessengerState scaffoldMessenger,
   }) async {
-    final details =
-        await ApiService.getTvDetails(widget.id);
+    final details = await ApiService.getTvDetails(widget.id);
 
-    final showTitle =
-        (details['name'] ?? widget.title).toString();
+    final showTitle = (details['name'] ?? widget.title).toString();
 
-    final posterPath =
-        details['poster_path']?.toString();
+    final posterPath = details['poster_path']?.toString();
 
-    final backdropPath =
-        details['backdrop_path']?.toString();
+    final backdropPath = details['backdrop_path']?.toString();
 
     final defaultRuntime = _getDefaultTvRuntime(details);
 
     final seasons =
-        (details['seasons'] as List<dynamic>?)
-                ?.where((season) {
-              final number = int.tryParse(
-                (season['season_number'] ?? '')
-                    .toString(),
-              );
+        (details['seasons'] as List<dynamic>?)?.where((season) {
+          final number = int.tryParse(
+            (season['season_number'] ?? '').toString(),
+          );
 
-              return number != null && number > 0;
-            })
-                .toList() ??
-            [];
+          return number != null && number > 0;
+        }).toList() ??
+        [];
 
     seasons.sort((a, b) {
-      final aNumber = int.tryParse(
-            (a['season_number'] ?? 0).toString(),
-          ) ??
-          0;
+      final aNumber = int.tryParse((a['season_number'] ?? 0).toString()) ?? 0;
 
-      final bNumber = int.tryParse(
-            (b['season_number'] ?? 0).toString(),
-          ) ??
-          0;
+      final bNumber = int.tryParse((b['season_number'] ?? 0).toString()) ?? 0;
 
       return aNumber.compareTo(bNumber);
     });
 
-    final selectedSeason = seasons.firstWhere(
-      (season) {
-        return int.tryParse(
-              (season['season_number'] ?? '')
-                  .toString(),
-            ) ==
-            seasonNumber;
-      },
-      orElse: () => null,
-    );
+    final selectedSeason = seasons.firstWhere((season) {
+      return int.tryParse((season['season_number'] ?? '').toString()) ==
+          seasonNumber;
+    }, orElse: () => null);
 
-    final releaseDate = (
-      selectedSeason?['air_date'] ??
-          details['first_air_date'] ??
-          ''
-    ).toString();
+    final releaseDate =
+        (selectedSeason?['air_date'] ?? details['first_air_date'] ?? '')
+            .toString();
 
     final watchedAt = await _selectWatchedDate(
       option: option,
@@ -224,32 +194,22 @@ class _MovieCardState extends State<MovieCard> {
 
     if (watchedAt == null) return;
 
-    final totalEpisodes = int.tryParse(
-          (details['number_of_episodes'] ?? '')
-              .toString(),
-        ) ??
-        seasons.fold<int>(
-          0,
-          (total, season) {
-            final episodeCount = int.tryParse(
-                  (season['episode_count'] ?? 0)
-                      .toString(),
-                ) ??
-                0;
+    final totalEpisodes =
+        int.tryParse((details['number_of_episodes'] ?? '').toString()) ??
+        seasons.fold<int>(0, (total, season) {
+          final episodeCount =
+              int.tryParse((season['episode_count'] ?? 0).toString()) ?? 0;
 
-            return total + episodeCount;
-          },
-        );
+          return total + episodeCount;
+        });
 
     // Only request the selected season from TMDB.
-    final episodes =
-        await ApiService.getTvSeasonDetails(
+    final episodes = await ApiService.getTvSeasonDetails(
       widget.id,
       seasonNumber,
     );
 
-    final selectedEpisodes =
-        <Map<String, dynamic>>[];
+    final selectedEpisodes = <Map<String, dynamic>>[];
 
     for (final episode in episodes) {
       final episodeNumber = int.tryParse(
@@ -258,9 +218,7 @@ class _MovieCardState extends State<MovieCard> {
 
       if (episodeNumber == null) continue;
 
-      final airDate = DateTime.tryParse(
-        (episode['air_date'] ?? '').toString(),
-      );
+      final airDate = DateTime.tryParse((episode['air_date'] ?? '').toString());
 
       // Future episodes should not be marked as watched.
       if (airDate != null && airDate.isAfter(now)) {
@@ -270,10 +228,8 @@ class _MovieCardState extends State<MovieCard> {
       selectedEpisodes.add({
         'season_number': seasonNumber,
         'episode_number': episodeNumber,
-        'runtime': int.tryParse(
-              (episode['runtime'] ?? defaultRuntime)
-                  .toString(),
-            ) ??
+        'runtime':
+            int.tryParse((episode['runtime'] ?? defaultRuntime).toString()) ??
             defaultRuntime,
       });
     }
@@ -305,17 +261,11 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  int _getDefaultTvRuntime(
-    Map<String, dynamic> details,
-  ) {
-    final runtimes =
-        details['episode_run_time'] as List<dynamic>?;
+  int _getDefaultTvRuntime(Map<String, dynamic> details) {
+    final runtimes = details['episode_run_time'] as List<dynamic>?;
 
     if (runtimes != null && runtimes.isNotEmpty) {
-      return int.tryParse(
-            runtimes.first.toString(),
-          ) ??
-          45;
+      return int.tryParse(runtimes.first.toString()) ?? 45;
     }
 
     return 45;
@@ -337,11 +287,7 @@ class _MovieCardState extends State<MovieCard> {
 
       try {
         if (releaseDate.length == 4) {
-          return DateTime(
-            int.parse(releaseDate),
-            1,
-            1,
-          ).toUtc();
+          return DateTime(int.parse(releaseDate), 1, 1).toUtc();
         }
 
         return DateTime.parse(releaseDate).toUtc();
@@ -399,33 +345,22 @@ class _MovieCardState extends State<MovieCard> {
     });
 
     try {
-      final details =
-          await ApiService.getTvDetails(widget.id);
+      final details = await ApiService.getTvDetails(widget.id);
 
       final seasons =
-          (details['seasons'] as List<dynamic>?)
-                  ?.where((season) {
-                final seasonNumber = int.tryParse(
-                  (season['season_number'] ?? '')
-                      .toString(),
-                );
+          (details['seasons'] as List<dynamic>?)?.where((season) {
+            final seasonNumber = int.tryParse(
+              (season['season_number'] ?? '').toString(),
+            );
 
-                return seasonNumber != null &&
-                    seasonNumber > 0;
-              })
-                  .toList() ??
-              [];
+            return seasonNumber != null && seasonNumber > 0;
+          }).toList() ??
+          [];
 
       seasons.sort((a, b) {
-        final aNumber = int.tryParse(
-              (a['season_number'] ?? 0).toString(),
-            ) ??
-            0;
+        final aNumber = int.tryParse((a['season_number'] ?? 0).toString()) ?? 0;
 
-        final bNumber = int.tryParse(
-              (b['season_number'] ?? 0).toString(),
-            ) ??
-            0;
+        final bNumber = int.tryParse((b['season_number'] ?? 0).toString()) ?? 0;
 
         return aNumber.compareTo(bNumber);
       });
@@ -446,84 +381,60 @@ class _MovieCardState extends State<MovieCard> {
       await showModalBottomSheet<void>(
         context: context,
         backgroundColor: const Color(0xFF131316),
-        barrierColor:
-            Colors.black.withValues(alpha: 0.75),
+        barrierColor: Colors.black.withValues(alpha: 0.75),
         isScrollControlled: true,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(20),
-          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (sheetContext) {
           return SafeArea(
             top: false,
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight:
-                    MediaQuery.sizeOf(sheetContext).height *
-                        0.75,
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.75,
               ),
               child: Padding(
-                padding: const EdgeInsets.only(
-                  top: 8,
-                  bottom: 24,
-                ),
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       width: 42,
                       height: 4,
-                      margin: const EdgeInsets.only(
-                        bottom: 14,
-                      ),
+                      margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
                         color: const Color(0xFF45404B),
-                        borderRadius:
-                            BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     Padding(
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 16,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: [
                           Container(
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF281732,
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(
-                                11,
-                              ),
+                              color: const Color(0xFF281732),
+                              borderRadius: BorderRadius.circular(11),
                             ),
                             child: const Icon(
-                              Icons
-                                  .video_library_outlined,
-                              color:
-                                  Color(0xFFCA66FF),
+                              Icons.video_library_outlined,
+                              color: Color(0xFFCA66FF),
                               size: 20,
                             ),
                           ),
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Select season',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 17,
-                                    fontWeight:
-                                        FontWeight.bold,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 SizedBox(height: 3),
@@ -531,8 +442,7 @@ class _MovieCardState extends State<MovieCard> {
                                   'Choose which season '
                                   'to mark as watched',
                                   style: TextStyle(
-                                    color:
-                                        Colors.white54,
+                                    color: Colors.white54,
                                     fontSize: 11,
                                   ),
                                 ),
@@ -545,9 +455,7 @@ class _MovieCardState extends State<MovieCard> {
                               color: Colors.white70,
                             ),
                             onPressed: () {
-                              Navigator.pop(
-                                sheetContext,
-                              );
+                              Navigator.pop(sheetContext);
                             },
                           ),
                         ],
@@ -555,40 +463,26 @@ class _MovieCardState extends State<MovieCard> {
                     ),
                     const SizedBox(height: 14),
                     Divider(
-                      color: Colors.white.withValues(
-                        alpha: 0.1,
-                      ),
+                      color: Colors.white.withValues(alpha: 0.1),
                       height: 1,
                     ),
                     Flexible(
                       child: ListView.builder(
                         shrinkWrap: true,
-                        padding:
-                            const EdgeInsets.fromLTRB(
-                          12,
-                          10,
-                          12,
-                          0,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
                         itemCount: seasons.length,
                         itemBuilder: (context, index) {
                           final season = seasons[index];
 
                           final seasonNumber =
                               int.tryParse(
-                                (season[
-                                            'season_number'] ??
-                                        0)
-                                    .toString(),
+                                (season['season_number'] ?? 0).toString(),
                               ) ??
                               0;
 
                           final episodeCount =
                               int.tryParse(
-                                (season[
-                                            'episode_count'] ??
-                                        0)
-                                    .toString(),
+                                (season['episode_count'] ?? 0).toString(),
                               ) ??
                               0;
 
@@ -596,31 +490,20 @@ class _MovieCardState extends State<MovieCard> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () {
-                                Navigator.pop(
-                                  sheetContext,
-                                );
+                                Navigator.pop(sheetContext);
 
-                                Future<void>.delayed(
-                                  Duration.zero,
-                                  () {
-                                    if (!mounted) return;
+                                Future<void>.delayed(Duration.zero, () {
+                                  if (!mounted) return;
 
-                                    _showMarkWatchedMenu(
-                                      'tv',
-                                      seasonNumber:
-                                          seasonNumber,
-                                    );
-                                  },
-                                );
+                                  _showMarkWatchedMenu(
+                                    'tv',
+                                    seasonNumber: seasonNumber,
+                                  );
+                                });
                               },
-                              borderRadius:
-                                  BorderRadius.circular(
-                                12,
-                              ),
+                              borderRadius: BorderRadius.circular(12),
                               child: Padding(
-                                padding:
-                                    const EdgeInsets
-                                        .symmetric(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 11,
                                 ),
@@ -629,86 +512,53 @@ class _MovieCardState extends State<MovieCard> {
                                     Container(
                                       width: 38,
                                       height: 38,
-                                      alignment:
-                                          Alignment.center,
-                                      decoration:
-                                          BoxDecoration(
-                                        color: const Color(
-                                          0xFF281732,
-                                        ),
-                                        borderRadius:
-                                            BorderRadius
-                                                .circular(
-                                          10,
-                                        ),
-                                        border:
-                                            Border.all(
-                                          color:
-                                              const Color(
-                                            0xFF4B2A59,
-                                          ),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF281732),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: const Color(0xFF4B2A59),
                                         ),
                                       ),
                                       child: Text(
                                         '$seasonNumber',
-                                        style:
-                                            const TextStyle(
-                                          color: Color(
-                                            0xFFCA66FF,
-                                          ),
-                                          fontWeight:
-                                              FontWeight
-                                                  .w800,
+                                        style: const TextStyle(
+                                          color: Color(0xFFCA66FF),
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(
-                                      width: 13,
-                                    ),
+                                    const SizedBox(width: 13),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment
-                                                .start,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             season['name'] ??
                                                 'Season '
                                                     '$seasonNumber',
-                                            style:
-                                                const TextStyle(
-                                              color:
-                                                  Colors.white,
-                                              fontSize:
-                                                  13,
-                                              fontWeight:
-                                                  FontWeight
-                                                      .w700,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
                                             ),
                                           ),
-                                          const SizedBox(
-                                            height: 3,
-                                          ),
+                                          const SizedBox(height: 3),
                                           Text(
                                             '$episodeCount '
                                             'episodes',
-                                            style:
-                                                const TextStyle(
-                                              color: Colors
-                                                  .white54,
-                                              fontSize:
-                                                  10,
+                                            style: const TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 10,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
                                     const Icon(
-                                      Icons
-                                          .chevron_right_rounded,
-                                      color: Color(
-                                        0xFF817C87,
-                                      ),
+                                      Icons.chevron_right_rounded,
+                                      color: Color(0xFF817C87),
                                     ),
                                   ],
                                 ),
@@ -744,43 +594,32 @@ class _MovieCardState extends State<MovieCard> {
     }
   }
 
-  void _showMarkWatchedMenu(
-    String targetType, {
-    int? seasonNumber,
-  }) {
+  void _showMarkWatchedMenu(String targetType, {int? seasonNumber}) {
     final isTv = targetType == 'tv';
 
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xFF131316),
-      barrierColor:
-          Colors.black.withValues(alpha: 0.75),
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.only(
-              bottom: 24,
-              top: 8,
-            ),
+            padding: const EdgeInsets.only(bottom: 24, top: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   width: 42,
                   height: 4,
-                  margin:
-                      const EdgeInsets.only(bottom: 12),
+                  margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     color: const Color(0xFF45404B),
-                    borderRadius:
-                        BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 Padding(
@@ -794,10 +633,8 @@ class _MovieCardState extends State<MovieCard> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF281732),
-                          borderRadius:
-                              BorderRadius.circular(11),
+                          color: const Color(0xFF281732),
+                          borderRadius: BorderRadius.circular(11),
                         ),
                         child: const Icon(
                           Icons.check_rounded,
@@ -808,27 +645,24 @@ class _MovieCardState extends State<MovieCard> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               isTv
                                   ? 'Track Season '
-                                      '$seasonNumber'
+                                        '$seasonNumber'
                                   : 'Mark as watched',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 17,
-                                fontWeight:
-                                    FontWeight.bold,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 3),
                             Text(
                               widget.title,
                               maxLines: 1,
-                              overflow:
-                                  TextOverflow.ellipsis,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 11,
@@ -849,12 +683,7 @@ class _MovieCardState extends State<MovieCard> {
                     ],
                   ),
                 ),
-                Divider(
-                  color: Colors.white.withValues(
-                    alpha: 0.1,
-                  ),
-                  height: 1,
-                ),
+                Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
                 _buildMenuOption(
                   Icons.bolt_rounded,
                   'Just now',
@@ -874,13 +703,9 @@ class _MovieCardState extends State<MovieCard> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Divider(
-                    color: Colors.white.withValues(
-                      alpha: 0.1,
-                    ),
+                    color: Colors.white.withValues(alpha: 0.1),
                     height: 1,
                   ),
                 ),
@@ -901,27 +726,19 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  void _showMoreOptions(
-    WatchlistProvider provider,
-    String targetType,
-  ) {
+  void _showMoreOptions(WatchlistProvider provider, String targetType) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xFF131316),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(16),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (sheetContext) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.only(
-              bottom: 24,
-              top: 8,
-            ),
+            padding: const EdgeInsets.only(bottom: 24, top: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -938,16 +755,12 @@ class _MovieCardState extends State<MovieCard> {
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colors.white70,
-                        ),
+                        icon: const Icon(Icons.close, color: Colors.white70),
                         onPressed: () {
                           Navigator.pop(sheetContext);
                         },
@@ -955,12 +768,7 @@ class _MovieCardState extends State<MovieCard> {
                     ],
                   ),
                 ),
-                Divider(
-                  color: Colors.white.withValues(
-                    alpha: 0.1,
-                  ),
-                  height: 1,
-                ),
+                Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
                 if (provider.customLists.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(24),
@@ -968,24 +776,17 @@ class _MovieCardState extends State<MovieCard> {
                       'No custom lists found. '
                       'Create one in the Lists tab.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white54,
-                      ),
+                      style: TextStyle(color: Colors.white54),
                     ),
                   )
                 else
                   ...provider.customLists.map((listData) {
-                    final listId = int.tryParse(
-                          (listData['id'] ?? 0)
-                              .toString(),
-                        ) ??
-                        0;
+                    final listId =
+                        int.tryParse((listData['id'] ?? 0).toString()) ?? 0;
 
-                    final listTitle = (
-                      listData['title'] ??
-                          listData['name'] ??
-                          'Untitled'
-                    ).toString();
+                    final listTitle =
+                        (listData['title'] ?? listData['name'] ?? 'Untitled')
+                            .toString();
 
                     return _buildMenuOption(
                       Icons.playlist_add_rounded,
@@ -1001,8 +802,7 @@ class _MovieCardState extends State<MovieCard> {
 
                         Navigator.pop(sheetContext);
 
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(
+                        ScaffoldMessenger.of(context).showSnackBar(
                           _buildSnackBar(
                             'Added "${widget.title}" '
                             'to "$listTitle"',
@@ -1019,27 +819,16 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  Widget _buildMenuOption(
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
+  Widget _buildMenuOption(IconData icon, String label, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 16,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(
             children: [
-              Icon(
-                icon,
-                color: const Color(0xFFCA66FF),
-                size: 22,
-              ),
+              Icon(icon, color: const Color(0xFFCA66FF), size: 22),
               const SizedBox(width: 16),
               Text(
                 label,
@@ -1056,10 +845,7 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  SnackBar _buildSnackBar(
-    String message, {
-    bool isError = false,
-  }) {
+  SnackBar _buildSnackBar(String message, {bool isError = false}) {
     return SnackBar(
       content: Row(
         children: [
@@ -1067,9 +853,7 @@ class _MovieCardState extends State<MovieCard> {
             isError
                 ? Icons.error_outline_rounded
                 : Icons.check_circle_outline_rounded,
-            color: isError
-                ? const Color(0xFFFF647C)
-                : const Color(0xFFCA66FF),
+            color: isError ? const Color(0xFFFF647C) : const Color(0xFFCA66FF),
             size: 19,
           ),
           const SizedBox(width: 10),
@@ -1092,9 +876,7 @@ class _MovieCardState extends State<MovieCard> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isError
-              ? const Color(0xFF57303D)
-              : const Color(0xFF39333F),
+          color: isError ? const Color(0xFF57303D) : const Color(0xFF39333F),
         ),
       ),
     );
@@ -1104,15 +886,11 @@ class _MovieCardState extends State<MovieCard> {
     WatchlistProvider watchlistProvider,
     String targetType,
   ) async {
-    final scaffoldMessenger =
-        ScaffoldMessenger.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     final isWatchlist =
-        watchlistProvider.getMediaStatus(
-              widget.id,
-              mediaType: targetType,
-            ) ==
-            'watchlist';
+        watchlistProvider.getMediaStatus(widget.id, mediaType: targetType) ==
+        'watchlist';
 
     if (isWatchlist) {
       await watchlistProvider.removeFromWatchlist(
@@ -1120,11 +898,7 @@ class _MovieCardState extends State<MovieCard> {
         mediaType: targetType,
       );
 
-      scaffoldMessenger.showSnackBar(
-        _buildSnackBar(
-          'Removed from Watchlist',
-        ),
-      );
+      scaffoldMessenger.showSnackBar(_buildSnackBar('Removed from Watchlist'));
 
       return;
     }
@@ -1135,28 +909,20 @@ class _MovieCardState extends State<MovieCard> {
 
     try {
       if (targetType == 'movie') {
-        final details =
-            await ApiService.getMovieDetails(widget.id);
+        final details = await ApiService.getMovieDetails(widget.id);
 
-        releaseDate =
-            (details['release_date'] ?? '').toString();
+        releaseDate = (details['release_date'] ?? '').toString();
 
-        runtime = int.tryParse(
-              (details['runtime'] ?? 120).toString(),
-            ) ??
-            120;
+        runtime = int.tryParse((details['runtime'] ?? 120).toString()) ?? 120;
       } else {
-        final details =
-            await ApiService.getTvDetails(widget.id);
+        final details = await ApiService.getTvDetails(widget.id);
 
-        releaseDate =
-            (details['first_air_date'] ?? '').toString();
+        releaseDate = (details['first_air_date'] ?? '').toString();
 
         runtime = _getDefaultTvRuntime(details);
 
         totalEpisodes = int.tryParse(
-          (details['number_of_episodes'] ?? '')
-              .toString(),
+          (details['number_of_episodes'] ?? '').toString(),
         );
       }
     } catch (_) {}
@@ -1173,39 +939,28 @@ class _MovieCardState extends State<MovieCard> {
       voteAverage: widget.rating ?? 0.0,
     );
 
-    scaffoldMessenger.showSnackBar(
-      _buildSnackBar('Added to Watchlist'),
-    );
+    scaffoldMessenger.showSnackBar(_buildSnackBar('Added to Watchlist'));
   }
 
   Widget _buildPlaceholder() {
     return Container(
       color: const Color(0xFF1E293B),
       alignment: Alignment.center,
-      child: const Icon(
-        Icons.movie_rounded,
-        color: Colors.white24,
-        size: 36,
-      ),
+      child: const Icon(Icons.movie_rounded, color: Colors.white24, size: 36),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final normalizedType =
-        widget.mediaType.toLowerCase();
+    final normalizedType = widget.mediaType.toLowerCase();
 
-    final isTvShow = normalizedType == 'tv' ||
-        normalizedType == 'show';
+    final isTvShow = normalizedType == 'tv' || normalizedType == 'show';
 
-    final targetType =
-        isTvShow ? 'tv' : 'movie';
+    final targetType = isTvShow ? 'tv' : 'movie';
 
-    final targetRoute =
-        '/$targetType/${widget.id}';
+    final targetRoute = '/$targetType/${widget.id}';
 
-    final watchlistProvider =
-        Provider.of<WatchlistProvider>(context);
+    final watchlistProvider = Provider.of<WatchlistProvider>(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1217,26 +972,18 @@ class _MovieCardState extends State<MovieCard> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius:
-                        BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(10),
                     color: const Color(0xFF1E293B),
                   ),
                   child: ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(10),
-                    child: widget.imageUrl
-                            .trim()
-                            .isNotEmpty
+                    borderRadius: BorderRadius.circular(10),
+                    child: widget.imageUrl.trim().isNotEmpty
                         ? Image.network(
                             widget.imageUrl,
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,
-                            errorBuilder: (
-                              context,
-                              error,
-                              stackTrace,
-                            ) {
+                            errorBuilder: (context, error, stackTrace) {
                               return _buildPlaceholder();
                             },
                           )
@@ -1251,8 +998,7 @@ class _MovieCardState extends State<MovieCard> {
                     height: 52,
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius:
-                            const BorderRadius.vertical(
+                        borderRadius: const BorderRadius.vertical(
                           bottom: Radius.circular(10),
                         ),
                         gradient: LinearGradient(
@@ -1260,9 +1006,7 @@ class _MovieCardState extends State<MovieCard> {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withValues(
-                              alpha: 0.88,
-                            ),
+                            Colors.black.withValues(alpha: 0.88),
                           ],
                         ),
                       ),
@@ -1276,27 +1020,23 @@ class _MovieCardState extends State<MovieCard> {
                     right: 8,
                     child: Row(
                       children: [
-                        if (widget.overlayLeftText !=
-                            null)
+                        if (widget.overlayLeftText != null)
                           Text(
                             widget.overlayLeftText!,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
-                              fontWeight:
-                                  FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         const Spacer(),
-                        if (widget.overlayRightText !=
-                            null)
+                        if (widget.overlayRightText != null)
                           Text(
                             widget.overlayRightText!,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
-                              fontWeight:
-                                  FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                       ],
@@ -1308,17 +1048,13 @@ class _MovieCardState extends State<MovieCard> {
                     left: 0,
                     right: 0,
                     child: ClipRRect(
-                      borderRadius:
-                          const BorderRadius.vertical(
+                      borderRadius: const BorderRadius.vertical(
                         bottom: Radius.circular(10),
                       ),
                       child: LinearProgressIndicator(
-                        value: widget.progress!
-                            .clamp(0.0, 1.0),
-                        backgroundColor:
-                            Colors.white24,
-                        color:
-                            const Color(0xFFA855F7),
+                        value: widget.progress!.clamp(0.0, 1.0),
+                        backgroundColor: Colors.white24,
+                        color: const Color(0xFFA855F7),
                         minHeight: 3,
                       ),
                     ),
@@ -1331,70 +1067,44 @@ class _MovieCardState extends State<MovieCard> {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(
-                          alpha: 0.65,
-                        ),
+                        color: Colors.black.withValues(alpha: 0.65),
                         shape: BoxShape.circle,
                       ),
                       child: _isLogging
                           ? const Padding(
-                              padding:
-                                  EdgeInsets.all(7),
-                              child:
-                                  CircularProgressIndicator(
+                              padding: EdgeInsets.all(7),
+                              child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color:
-                                    Color(0xFFCA66FF),
+                                color: Color(0xFFCA66FF),
                               ),
                             )
                           : PopupMenuButton<String>(
                               tooltip: 'Media options',
                               padding: EdgeInsets.zero,
                               icon: const Icon(
-                                Icons
-                                    .more_vert_rounded,
+                                Icons.more_vert_rounded,
                                 color: Colors.white,
                                 size: 16,
                               ),
-                              color: const Color(
-                                0xFF131316,
+                              color: const Color(0xFF131316),
+                              surfaceTintColor: const Color(0xFF131316),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: const BorderSide(color: Colors.white12),
                               ),
-                              surfaceTintColor:
-                                  const Color(
-                                0xFF131316,
-                              ),
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  10,
-                                ),
-                                side:
-                                    const BorderSide(
-                                  color:
-                                      Colors.white12,
-                                ),
-                              ),
-                              onSelected:
-                                  (value) async {
-                                if (value ==
-                                    'watchlist') {
+                              onSelected: (value) async {
+                                if (value == 'watchlist') {
                                   await _toggleWatchlist(
                                     watchlistProvider,
                                     targetType,
                                   );
-                                } else if (value ==
-                                    'track') {
-                                  if (targetType ==
-                                      'tv') {
+                                } else if (value == 'track') {
+                                  if (targetType == 'tv') {
                                     await _showSeasonPicker();
                                   } else {
-                                    _showMarkWatchedMenu(
-                                      'movie',
-                                    );
+                                    _showMarkWatchedMenu('movie');
                                   }
-                                } else if (value ==
-                                    'manage') {
+                                } else if (value == 'manage') {
                                   _showMoreOptions(
                                     watchlistProvider,
                                     targetType,
@@ -1403,13 +1113,11 @@ class _MovieCardState extends State<MovieCard> {
                               },
                               itemBuilder: (context) {
                                 final isWatchlist =
-                                    watchlistProvider
-                                            .getMediaStatus(
-                                              widget.id,
-                                              mediaType:
-                                                  targetType,
-                                            ) ==
-                                        'watchlist';
+                                    watchlistProvider.getMediaStatus(
+                                      widget.id,
+                                      mediaType: targetType,
+                                    ) ==
+                                    'watchlist';
 
                                 return [
                                   PopupMenuItem<String>(
@@ -1418,25 +1126,18 @@ class _MovieCardState extends State<MovieCard> {
                                       children: [
                                         Icon(
                                           isWatchlist
-                                              ? Icons
-                                                  .bookmark_added_rounded
-                                              : Icons
-                                                  .bookmark_add_outlined,
-                                          color:
-                                              Colors.white,
+                                              ? Icons.bookmark_added_rounded
+                                              : Icons.bookmark_add_outlined,
+                                          color: Colors.white,
                                           size: 18,
                                         ),
-                                        const SizedBox(
-                                          width: 8,
-                                        ),
+                                        const SizedBox(width: 8),
                                         Text(
                                           isWatchlist
                                               ? 'Remove from Watchlist'
                                               : 'Watchlist',
-                                          style:
-                                              const TextStyle(
-                                            color:
-                                                Colors.white,
+                                          style: const TextStyle(
+                                            color: Colors.white,
                                             fontSize: 13,
                                           ),
                                         ),
@@ -1448,48 +1149,35 @@ class _MovieCardState extends State<MovieCard> {
                                     child: Row(
                                       children: [
                                         const Icon(
-                                          Icons
-                                              .check_rounded,
-                                          color:
-                                              Colors.white,
+                                          Icons.check_rounded,
+                                          color: Colors.white,
                                           size: 18,
                                         ),
-                                        const SizedBox(
-                                          width: 8,
-                                        ),
+                                        const SizedBox(width: 8),
                                         Text(
-                                          isTvShow
-                                              ? 'Track Season'
-                                              : 'Track',
-                                          style:
-                                              const TextStyle(
-                                            color:
-                                                Colors.white,
+                                          isTvShow ? 'Track Season' : 'Track',
+                                          style: const TextStyle(
+                                            color: Colors.white,
                                             fontSize: 13,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  const PopupMenuItem<
-                                      String>(
+                                  const PopupMenuItem<String>(
                                     value: 'manage',
                                     child: Row(
                                       children: [
                                         Icon(
-                                          Icons
-                                              .list_alt_rounded,
-                                          color:
-                                              Colors.white,
+                                          Icons.list_alt_rounded,
+                                          color: Colors.white,
                                           size: 18,
                                         ),
                                         SizedBox(width: 8),
                                         Text(
                                           'Manage List',
-                                          style:
-                                              TextStyle(
-                                            color:
-                                                Colors.white,
+                                          style: TextStyle(
+                                            color: Colors.white,
                                             fontSize: 13,
                                           ),
                                         ),
@@ -1525,15 +1213,11 @@ class _MovieCardState extends State<MovieCard> {
             widget.subtitle!,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 11,
-            ),
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
           ),
         ],
         if (widget.year != null ||
-            (widget.rating != null &&
-                widget.rating! > 0)) ...[
+            (widget.rating != null && widget.rating! > 0)) ...[
           const SizedBox(height: 4),
           Row(
             children: [
@@ -1542,14 +1226,10 @@ class _MovieCardState extends State<MovieCard> {
                   widget.year ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ),
-              if (widget.rating != null &&
-                  widget.rating! > 0)
+              if (widget.rating != null && widget.rating! > 0)
                 Row(
                   children: [
                     const Icon(
@@ -1559,13 +1239,11 @@ class _MovieCardState extends State<MovieCard> {
                     ),
                     const SizedBox(width: 3),
                     Text(
-                      widget.rating!
-                          .toStringAsFixed(1),
+                      widget.rating!.toStringAsFixed(1),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 11,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],

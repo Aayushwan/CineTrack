@@ -124,7 +124,11 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
         backgroundColor: const Color(0xFF09090B),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => context.go('/'),
         ),
         title: const Row(
@@ -148,72 +152,85 @@ class _RecommendedScreenState extends State<RecommendedScreen> {
                 child: CircularProgressIndicator(color: Color(0xFFA855F7)),
               )
             : _errorMessage.isNotEmpty
-                ? Center(
-                    child: Text(
-                      _errorMessage,
-                      style: const TextStyle(color: Colors.redAccent),
-                    ),
-                  )
-                : RefreshIndicator(
-                    color: const Color(0xFFA855F7),
-                    backgroundColor: const Color(0xFF131316),
-                    onRefresh: _fetchInitialData,
-                    child: GridView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 160,
-                        childAspectRatio: 0.58, // Provides proper spacing for card + title + metadata
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 16,
-                      ),
-                      itemCount: _items.length + (_isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _items.length) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: CircularProgressIndicator(
-                                color: Color(0xFFA855F7),
-                                strokeWidth: 2.5,
-                              ),
-                            ),
-                          );
-                        }
-
-                        final item = _items[index];
-                        final id = item['id'];
-                        final title = item['title'] ?? item['name'] ?? 'Untitled';
-                        
-                        // Normalize mediaType to 'tv' or 'movie'
-                        final rawType = (item['media_type'] ?? '').toString().toLowerCase();
-                        final bool isTv = rawType == 'tv' ||
-                            rawType == 'show' ||
-                            item['first_air_date'] != null ||
-                            (item['name'] != null && item['title'] == null);
-                        final mediaType = isTv ? 'tv' : 'movie';
-                        
-                        final posterPath = item['poster_path'];
-                        final posterUrl = (posterPath != null && posterPath.toString().trim().isNotEmpty)
-                            ? 'https://image.tmdb.org/t/p/w500$posterPath'
-                            : '';
-
-                        final releaseDate = item['release_date'] ?? item['first_air_date'] ?? '';
-                        final yearStr = (releaseDate.length >= 4) ? releaseDate.substring(0, 4) : null;
-                        final voteAverage = (item['vote_average'] ?? 0.0) as num;
-
-                        return MovieCard(
-                          id: id,
-                          title: title,
-                          imageUrl: posterUrl,
-                          mediaType: mediaType, // 👈 Ensures dynamic routing to /tv/:id vs /movie/:id
-                          isLandscape: false,
-                          year: yearStr,
-                          rating: voteAverage.toDouble(),
-                        );
-                      },
-                    ),
+            ? Center(
+                child: Text(
+                  _errorMessage,
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
+              )
+            : RefreshIndicator(
+                color: const Color(0xFFA855F7),
+                backgroundColor: const Color(0xFF131316),
+                onRefresh: _fetchInitialData,
+                child: GridView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 12.0,
                   ),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 160,
+                    childAspectRatio:
+                        0.58, // Provides proper spacing for card + title + metadata
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: _items.length + (_isLoadingMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _items.length) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(
+                            color: Color(0xFFA855F7),
+                            strokeWidth: 2.5,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final item = _items[index];
+                    final id = item['id'];
+                    final title = item['title'] ?? item['name'] ?? 'Untitled';
+
+                    // Normalize mediaType to 'tv' or 'movie'
+                    final rawType = (item['media_type'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                    final bool isTv =
+                        rawType == 'tv' ||
+                        rawType == 'show' ||
+                        item['first_air_date'] != null ||
+                        (item['name'] != null && item['title'] == null);
+                    final mediaType = isTv ? 'tv' : 'movie';
+
+                    final posterPath = item['poster_path'];
+                    final posterUrl =
+                        (posterPath != null &&
+                            posterPath.toString().trim().isNotEmpty)
+                        ? 'https://image.tmdb.org/t/p/w500$posterPath'
+                        : '';
+
+                    final releaseDate =
+                        item['release_date'] ?? item['first_air_date'] ?? '';
+                    final yearStr = (releaseDate.length >= 4)
+                        ? releaseDate.substring(0, 4)
+                        : null;
+                    final voteAverage = (item['vote_average'] ?? 0.0) as num;
+
+                    return MovieCard(
+                      id: id,
+                      title: title,
+                      imageUrl: posterUrl,
+                      mediaType:
+                          mediaType, // 👈 Ensures dynamic routing to /tv/:id vs /movie/:id
+                      isLandscape: false,
+                      year: yearStr,
+                      rating: voteAverage.toDouble(),
+                    );
+                  },
+                ),
+              ),
       ),
     );
   }

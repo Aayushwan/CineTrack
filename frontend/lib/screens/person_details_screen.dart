@@ -1,7 +1,11 @@
 // frontend/lib/screens/person_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
 import '../services/api_service.dart';
+import '../providers/watchlist_provider.dart';
+import '../widgets/movie_card.dart'; // 👇 Imported your MovieCard component
 
 class PersonDetailsScreen extends StatefulWidget {
   final int personId;
@@ -21,6 +25,11 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
   void initState() {
     super.initState();
     _fetchPersonDetails();
+    
+    // Ensure custom lists are loaded in case the user uses the MovieCard menu
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WatchlistProvider>(context, listen: false).fetchCustomLists();
+    });
   }
 
   Future<void> _fetchPersonDetails() async {
@@ -221,19 +230,23 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
                 child: Text('No credits found.', style: TextStyle(color: Colors.white54, fontSize: 14)),
               )
             else
-              ListView.separated(
+              // 👇 Implemented a GridView to hold your reusable MovieCards!
+              GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: castCredits.length,
-                separatorBuilder: (context, index) => Divider(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  height: 18,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 150, // Standard poster width
+                  mainAxisExtent: 280, // Height to fit poster + title + subtitle
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
                 ),
+                itemCount: castCredits.length,
                 itemBuilder: (context, index) {
                   final item = castCredits[index];
-                  final mediaId = item['id'];
-                  final mediaTitle = item['title'] ?? item['name'] ?? 'Untitled';
-                  final character = (item['character'] ?? '').toString().trim();
+                  
+                  final int mediaId = item['id'];
+                  final String mediaTitle = item['title'] ?? item['name'] ?? 'Untitled';
+                  final String character = (item['character'] ?? '').toString().trim();
 
                   // Determine media type
                   final String rawType = (item['media_type'] ?? '').toString().toLowerCase();
@@ -241,109 +254,29 @@ class _PersonDetailsScreenState extends State<PersonDetailsScreen> {
                       rawType == 'show' ||
                       item['first_air_date'] != null ||
                       (item['name'] != null && item['title'] == null);
+                  final String parsedMediaType = isTv ? 'tv' : 'movie';
 
                   // Extract release year
-                  final dateStr = (item['release_date'] ?? item['first_air_date'] ?? '').toString();
-                  final year = dateStr.length >= 4 ? dateStr.substring(0, 4) : 'TBA';
+                  final String dateStr = (item['release_date'] ?? item['first_air_date'] ?? '').toString();
+                  final String year = dateStr.length >= 4 ? dateStr.substring(0, 4) : 'TBA';
 
                   final itemPoster = item['poster_path'];
-                  final itemPosterUrl = itemPoster != null && itemPoster.toString().isNotEmpty
-                      ? 'https://image.tmdb.org/t/p/w185$itemPoster'
+                  final String itemPosterUrl = itemPoster != null && itemPoster.toString().isNotEmpty
+                      ? 'https://image.tmdb.org/t/p/w342$itemPoster'
                       : '';
+                      
+                  final double? rating = item['vote_average'] != null 
+                      ? double.tryParse(item['vote_average'].toString()) 
+                      : null;
 
-                  return InkWell(
-                    onTap: () {
-                      if (isTv) {
-                        context.go('/tv/$mediaId');
-                      } else {
-                        context.go('/movie/$mediaId');
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Row(
-                        children: [
-                          // Poster Thumbnail
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 50,
-                              height: 75,
-                              color: const Color(0xFF131316),
-                              child: itemPosterUrl.isNotEmpty
-                                  ? Image.network(
-                                      itemPosterUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          const Center(child: Icon(Icons.movie_rounded, color: Colors.white24, size: 24)),
-                                    )
-                                  : const Center(child: Icon(Icons.movie_rounded, color: Colors.white24, size: 24)),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-
-                          // Title, Role & Metadata
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  mediaTitle,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                if (character.isNotEmpty)
-                                  Text(
-                                    'as $character',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Color(0xFFA855F7),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1E1E24),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: Colors.white10),
-                                      ),
-                                      child: Text(
-                                        isTv ? 'TV' : 'MOVIE',
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      year,
-                                      style: const TextStyle(color: Colors.white38, fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 20),
-                        ],
-                      ),
-                    ),
+                  return MovieCard(
+                    id: mediaId,
+                    title: mediaTitle,
+                    imageUrl: itemPosterUrl,
+                    mediaType: parsedMediaType,
+                    year: year,
+                    rating: rating,
+                    subtitle: character.isNotEmpty ? character : null,
                   );
                 },
               ),

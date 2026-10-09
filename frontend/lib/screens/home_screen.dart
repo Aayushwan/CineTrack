@@ -1,7 +1,10 @@
 // frontend/lib/screens/home_screen.dart
+
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../services/api_service.dart';
 import '../widgets/filter_drawer.dart';
 import '../widgets/movie_card.dart';
@@ -16,6 +19,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const Color _background = Color(0xFF08080B);
+  static const Color _surface = Color(0xFF141419);
+  static const Color _purple = Color(0xFFB143EB);
+  static const Color _lightPurple = Color(0xFFCA66FF);
+  static const Color _darkPurple = Color(0xFF8431D9);
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _isLoading = true;
@@ -45,13 +54,16 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       continueWatchingData = await ApiService.getContinueWatching();
     } catch (_) {}
+
     try {
       List<dynamic> watchlistData = [];
+
       try {
         watchlistData = await ApiService.getWatchlist();
       } catch (_) {}
 
       List<dynamic> historyData = [];
+
       try {
         historyData = await ApiService.getWatchHistory();
       } catch (_) {
@@ -63,50 +75,45 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final fallback = <String, dynamic>{'results': <dynamic>[]};
 
-      // 💡 Expanded endpoints to guarantee a massive pool of recent releases
       final results = await Future.wait([
-        ApiService.getTrendingMovies(
-          type: 'all',
-        ).catchError((_) => fallback), // 0: Trending
+        ApiService.getTrendingMovies(type: 'all').catchError((_) => fallback),
         ApiService.getDiscoverMedia(
           category: 'releases',
           page: 1,
           type: 'movie',
-        ).catchError((_) => fallback), // 1: Movie Releases Pg 1
+        ).catchError((_) => fallback),
         ApiService.getDiscoverMedia(
           category: 'releases',
           page: 1,
           type: 'tv',
-        ).catchError((_) => fallback), // 2: TV Releases Pg 1
+        ).catchError((_) => fallback),
         ApiService.getDiscoverMedia(
           category: 'releases',
           page: 2,
           type: 'movie',
-        ).catchError((_) => fallback), // 3: Movie Releases Pg 2
+        ).catchError((_) => fallback),
         ApiService.getDiscoverMedia(
           category: 'releases',
           page: 2,
           type: 'tv',
-        ).catchError((_) => fallback), // 4: TV Releases Pg 2
+        ).catchError((_) => fallback),
         ApiService.getDiscoverMedia(
           category: 'popular',
           page: 1,
           type: 'movie',
-        ).catchError((_) => fallback), // 5: Popular Movies (Recommended)
+        ).catchError((_) => fallback),
         ApiService.getDiscoverMedia(
           category: 'popular',
           page: 1,
           type: 'tv',
-        ).catchError((_) => fallback), // 6: Popular TV (Recommended)
+        ).catchError((_) => fallback),
       ]);
 
       final trendingList = (results[0]['results'] as List<dynamic>?) ?? [];
 
-      // ─── Process Calendar (Strictly Past Releases) ───
       List<dynamic> rawReleases = [];
-      rawReleases.addAll(
-        trendingList,
-      ); // Feed trending in so we never run out of past media
+
+      rawReleases.addAll(trendingList);
       rawReleases.addAll((results[1]['results'] as List<dynamic>?) ?? []);
       rawReleases.addAll((results[2]['results'] as List<dynamic>?) ?? []);
       rawReleases.addAll((results[3]['results'] as List<dynamic>?) ?? []);
@@ -115,23 +122,27 @@ class _HomeScreenState extends State<HomeScreen> {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
-      // 1. Strict Filter: Only keep releases that have ALREADY dropped (No future dates)
       List<dynamic> lastReleases = rawReleases.where((item) {
         final dateStr =
             item['calendar_date'] ??
             item['release_date'] ??
             item['first_air_date'];
-        if (dateStr == null || dateStr.toString().trim().isEmpty) return false;
+
+        if (dateStr == null || dateStr.toString().trim().isEmpty) {
+          return false;
+        }
+
         try {
           final dt = DateTime.parse(dateStr.toString());
+
           final releaseDay = DateTime(dt.year, dt.month, dt.day);
+
           return !releaseDay.isAfter(today);
         } catch (_) {
           return false;
         }
       }).toList();
 
-      // 2. Sort Descending: Newest releases closest to today show up first!
       lastReleases.sort((a, b) {
         final dateA =
             DateTime.tryParse(
@@ -141,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   '',
             ) ??
             DateTime(1900);
+
         final dateB =
             DateTime.tryParse(
               b['calendar_date'] ??
@@ -149,38 +161,49 @@ class _HomeScreenState extends State<HomeScreen> {
                   '',
             ) ??
             DateTime(1900);
+
         return dateB.compareTo(dateA);
       });
 
-      // 3. Remove duplicates across the pooled endpoints
       final seenReleaseIds = <int>{};
+
       lastReleases = lastReleases.where((item) {
         final id = item['id'] as int? ?? 0;
-        if (seenReleaseIds.contains(id)) return false;
+
+        if (seenReleaseIds.contains(id)) {
+          return false;
+        }
+
         seenReleaseIds.add(id);
         return true;
       }).toList();
 
-      // Fallback just in case everything fails
       if (lastReleases.isEmpty && trendingList.isNotEmpty) {
         lastReleases = List.from(trendingList);
       }
 
-      // ─── Process Recommended (Popular Movies & TV) ───
       List<dynamic> rawRecommended = [];
+
       rawRecommended.addAll((results[5]['results'] as List<dynamic>?) ?? []);
+
       rawRecommended.addAll((results[6]['results'] as List<dynamic>?) ?? []);
 
       rawRecommended.sort((a, b) {
         final popA = (a['popularity'] ?? 0.0) as num;
         final popB = (b['popularity'] ?? 0.0) as num;
+
         return popB.compareTo(popA);
       });
 
       final seenRecIds = <int>{};
+
       rawRecommended = rawRecommended.where((item) {
         final id = item['id'] as int? ?? 0;
-        if (seenRecIds.contains(id)) return false;
+
+        if (seenRecIds.contains(id)) {
+          return false;
+        }
+
         seenRecIds.add(id);
         return true;
       }).toList();
@@ -188,16 +211,19 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _startWatching = watchlistData;
-          _upcomingReleases = lastReleases; // Passed to Calendar section
+          _upcomingReleases = lastReleases;
           _recommended = rawRecommended;
+
           _continueWatching = continueWatchingData.where((item) {
             final watched =
                 int.tryParse((item['watchedEpisodes'] ?? 0).toString()) ?? 0;
+
             final total =
                 int.tryParse((item['totalEpisodes'] ?? 0).toString()) ?? 0;
 
             return total > 0 && watched < total;
           }).toList();
+
           _history = historyData;
           _isLoading = false;
         });
@@ -217,29 +243,44 @@ class _HomeScreenState extends State<HomeScreen> {
       final String rawType = (item['media_type'] ?? item['type'] ?? '')
           .toString()
           .toLowerCase();
+
       final bool isTv =
           rawType == 'tv' ||
           rawType == 'show' ||
           item['first_air_date'] != null ||
           (item['name'] != null && item['title'] == null);
 
-      if (_selectedFilter == 'shows' && !isTv) return false;
-      if (_selectedFilter == 'movies' && isTv) return false;
+      if (_selectedFilter == 'shows' && !isTv) {
+        return false;
+      }
+
+      if (_selectedFilter == 'movies' && isTv) {
+        return false;
+      }
 
       if (_selectedGenre != 'All') {
         final List<dynamic> genreIds = item['genre_ids'] ?? [];
         final targetGenreId = FilterDrawer.genreMap[_selectedGenre];
-        if (targetGenreId != null && !genreIds.contains(targetGenreId))
+
+        if (targetGenreId != null && !genreIds.contains(targetGenreId)) {
           return false;
+        }
       }
 
       if (_selectedStatus != 'All') {
         final dateStr = item['release_date'] ?? item['first_air_date'] ?? '';
+
         final isUpcoming =
             dateStr.isNotEmpty &&
             (DateTime.tryParse(dateStr)?.isAfter(DateTime.now()) ?? false);
-        if (_selectedStatus == 'Upcoming' && !isUpcoming) return false;
-        if (_selectedStatus == 'Released' && isUpcoming) return false;
+
+        if (_selectedStatus == 'Upcoming' && !isUpcoming) {
+          return false;
+        }
+
+        if (_selectedStatus == 'Released' && isUpcoming) {
+          return false;
+        }
       }
 
       if (_selectedDecade != 'All') {
@@ -249,21 +290,33 @@ class _HomeScreenState extends State<HomeScreen> {
             item['first_air_date'] ??
             item['year'] ??
             '';
+
         final year = int.tryParse(
           dateStr.toString().length >= 4
               ? dateStr.toString().substring(0, 4)
               : '',
         );
+
         if (year != null) {
-          if (_selectedDecade == 'This Year' && year != DateTime.now().year)
+          if (_selectedDecade == 'This Year' && year != DateTime.now().year) {
             return false;
-          if (_selectedDecade == '2020s' && (year < 2020 || year > 2029))
+          }
+
+          if (_selectedDecade == '2020s' && (year < 2020 || year > 2029)) {
             return false;
-          if (_selectedDecade == '2010s' && (year < 2010 || year > 2019))
+          }
+
+          if (_selectedDecade == '2010s' && (year < 2010 || year > 2019)) {
             return false;
-          if (_selectedDecade == '2000s' && (year < 2000 || year > 2009))
+          }
+
+          if (_selectedDecade == '2000s' && (year < 2000 || year > 2009)) {
             return false;
-          if (_selectedDecade == 'Before 1960' && year >= 1960) return false;
+          }
+
+          if (_selectedDecade == 'Before 1960' && year >= 1960) {
+            return false;
+          }
         }
       }
 
@@ -276,6 +329,16 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedStatus != 'All' ||
       _selectedDecade != 'All';
 
+  int get _activeSidebarFilterCount {
+    int count = 0;
+
+    if (_selectedGenre != 'All') count++;
+    if (_selectedStatus != 'All') count++;
+    if (_selectedDecade != 'All') count++;
+
+    return count;
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredContinue = _filterList(_continueWatching);
@@ -286,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFF09090B),
+      backgroundColor: _background,
       endDrawer: FilterDrawer(
         selectedGenre: _selectedGenre,
         selectedStatus: _selectedStatus,
@@ -306,160 +369,621 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         },
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 10.0,
+      body: Stack(
+        children: [
+          const Positioned.fill(child: _HomeBackground()),
+          SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    child: _buildBody(
+                      filteredContinue: filteredContinue,
+                      filteredStart: filteredStart,
+                      filteredUpcoming: filteredUpcoming,
+                      filteredRecommended: filteredRecommended,
+                      filteredHistory: filteredHistory,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 14, 15),
+      decoration: BoxDecoration(
+        color: _background.withValues(alpha: 0.86),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 680;
+
+          final brand = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_lightPurple, _darkPurple],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _purple.withValues(alpha: 0.26),
+                      blurRadius: 22,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.movie_filter_rounded,
+                  color: Colors.white,
+                  size: 23,
+                ),
               ),
-              child: Row(
+              const SizedBox(width: 12),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'CineTrack',
                     style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
                       color: Colors.white,
+                      fontSize: 22,
+                      height: 1,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.7,
                     ),
                   ),
-                  const Spacer(),
-                  TraktFilterBar(
-                    selectedFilter: _selectedFilter,
-                    showPeople: false,
-                    onFilterChanged: (filter) =>
-                        setState(() => _selectedFilter = filter),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-                    icon: Stack(
-                      children: [
-                        const Icon(
-                          Icons.tune_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                        if (_hasActiveSidebarFilters)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFA855F7),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFF131316),
-                      padding: const EdgeInsets.all(10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: Colors.white10),
-                      ),
+                  SizedBox(height: 5),
+                  Text(
+                    'YOUR PERSONAL CINEMA',
+                    style: TextStyle(
+                      color: _lightPurple,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.15,
                     ),
                   ),
                 ],
               ),
+            ],
+          );
+
+          final filterControls = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TraktFilterBar(
+                selectedFilter: _selectedFilter,
+                showPeople: false,
+                onFilterChanged: (filter) {
+                  setState(() {
+                    _selectedFilter = filter;
+                  });
+                },
+              ),
+              const SizedBox(width: 9),
+              _buildFilterButton(),
+            ],
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [brand, const Spacer(), _buildFilterButton()]),
+                const SizedBox(height: 15),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: TraktFilterBar(
+                    selectedFilter: _selectedFilter,
+                    showPeople: false,
+                    onFilterChanged: (filter) {
+                      setState(() {
+                        _selectedFilter = filter;
+                      });
+                    },
+                  ),
+                ),
+                if (_hasActiveSidebarFilters) ...[
+                  const SizedBox(height: 12),
+                  _buildActiveFilters(),
+                ],
+              ],
+            );
+          }
+
+          return Column(
+            children: [
+              Row(children: [brand, const Spacer(), filterControls]),
+              if (_hasActiveSidebarFilters) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _buildActiveFilters(),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFilterButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          _scaffoldKey.currentState?.openEndDrawer();
+        },
+        borderRadius: BorderRadius.circular(13),
+        child: Ink(
+          width: 43,
+          height: 43,
+          decoration: BoxDecoration(
+            color: _hasActiveSidebarFilters
+                ? _purple.withValues(alpha: 0.14)
+                : _surface,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: _hasActiveSidebarFilters
+                  ? _purple.withValues(alpha: 0.38)
+                  : Colors.white.withValues(alpha: 0.08),
             ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFA855F7),
-                      ),
-                    )
-                  : _errorMessage.isNotEmpty
-                  ? Center(
-                      child: Text(
-                        _errorMessage,
-                        style: const TextStyle(color: Colors.redAccent),
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SectionHeader(
-                            title: 'Continue Watching',
-                            onTap: () => context.go('/progress'),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildMediaList(
-                            items: filteredContinue,
-                            emptyMessage: 'Start watching $_selectedFilter',
-                            isLandscape: true,
-                            isContinueWatching: true,
-                          ),
-                          const SizedBox(height: 28),
-
-                          SectionHeader(
-                            title: 'Start Watching',
-                            onTap: () => context.go('/watchlist'),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildMediaList(
-                            items: filteredStart,
-                            emptyMessage:
-                                'No $_selectedFilter in your watchlist',
-                            isLandscape: false,
-                          ),
-                          const SizedBox(height: 28),
-
-                          // Header name preserved as "Calendar"
-                          SectionHeader(
-                            title: 'Calendar',
-                            onTap: () => context.go('/calendar'),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildMediaList(
-                            items: filteredUpcoming,
-                            emptyMessage:
-                                'No recent $_selectedFilter releases found',
-                            isLandscape: false,
-                            isCalendar: true,
-                          ),
-                          const SizedBox(height: 28),
-
-                          SectionHeader(
-                            title: 'Recommended',
-                            onTap: () => context.go('/recommended'),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildMediaList(
-                            items: filteredRecommended,
-                            emptyMessage:
-                                'No recommended $_selectedFilter found',
-                            isLandscape: false,
-                          ),
-                          const SizedBox(height: 28),
-
-                          SectionHeader(
-                            title: 'History',
-                            onTap: () => context.go('/history'),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildMediaList(
-                            items: filteredHistory,
-                            emptyMessage:
-                                'Watch $_selectedFilter to view history',
-                            isLandscape: true,
-                            isHistory: true,
-                          ),
-                          const SizedBox(height: 20),
-                        ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                Icons.tune_rounded,
+                color: _hasActiveSidebarFilters
+                    ? _lightPurple
+                    : Colors.white.withValues(alpha: 0.8),
+                size: 21,
+              ),
+              if (_hasActiveSidebarFilters)
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 15,
+                      minHeight: 15,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: _lightPurple,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$_activeSidebarFilterCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveFilters() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_selectedGenre != 'All')
+            _buildFilterChip(
+              icon: Icons.theaters_outlined,
+              label: _selectedGenre,
+            ),
+          if (_selectedStatus != 'All') ...[
+            if (_selectedGenre != 'All') const SizedBox(width: 7),
+            _buildFilterChip(
+              icon: Icons.schedule_rounded,
+              label: _selectedStatus,
             ),
           ],
+          if (_selectedDecade != 'All') ...[
+            if (_selectedGenre != 'All' || _selectedStatus != 'All')
+              const SizedBox(width: 7),
+            _buildFilterChip(
+              icon: Icons.calendar_month_outlined,
+              label: _selectedDecade,
+            ),
+          ],
+          const SizedBox(width: 8),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedGenre = 'All';
+                  _selectedStatus = 'All';
+                  _selectedDecade = 'All';
+                });
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.close_rounded,
+                      color: Colors.white.withValues(alpha: 0.45),
+                      size: 13,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Clear',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.48),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: _purple.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _purple.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: _lightPurple, size: 12),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: _lightPurple,
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody({
+    required List<dynamic> filteredContinue,
+    required List<dynamic> filteredStart,
+    required List<dynamic> filteredUpcoming,
+    required List<dynamic> filteredRecommended,
+    required List<dynamic> filteredHistory,
+  }) {
+    if (_isLoading) {
+      return const _HomeLoadingState(key: ValueKey('loading'));
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return _HomeErrorState(
+        key: const ValueKey('error'),
+        message: _errorMessage,
+        onRetry: () {
+          setState(() {
+            _isLoading = true;
+            _errorMessage = '';
+          });
+
+          _loadHomeData();
+        },
+      );
+    }
+
+    return SingleChildScrollView(
+      key: const ValueKey('content'),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(top: 16, bottom: 34),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildWelcomePanel(
+            continueCount: filteredContinue.length,
+            watchlistCount: filteredStart.length,
+          ),
+          const SizedBox(height: 27),
+          _buildHomeSection(
+            title: 'Continue Watching',
+            icon: Icons.play_circle_outline_rounded,
+            itemCount: filteredContinue.length,
+            onTap: () => context.go('/progress'),
+            child: _buildMediaList(
+              items: filteredContinue,
+              emptyMessage: 'Start watching $_selectedFilter',
+              isLandscape: true,
+              isContinueWatching: true,
+            ),
+          ),
+          _buildHomeSection(
+            title: 'Start Watching',
+            icon: Icons.bookmark_outline_rounded,
+            itemCount: filteredStart.length,
+            onTap: () => context.go('/watchlist'),
+            child: _buildMediaList(
+              items: filteredStart,
+              emptyMessage: 'No $_selectedFilter in your watchlist',
+              isLandscape: false,
+            ),
+          ),
+          _buildHomeSection(
+            title: 'Calendar',
+            icon: Icons.calendar_month_outlined,
+            itemCount: filteredUpcoming.length,
+            onTap: () => context.go('/calendar'),
+            child: _buildMediaList(
+              items: filteredUpcoming,
+              emptyMessage: 'No recent $_selectedFilter releases found',
+              isLandscape: false,
+              isCalendar: true,
+            ),
+          ),
+          _buildHomeSection(
+            title: 'Recommended',
+            icon: Icons.auto_awesome_outlined,
+            itemCount: filteredRecommended.length,
+            onTap: () => context.go('/recommended'),
+            child: _buildMediaList(
+              items: filteredRecommended,
+              emptyMessage: 'No recommended $_selectedFilter found',
+              isLandscape: false,
+            ),
+          ),
+          _buildHomeSection(
+            title: 'History',
+            icon: Icons.history_rounded,
+            itemCount: filteredHistory.length,
+            onTap: () => context.go('/history'),
+            isLast: true,
+            child: _buildMediaList(
+              items: filteredHistory,
+              emptyMessage: 'Watch $_selectedFilter to view history',
+              isLandscape: true,
+              isHistory: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomePanel({
+    required int continueCount,
+    required int watchlistCount,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF201129), Color(0xFF15121A), Color(0xFF101014)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _lightPurple.withValues(alpha: 0.14)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.23),
+            blurRadius: 28,
+            offset: const Offset(0, 13),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -65,
+            right: -55,
+            child: Container(
+              width: 170,
+              height: 170,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    _lightPurple.withValues(alpha: 0.18),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.local_movies_outlined,
+                          color: _lightPurple,
+                          size: 14,
+                        ),
+                        SizedBox(width: 7),
+                        Text(
+                          'YOUR CINEMA',
+                          style: TextStyle(
+                            color: _lightPurple,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.25,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 11),
+                    const Text(
+                      'Pick up where you\nleft off.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        height: 1.12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.7,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Text(
+                      'Everything you watch, save, and discover is organized in one place.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.46),
+                        fontSize: 11,
+                        height: 1.55,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 18),
+              Column(
+                children: [
+                  _buildWelcomeStat(
+                    value: '$continueCount',
+                    label: 'IN PROGRESS',
+                  ),
+                  const SizedBox(height: 10),
+                  _buildWelcomeStat(
+                    value: '$watchlistCount',
+                    label: 'WATCHLIST',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeStat({required String value, required String label}) {
+    return Container(
+      width: 82,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.045),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.38),
+              fontSize: 7,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.7,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeSection({
+    required String title,
+    required IconData icon,
+    required int itemCount,
+    required VoidCallback onTap,
+    required Widget child,
+    bool isLast = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 29),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Container(
+                  width: 31,
+                  height: 31,
+                  decoration: BoxDecoration(
+                    color: _purple.withValues(alpha: 0.09),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: _purple.withValues(alpha: 0.14)),
+                  ),
+                  child: Icon(icon, color: _lightPurple, size: 15),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SectionHeader(title: title, onTap: onTap),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.045),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$itemCount',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.44),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
       ),
     );
   }
@@ -474,28 +998,56 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     if (items.isEmpty) {
       return Container(
-        height: 100,
+        height: 112,
         margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
-          color: const Color(0xFF131316),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10),
+          color: _surface.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(17),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
-        child: Center(
-          child: Text(
-            emptyMessage,
-            style: const TextStyle(color: Colors.white38, fontSize: 13),
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: _purple.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                isHistory
+                    ? Icons.history_toggle_off_rounded
+                    : isContinueWatching
+                    ? Icons.play_circle_outline_rounded
+                    : Icons.movie_filter_outlined,
+                color: _lightPurple.withValues(alpha: 0.68),
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 13),
+            Flexible(
+              child: Text(
+                emptyMessage,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    // 💡 Massively increased the Calendar media limit to 30 items
     final int itemLimit = isCalendar ? 30 : (isHistory ? 7 : 20);
+
     final displayItems = items.take(itemLimit).toList();
 
-    final double listHeight = isLandscape ? 170 : 230;
-    final double cardWidth = isLandscape ? 240 : 115;
+    final double listHeight = isLandscape ? 188 : 252;
+    final double cardWidth = isLandscape ? 268 : 128;
 
     return SizedBox(
       height: listHeight,
@@ -504,6 +1056,7 @@ class _HomeScreenState extends State<HomeScreen> {
           dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
         ),
         child: ListView.builder(
+          physics: const BouncingScrollPhysics(),
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           itemCount: displayItems.length,
@@ -513,6 +1066,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final rawId = isContinueWatching
                 ? item['show_id']
                 : item['id'] ?? item['movie_id'] ?? item['media_id'];
+
             final int id = rawId != null
                 ? int.tryParse(rawId.toString()) ?? 0
                 : 0;
@@ -526,6 +1080,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final String rawType = (item['media_type'] ?? item['type'] ?? '')
                 .toString()
                 .toLowerCase();
+
             final String mediaType = isContinueWatching
                 ? 'tv'
                 : (rawType == 'tv' || rawType == 'show' || item['name'] != null)
@@ -552,11 +1107,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         item['year'] ??
                         '')
                     .toString();
+
             String? metadataLeftText;
 
             if (isCalendar && releaseDate.isNotEmpty) {
               try {
                 final DateTime dt = DateTime.parse(releaseDate);
+
                 final List<String> months = [
                   'Jan',
                   'Feb',
@@ -571,6 +1128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Nov',
                   'Dec',
                 ];
+
                 metadataLeftText = isLandscape
                     ? '${months[dt.month - 1]} ${dt.day}, ${dt.year}'
                     : '${months[dt.month - 1]} ${dt.day}';
@@ -578,7 +1136,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 metadataLeftText = releaseDate;
               }
             } else {
-              metadataLeftText = (releaseDate.length >= 4)
+              metadataLeftText = releaseDate.length >= 4
                   ? releaseDate.substring(0, 4)
                   : null;
             }
@@ -610,6 +1168,7 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitle = 'Next: S$nextSeason • E$nextEpisode';
               overlayLeft = '${item['nextEpisodeRuntime'] ?? 45}m';
               overlayRight = '${total - watched} left';
+
               progress = total > 0 ? (watched / total).clamp(0.0, 1.0) : 0;
             } else if (isHistory) {
               final String watchedDate =
@@ -618,12 +1177,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           item['watched_at'] ??
                           'Recently')
                       .toString();
+
               overlayLeft = watchedDate;
             }
 
             return Container(
               width: cardWidth,
-              margin: const EdgeInsets.only(right: 14),
+              margin: EdgeInsets.only(
+                right: index == displayItems.length - 1 ? 0 : 15,
+              ),
               child: MovieCard(
                 id: id,
                 title: title,
@@ -639,6 +1201,187 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeBackground extends StatelessWidget {
+  const _HomeBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          const ColoredBox(color: Color(0xFF08080B), child: SizedBox.expand()),
+          Positioned(
+            top: -190,
+            right: -170,
+            child: Container(
+              width: 430,
+              height: 430,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFB143EB).withValues(alpha: 0.13),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -260,
+            left: -200,
+            child: Container(
+              width: 500,
+              height: 500,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF8431D9).withValues(alpha: 0.065),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeLoadingState extends StatelessWidget {
+  const _HomeLoadingState({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(25),
+        decoration: BoxDecoration(
+          color: const Color(0xFF141419),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 25,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: const SizedBox(
+          width: 30,
+          height: 30,
+          child: CircularProgressIndicator(
+            color: Color(0xFFCA66FF),
+            strokeWidth: 2.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeErrorState extends StatelessWidget {
+  const _HomeErrorState({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: const Color(0xFF141419),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFFFF647C).withValues(alpha: 0.17),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.23),
+                blurRadius: 28,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF647C).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFFF647C).withValues(alpha: 0.16),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.cloud_off_rounded,
+                  color: Color(0xFFFF647C),
+                  size: 29,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Unable to load your home feed',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.43),
+                  fontSize: 12,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 21),
+              FilledButton.icon(
+                onPressed: onRetry,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFB143EB),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 21,
+                    vertical: 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text(
+                  'Try again',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -28,8 +28,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _username = 'User';
 
-  // Ready to connect to your Continue Watching backend data.
-  final List<Map<String, dynamic>> _continueWatching = [];
+  // 👇 Removed 'final' so we can assign live data
+  List<dynamic> _continueWatching = [];
 
   String get _usernameInitial {
     final trimmedName = _username.trim();
@@ -60,9 +60,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
 
+      // 👇 Added getContinueWatching to the parallel API calls
       final results = await Future.wait([
         ApiService.getProfileStats(),
         ApiService.getWatchHistory(),
+        ApiService.getContinueWatching(), 
       ]);
 
       if (mounted) {
@@ -73,6 +75,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final historyData = results[1] as List<dynamic>;
           _historyItems = historyData.take(10).toList();
           _isLoadingHistory = false;
+          
+          // 👇 Assign the live data to the UI
+          _continueWatching = results[2] as List<dynamic>;
         });
       }
     } catch (_) {
@@ -181,10 +186,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 16),
                         _buildAnalyticsCard(),
                         const SizedBox(height: 32),
-                        _buildSectionHeader(
+                        _buildNavigableSectionHeader( // 👇 Made this navigable to the ProgressScreen!
+                          context: context,
                           icon: Icons.play_circle_outline_rounded,
                           title: 'Continue Watching',
                           subtitle: 'Pick up where you left off',
+                          route: '/progress',
                         ),
                         const SizedBox(height: 14),
                         _buildContinueWatchingList(),
@@ -646,102 +653,198 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // 👇 Updated to safely parse the live data mapping
   Widget _buildContinueWatchingList() {
-    if (_continueWatching.isEmpty) {
+    final activeItems = _continueWatching.where((show) {
+      final watched = int.tryParse(
+            (show['watchedEpisodes'] ?? 0).toString(),
+          ) ??
+          0;
+      final total = int.tryParse(
+            (show['totalEpisodes'] ?? 0).toString(),
+          ) ??
+          0;
+
+      return total > 0 && watched < total;
+    }).take(5).toList();
+
+    if (activeItems.isEmpty) {
       return _buildEmptyState(
         icon: Icons.play_arrow_rounded,
         title: 'Nothing in progress',
-        message: 'Start watching something and it will appear here.',
+        message:
+            'Start watching something and it will appear here.',
       );
     }
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _continueWatching.length,
-      separatorBuilder: (context, index) {
-        return const SizedBox(height: 12);
-      },
-      itemBuilder: (context, index) {
-        final show = _continueWatching[index];
+    return SizedBox(
+      height: 184,
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+          },
+        ),
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: activeItems.length,
+          itemBuilder: (context, index) {
+            final show = activeItems[index];
 
-        final double factor =
-            show['watchedEpisodes'] / show['totalEpisodes'];
+            final watched = int.tryParse(
+                  (show['watchedEpisodes'] ?? 0).toString(),
+                ) ??
+                0;
 
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xD915151B),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFF2D2933),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF281732),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.play_arrow_rounded,
-                      color: Color(0xFFCA66FF),
-                      size: 21,
-                    ),
+            final total = int.tryParse(
+                  (show['totalEpisodes'] ?? 1).toString(),
+                ) ??
+                1;
+
+            final factor =
+                total > 0 ? (watched / total).clamp(0.0, 1.0) : 0.0;
+
+            final mediaId =
+                (show['show_id'] ?? '').toString();
+
+            final nextSeason = int.tryParse(
+                  (show['nextSeasonNumber'] ?? 1).toString(),
+                ) ??
+                1;
+
+            final nextEpisode = int.tryParse(
+                  (show['nextEpisodeNumber'] ?? watched + 1)
+                      .toString(),
+                ) ??
+                watched + 1;
+
+            final rawBackdrop =
+                (show['backdrop_path'] ?? '').toString();
+
+            final imageUrl = rawBackdrop.isNotEmpty &&
+                    rawBackdrop != 'null'
+                ? rawBackdrop.startsWith('http')
+                    ? rawBackdrop
+                    : 'https://image.tmdb.org/t/p/w500'
+                        '$rawBackdrop'
+                : '';
+
+            return GestureDetector(
+              onTap: () => context.go('/tv/$mediaId'),
+              child: Container(
+                width: 286,
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF15151B),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF2D2933),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      show['title'],
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFFF5F3F8),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 18,
+                      offset: Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (imageUrl.isNotEmpty)
+                        Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) =>
+                              _buildPosterPlaceholder(),
+                        )
+                      else
+                        _buildPosterPlaceholder(),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0x10000000),
+                              Color(0x30000000),
+                              Color(0xF2000000),
+                            ],
+                            stops: [0, 0.48, 1],
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        left: 14,
+                        right: 14,
+                        bottom: 12,
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              show['title'] ?? 'Unknown Show',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFFF5F3F8),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Next: S$nextSeason • '
+                                    'E$nextEpisode',
+                                    style: const TextStyle(
+                                      color: Color(0xFFC0BAC5),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '${total - watched} left',
+                                  style: const TextStyle(
+                                    color: Color(0xFFCA66FF),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 9),
+                            ClipRRect(
+                              borderRadius:
+                                  BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: factor,
+                                minHeight: 6,
+                                backgroundColor:
+                                    const Color(0xFF343039),
+                                valueColor:
+                                    const AlwaysStoppedAnimation(
+                                  Color(0xFFCA66FF),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${show['watchedEpisodes']}/'
-                    '${show['totalEpisodes']} eps',
-                    style: const TextStyle(
-                      color: Color(0xFFCA66FF),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                show['season'],
-                style: const TextStyle(
-                  color: Color(0xFF817C87),
-                  fontSize: 11,
                 ),
               ),
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: factor,
-                  backgroundColor: const Color(0xFF2A2730),
-                  color: const Color(0xFFB143EB),
-                  minHeight: 7,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 

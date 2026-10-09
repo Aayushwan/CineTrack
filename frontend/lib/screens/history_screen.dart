@@ -94,13 +94,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final Map<String, List<dynamic>> grouped = {};
     
     for (var item in _filteredHistory) {
-      final String rawDate = item['watchedDate'] ?? item['watched_date'] ?? item['release_date'] ?? '';
+      final String rawDate = (
+        item['watched_at'] ??
+            item['watchedAt'] ??
+            item['watchedDate'] ??
+            item['watched_date'] ??
+            ''
+      ).toString();
+
       String dateLabel = 'Unknown Date';
-      
+
       if (rawDate.isNotEmpty) {
         try {
-          final DateTime dt = DateTime.parse(rawDate);
-          dateLabel = DateFormat('MMMM d, yyyy').format(dt); 
+          final date = DateTime.parse(rawDate).toLocal();
+          dateLabel = DateFormat('MMM dd, yyyy').format(date);
         } catch (_) {
           dateLabel = rawDate;
         }
@@ -230,6 +237,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final rawId = item['movie_id'] ?? item['id'] ?? 0;
     final int id = int.tryParse(rawId.toString()) ?? 0;
     final String title = item['movie_title'] ?? item['title'] ?? 'Untitled';
+    final String subtitle = (item['subtitle'] ?? '').toString();
     
     final String rawType = (item['type'] ?? item['media_type'] ?? '').toString().toLowerCase();
     final bool isShow = rawType == 'show' || rawType == 'tv' || item['subtitle'] != null;
@@ -322,14 +330,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF281732),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: const Color(0xFF4B2A59),
+                          ),
+                        ),
+                        child: Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Color(0xFFCA66FF),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
                     Text(
                       dateLabel,
-                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                      ),
                     ),
                     Text(
                       watchedTime,
-                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),

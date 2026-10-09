@@ -40,6 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadHomeData() async {
+      List<dynamic> continueWatchingData = [];
+
+      try {
+        continueWatchingData =
+            await ApiService.getContinueWatching();
+      } catch (_) {}
     try {
       List<dynamic> watchlistData = [];
       try {
@@ -139,7 +145,18 @@ class _HomeScreenState extends State<HomeScreen> {
           _startWatching = watchlistData; 
           _upcomingReleases = lastReleases; // Passed to Calendar section
           _recommended = rawRecommended;    
-          _continueWatching = [];
+          _continueWatching = continueWatchingData.where((item) {
+            final watched = int.tryParse(
+                  (item['watchedEpisodes'] ?? 0).toString(),
+                ) ??
+                0;
+            final total = int.tryParse(
+                  (item['totalEpisodes'] ?? 0).toString(),
+                ) ??
+                0;
+
+            return total > 0 && watched < total;
+          }).toList();
           _history = historyData; 
           _isLoading = false;
         });
@@ -407,13 +424,23 @@ class _HomeScreenState extends State<HomeScreen> {
           itemBuilder: (context, index) {
             final item = displayItems[index];
             
-            final rawId = item['id'] ?? item['movie_id'] ?? item['media_id'];
+            final rawId = isContinueWatching
+                ? item['show_id']
+                : item['id'] ??
+                    item['movie_id'] ??
+                    item['media_id'];
             final int id = rawId != null ? int.tryParse(rawId.toString()) ?? 0 : 0;
             
             final String title = item['title'] ?? item['movie_title'] ?? item['name'] ?? 'Untitled';
             
             final String rawType = (item['media_type'] ?? item['type'] ?? '').toString().toLowerCase();
-            final String mediaType = (rawType == 'tv' || rawType == 'show' || item['name'] != null) ? 'tv' : 'movie';
+            final String mediaType = isContinueWatching
+                ? 'tv'
+                : (rawType == 'tv' ||
+                        rawType == 'show' ||
+                        item['name'] != null)
+                    ? 'tv'
+                    : 'movie';
 
             final String imagePath = isLandscape
                 ? (item['backdrop_path'] ?? item['poster_path'] ?? item['poster'] ?? '')
@@ -451,10 +478,34 @@ class _HomeScreenState extends State<HomeScreen> {
             double? progress;
 
             if (isContinueWatching) {
-              subtitle = 'S1 • E${(index % 10) + 1} - Next Episode';
-              overlayLeft = '45m';
-              overlayRight = '${(index % 5) + 2} left';
-              progress = 0.3 + (index * 0.1).clamp(0.0, 1.0);
+              final watched = int.tryParse(
+                    (item['watchedEpisodes'] ?? 0).toString(),
+                  ) ??
+                  0;
+
+              final total = int.tryParse(
+                    (item['totalEpisodes'] ?? 1).toString(),
+                  ) ??
+                  1;
+
+              final nextSeason = int.tryParse(
+                    (item['nextSeasonNumber'] ?? 1).toString(),
+                  ) ??
+                  1;
+
+              final nextEpisode = int.tryParse(
+                    (item['nextEpisodeNumber'] ?? watched + 1)
+                        .toString(),
+                  ) ??
+                  watched + 1;
+
+              subtitle =
+                  'Next: S$nextSeason • E$nextEpisode';
+              overlayLeft =
+                  '${item['nextEpisodeRuntime'] ?? 45}m';
+              overlayRight = '${total - watched} left';
+              progress =
+                  total > 0 ? (watched / total).clamp(0.0, 1.0) : 0;
             } else if (isHistory) {
               final String watchedDate = (item['watchedDate'] ?? item['watched_date'] ?? item['watched_at'] ?? 'Recently').toString();
               overlayLeft = watchedDate;

@@ -34,6 +34,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
   List<dynamic> _episodes = [];
   int _currentSeason = 1;
+  
+  // 👇 Added state variable to hold the user's specific progress
+  List<dynamic> _watchedEpisodes = [];
 
   @override
   void initState() {
@@ -71,11 +74,18 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         );
       } catch (_) {}
 
+      // 👇 Fetch exact episode progress
+      List<dynamic> fetchedProgress = [];
+      try {
+        fetchedProgress = await ApiService.getSpecificShowProgress(widget.showId);
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
           _showDetails = details;
           _reviews = fetchedReviews;
           _episodes = fetchedEpisodes;
+          _watchedEpisodes = fetchedProgress;
           _isLoading = false;
         });
       }
@@ -90,12 +100,104 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     }
   }
 
+  List<Map<String, dynamic>> _buildEpisodePayload({
+    int? selectedSeason,
+  }) {
+    final details = _showDetails;
+
+    if (details == null) {
+      return <Map<String, dynamic>>[];
+    }
+
+    final runtimes =
+        details['episode_run_time'] as List<dynamic>?;
+
+    final defaultRuntime =
+        runtimes != null && runtimes.isNotEmpty
+            ? int.tryParse(runtimes.first.toString()) ?? 45
+            : 45;
+
+    final nextEpisode =
+        details['next_episode_to_air'];
+
+    final nextSeasonNumber = int.tryParse(
+      (nextEpisode?['season_number'] ?? '').toString(),
+    );
+
+    final nextEpisodeNumber = int.tryParse(
+      (nextEpisode?['episode_number'] ?? '').toString(),
+    );
+
+    final seasons =
+        (details['seasons'] as List<dynamic>?)
+                ?.where((season) {
+              final number = int.tryParse(
+                (season['season_number'] ?? '').toString(),
+              );
+
+              if (number == null || number <= 0) {
+                return false;
+              }
+
+              return selectedSeason == null ||
+                  number == selectedSeason;
+            })
+                .toList() ??
+            <dynamic>[];
+
+    final episodes = <Map<String, dynamic>>[];
+
+    for (final season in seasons) {
+      final seasonNumber = int.tryParse(
+            (season['season_number'] ?? '').toString(),
+          ) ??
+          0;
+
+      var episodeCount = int.tryParse(
+            (season['episode_count'] ?? 0).toString(),
+          ) ??
+          0;
+
+      final seasonAirDate = DateTime.tryParse(
+        (season['air_date'] ?? '').toString(),
+      );
+
+      if (seasonAirDate != null &&
+          seasonAirDate.isAfter(DateTime.now())) {
+        continue;
+      }
+
+      if (nextSeasonNumber == seasonNumber &&
+          nextEpisodeNumber != null) {
+        episodeCount = (nextEpisodeNumber - 1).clamp(
+          0,
+          episodeCount,
+        );
+      }
+
+      for (
+        var episodeNumber = 1;
+        episodeNumber <= episodeCount;
+        episodeNumber++
+      ) {
+        episodes.add({
+          'season_number': seasonNumber,
+          'episode_number': episodeNumber,
+          'runtime': defaultRuntime,
+        });
+      }
+    }
+
+    return episodes;
+  }
+
   Future<void> _markAsWatched(
     String title,
     String? poster,
-    int episodes,
+    String? backdrop,
     String option, {
     String? releaseDateStr,
+    int? seasonNumber,
   }) async {
     Navigator.pop(context);
 
@@ -112,14 +214,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     } else if (option == 'Release date' &&
         releaseDateStr != null &&
         releaseDateStr.isNotEmpty) {
-      try {
-        watchedAtDate =
-            DateTime.parse(releaseDateStr).toUtc();
-      } catch (_) {
-        watchedAtDate = DateTime.now().toUtc();
-      }
+      watchedAtDate =
+          DateTime.tryParse(releaseDateStr)?.toUtc() ??
+              DateTime.now().toUtc();
     } else if (option == 'Other date') {
-      final DateTime? pickedDate = await showDatePicker(
+      final pickedDate = await showDatePicker(
         context: context,
         initialDate: DateTime.now(),
         firstDate: DateTime(1900),
@@ -148,7 +247,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             _isLogging = false;
           });
         }
-
         return;
       }
 
@@ -156,19 +254,71 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     }
 
     try {
-      await ApiService.logWatchHistory(
-        movieId: widget.showId,
-        mediaType: 'tv',
+      final allEpisodes = _buildEpisodePayload(
+        selectedSeason: seasonNumber,
+      );
+
+      if (allEpisodes.isEmpty) {
+        throw Exception(
+          seasonNumber == null
+              ? 'No released episodes were found for this show'
+              : 'No released episodes were found in Season $seasonNumber',
+        );
+      }
+
+      final totalShowEpisodes = int.tryParse(
+            (_showDetails?['number_of_episodes'] ?? '')
+                .toString(),
+          ) ??
+          allEpisodes.length;
+
+      await ApiService.logShowWatchHistory(
+        showId: widget.showId,
         title: title,
         posterPath: poster,
-        runtimeMinutes: 45,
-        userRating: 0.0,
+        backdropPath: backdrop,
+        episodes: allEpisodes,
+        totalEpisodes: totalShowEpisodes > 0
+            ? totalShowEpisodes
+            : allEpisodes.length,
         watchedAt: watchedAtDate?.toIso8601String(),
       );
 
-      _showSnackBar('Marked "$title" as watched');
+      if (mounted) {
+        setState(() {
+          final newItems = allEpisodes.map(
+            (episode) => {
+              'season_number': episode['season_number'],
+              'episode_number': episode['episode_number'],
+            },
+          );
+
+          for (final newItem in newItems) {
+            final alreadyExists = _watchedEpisodes.any(
+              (item) =>
+                  item['season_number'] ==
+                      newItem['season_number'] &&
+                  item['episode_number'] ==
+                      newItem['episode_number'],
+            );
+
+            if (!alreadyExists) {
+              _watchedEpisodes.add(newItem);
+            }
+          }
+        });
+      }
+
+      _showSnackBar(
+        seasonNumber == null
+            ? 'Marked all episodes of "$title" as watched'
+            : 'Marked Season $seasonNumber of "$title" as watched',
+      );
     } catch (e) {
-      _showSnackBar('Failed to log watch history: $e');
+      _showSnackBar(
+        'Failed to mark show as watched: '
+        '${e.toString().replaceAll('Exception: ', '')}',
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -178,12 +328,272 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     }
   }
 
+  // 👇 New function specifically for checking off individual episodes
+  Future<bool> _markEpisodeWatched({
+    required String showTitle,
+    required String? posterPath,
+    required String? backdropPath,
+    required int seasonNumber,
+    required int episodeNumber,
+    required int runtime,
+    required int totalEpisodes,
+  }) async {
+    final alreadyWatched = _watchedEpisodes.any(
+      (item) =>
+          item['season_number'] == seasonNumber &&
+          item['episode_number'] == episodeNumber,
+    );
+
+    if (alreadyWatched) return true;
+
+    try {
+      await ApiService.logWatchHistory(
+        movieId: widget.showId,
+        mediaType: 'tv',
+        title: showTitle,
+        posterPath: posterPath,
+        backdropPath: backdropPath,
+        runtimeMinutes: runtime,
+        seasonNumber: seasonNumber,
+        episodeNumber: episodeNumber,
+        totalEpisodes: totalEpisodes,
+        watchedAt: DateTime.now().toUtc().toIso8601String(),
+      );
+
+      if (mounted) {
+        setState(() {
+          _watchedEpisodes.add({
+            'season_number': seasonNumber,
+            'episode_number': episodeNumber,
+          });
+        });
+      }
+
+      _showSnackBar(
+        'Marked S$seasonNumber • E$episodeNumber as watched',
+      );
+
+      return true;
+    } catch (e) {
+      _showSnackBar(
+        'Failed to log episode: '
+        '${e.toString().replaceAll('Exception: ', '')}',
+      );
+      return false;
+    }
+  }
+
+  void _showTrackPicker(
+    String title,
+    String? poster,
+    String? backdrop,
+    String? firstAirDate,
+  ) {
+    final seasons =
+        (_showDetails?['seasons'] as List<dynamic>?)
+                ?.where((season) {
+              final number = int.tryParse(
+                (season['season_number'] ?? '').toString(),
+              );
+
+              return number != null && number > 0;
+            })
+                .toList() ??
+            <dynamic>[];
+
+    seasons.sort((a, b) {
+      final aNumber = int.tryParse(
+            (a['season_number'] ?? 0).toString(),
+          ) ??
+          0;
+
+      final bNumber = int.tryParse(
+            (b['season_number'] ?? 0).toString(),
+          ) ??
+          0;
+
+      return aNumber.compareTo(bNumber);
+    });
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF15151B),
+      barrierColor:
+          Colors.black.withValues(alpha: 0.75),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight:
+                  MediaQuery.sizeOf(sheetContext).height *
+                      0.78,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                12,
+                10,
+                12,
+                24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildSheetHandle(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        _buildSheetIcon(
+                          Icons.checklist_rounded,
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Track episodes',
+                                style: TextStyle(
+                                  color: Color(0xFFF5F3F8),
+                                  fontSize: 17,
+                                  fontWeight:
+                                      FontWeight.w800,
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Choose the entire show or a season',
+                                style: TextStyle(
+                                  color: Color(0xFF817C87),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _buildCloseButton(sheetContext),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(
+                    color: Color(0xFF2D2933),
+                    height: 1,
+                  ),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      padding:
+                          const EdgeInsets.only(top: 8),
+                      children: [
+                        _buildMenuOption(
+                          Icons.done_all_rounded,
+                          'Entire show',
+                          () {
+                            Navigator.pop(sheetContext);
+
+                            Future<void>.delayed(
+                              Duration.zero,
+                              () {
+                                if (!mounted) return;
+
+                                _showMarkWatchedMenu(
+                                  title,
+                                  poster,
+                                  backdrop,
+                                  firstAirDate,
+                                );
+                              },
+                            );
+                          },
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Divider(
+                            color: Color(0xFF2D2933),
+                            height: 1,
+                          ),
+                        ),
+                        ...seasons.map((season) {
+                          final seasonNumber =
+                              int.tryParse(
+                                (season[
+                                            'season_number'] ??
+                                        0)
+                                    .toString(),
+                              ) ??
+                              0;
+
+                          final episodeCount =
+                              int.tryParse(
+                                (season[
+                                            'episode_count'] ??
+                                        0)
+                                    .toString(),
+                              ) ??
+                              0;
+
+                          return _buildMenuOption(
+                            Icons
+                                .video_library_outlined,
+                            'Season $seasonNumber'
+                            '  •  $episodeCount episodes',
+                            () {
+                              Navigator.pop(
+                                sheetContext,
+                              );
+
+                              Future<void>.delayed(
+                                Duration.zero,
+                                () {
+                                  if (!mounted) return;
+
+                                  _showMarkWatchedMenu(
+                                    title,
+                                    poster,
+                                    backdrop,
+                                    season['air_date']
+                                        ?.toString(),
+                                    seasonNumber:
+                                        seasonNumber,
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showMarkWatchedMenu(
     String title,
     String? poster,
-    int episodes,
-    String? releaseDate,
-  ) {
+    String? backdrop,
+    String? releaseDate, {
+    int? seasonNumber,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF15151B),
@@ -221,9 +631,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           crossAxisAlignment:
                               CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Mark as watched',
-                              style: TextStyle(
+                            Text(
+                              seasonNumber == null
+                                  ? 'Mark entire show watched'
+                                  : 'Track Season $seasonNumber',
+                              style: const TextStyle(
                                 color: Color(0xFFF5F3F8),
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800,
@@ -258,8 +670,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   () => _markAsWatched(
                     title,
                     poster,
-                    episodes,
+                    backdrop,
                     'Just now',
+                    seasonNumber: seasonNumber,
                   ),
                 ),
                 _buildMenuOption(
@@ -268,9 +681,10 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   () => _markAsWatched(
                     title,
                     poster,
-                    episodes,
+                    backdrop,
                     'Release date',
                     releaseDateStr: releaseDate,
+                    seasonNumber: seasonNumber,
                   ),
                 ),
                 _buildMenuOption(
@@ -279,8 +693,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   () => _markAsWatched(
                     title,
                     poster,
-                    episodes,
+                    backdrop,
                     'Other date',
+                    seasonNumber: seasonNumber,
                   ),
                 ),
               ],
@@ -1154,12 +1569,47 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                                     episode[
                                             'episode_number'] ??
                                         index + 1;
+                                        
+                                // 👇 Determine if THIS exact episode has been watched
+                                final bool isWatched = _watchedEpisodes.any((item) => 
+                                  item['season_number'] == _currentSeason && 
+                                  item['episode_number'] == episodeNumber
+                                );
 
                                 return _buildEpisodeListTile(
                                   episode: episode,
                                   imageUrl: imageUrl,
                                   episodeNumber:
                                       episodeNumber,
+                                  isWatched: isWatched,
+                                  onMarkWatched: () async {
+                                    final success =
+                                        await _markEpisodeWatched(
+                                      showTitle:
+                                          _showDetails?['name'] ??
+                                              'Untitled Show',
+                                      posterPath:
+                                          _showDetails?['poster_path']
+                                              ?.toString(),
+                                      backdropPath:
+                                          _showDetails?['backdrop_path']
+                                              ?.toString(),
+                                      seasonNumber:
+                                          _currentSeason,
+                                      episodeNumber:
+                                          episodeNumber,
+                                      runtime:
+                                          episode['runtime'] ?? 45,
+                                      totalEpisodes:
+                                          _showDetails?[
+                                                  'number_of_episodes'] ??
+                                              1,
+                                    );
+
+                                    if (success) {
+                                      setModalState(() {});
+                                    }
+                                  },
                                 );
                               },
                             ),
@@ -1174,10 +1624,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
+  // 👇 Updated to accept isWatched boolean and interaction callback
   Widget _buildEpisodeListTile({
     required dynamic episode,
     required String imageUrl,
     required dynamic episodeNumber,
+    required bool isWatched,
+    required VoidCallback onMarkWatched,
   }) {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -1262,10 +1715,33 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          const Icon(
-            Icons.check_rounded,
-            color: Color(0xFF7D398F),
-            size: 21,
+          
+          // 👇 Interactive Checkmark for marking individual episodes!
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isWatched ? null : onMarkWatched,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isWatched 
+                      ? const Color(0xFF7D398F).withValues(alpha: 0.2) 
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: isWatched 
+                        ? const Color(0xFF7D398F) 
+                        : const Color(0xFF302C35),
+                  ),
+                ),
+                child: Icon(
+                  Icons.check_rounded,
+                  color: isWatched ? const Color(0xFFCA66FF) : const Color(0xFF514C59),
+                  size: 20,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -2272,10 +2748,10 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   : 'Mark watched',
               icon: Icons.check_rounded,
               isLoading: _isLogging,
-              onTap: () => _showMarkWatchedMenu(
+              onTap: () => _showTrackPicker(
                 title,
                 posterPath,
-                episodes,
+                _showDetails?['backdrop_path']?.toString(),
                 firstAirDate,
               ),
             ),
@@ -2730,6 +3206,12 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     episode['episode_number'] ??
                         index + 1;
 
+                final isWatched = _watchedEpisodes.any(
+                  (item) =>
+                      item['season_number'] == _currentSeason &&
+                      item['episode_number'] == episodeNumber,
+                );
+
                 return Container(
                   width: 250,
                   margin:
@@ -2842,9 +3324,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                                 ),
                               ),
                             ),
-                            const Icon(
-                              Icons.check_rounded,
-                              color: Color(0xFF7D398F),
+                            Icon(
+                              isWatched
+                                  ? Icons.check_circle_rounded
+                                  : Icons.radio_button_unchecked_rounded,
+                              color: isWatched
+                                  ? const Color(0xFFCA66FF)
+                                  : const Color(0xFF514C59),
                               size: 17,
                             ),
                           ],
